@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="de">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Document</title>
+    </head>
+    <body>
+        <div id="classes-con">
+            <h1>Klassen</h1>
+            <table>
+                <thead>
+                    <tr>
+                        <td>Name</td>
+                        <td>Klassenstufe</td>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+            <div id="add-class-con">
+                <input type="text" id="class-name-input" placeholder="Klassenname">
+                <input type="number" id="class-level-input" placeholder="Klassenstufe">
+                <button id="add-class-button">Klasse hinzufügen</button>
+            </div>
+        </div>
+        <div id="participants-con">
+            <h1>Teilnehmer</h1>
+            <table>
+                <thead>
+                    <tr>
+                        <td>ID</td>
+                        <td>Name</td>
+                        <td>Vorname</td>
+                        <td>Klasse</td>
+                        <td>Bemerkungen</td>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+            <div id="add-participant-con">
+                <input type="text" id="participant-name-input" placeholder="Name">
+                <input type="text" id="participant-forename-input" placeholder="Vorname">
+                <select id="participant-class-select"></select>
+                <input type="text" id="participant-remarks-input" placeholder="Bemerkungen">
+                <button id="add-participant-button">Teilnehmer hinzufügen</button>
+            </div>
+        </div>
+        <div id="disciplines-con">
+            <h1>Disziplinen</h1>
+            <table>
+                <thead>
+                    <tr>
+                        <td>ID</td>
+                        <td>Name</td>
+                        <td>Messeinheit</td>
+                        <td>Timer?</td>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+            <div id="add-discipline-con">
+                <input type="text" id="discipline-name-input" placeholder="Name">
+                <input type="text" id="discipline-unit-input" placeholder="Messeinheit">
+                <input type="checkbox" id="discipline-timer-input"> Timer?
+                <button id="add-discipline-button">Disziplin hinzufügen</button>
+            </div>
+        </div>
+        <script src="js/central.js"></script>
+    </body>
+</html>
