@@ -10,6 +10,11 @@
         <div id="discipline-con" style="display: none;">
             <div id="discipline-header"></div>
             <div id="class-selector-con"></div>
+            <div id="global-timer-con" style="display: none;">
+                <span id="global-timer-display">00:00:00.000</span>
+                <button id="global-start-btn">Global starten</button>
+                <button id="global-stop-btn" style="display: none;">Alle stoppen</button>
+            </div>
             <table id="class-con" style="display: none;">
                 <thead>
                     <tr>
@@ -20,7 +25,40 @@
                         <th>Messungen</th>
                     </tr>
                 </thead>
-                <tbody id="class-body"></tbody>
+                <tbody id="class-body">
+                    <tr>
+                        <td>1</td>
+                        <td>Mustermann</td>
+                        <td>Max</td>
+                        <td>Lorem ipsum </td>
+                        <td class="measurement-actions" data-id="1">
+                            <table id="measurements-table-1" style="margin-bottom: 10px;">
+                                <tr>
+                                    <td>Invalid run/false start</td>
+                                    <td><button class="delete-measurement">Löschen</button></td>
+                                </tr>
+                            </table>
+                            <!-- Manual Input Section -->
+                            <div id="manual-input-section-1" style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px;">
+                                <button class="false-start-btn">Invalid run/false start</button>
+                                <div style="display: flex; gap: 5px;">
+                                    <input type="number" class="measurement-input" placeholder="Messung" step="0.01" min="0">
+                                    <span class="measurement-unit">s</span>
+                                    <button class="add-measurement-btn">Hinzufügen</button>
+                                </div>
+                            </div>
+                            <!-- Timer Section -->
+                            <div id="timer-section-1" style="display: none; flex-direction: column; gap: 8px; margin-bottom: 10px;">
+                                <button class="false-start-btn">Invalid run/false start</button>
+                                <div style="display: flex; gap: 5px; align-items: center;">
+                                    <span class="timer-display">00:00:00.000</span>
+                                </div>
+                                <button class="start-timer-btn">Messung starten</button>
+                                <button class="stop-timer-btn" style="display: none;">Messung stoppen</button>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
             </table>
         </div>
         <script src="js/js.js"></script>
