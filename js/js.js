@@ -1,7 +1,13 @@
 const DB_NAME = "tournament";
 const DB_VERSION = 1;
 
+// Sync flow constants (in milliseconds)
+const SYNC_INTERVAL_A = 5000;      // Wait time after successful sync
+const SYNC_TIMEOUT_B = 10000;       // Timeout for server request
+const SYNC_RETRY_INTERVAL_C = 2000; // Wait time after failed sync (offline/timeout)
+
 var db;
+var syncFlowRunning = false;
 
 function getData() {
     return {
@@ -185,4 +191,147 @@ function showClass(id) {
             })
         }
     };
+}
+
+function sync() {
+    return new Promise((resolve, reject) => {
+        const transaction = db.transaction(["measurements"], "readonly");
+        transaction.oncomplete = (event) => {
+            console.log("Sync transaction completed!");
+        };
+
+        transaction.onerror = (event) => {
+            console.error("Transaction error:", event);
+            reject(event);
+        };
+
+        const measurementStore = transaction.objectStore("measurements");
+        measurementStore.getAll().onsuccess = async (event) => {
+            const measurements = event.target.result;
+            
+            if (measurements.length === 0) {
+                console.log("No measurements to sync");
+                resolve();
+                return;
+            }
+            
+            try {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), SYNC_TIMEOUT_B);
+                
+                const response = await fetch("http://localhost:80/sync", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(measurements),
+                    signal: controller.signal
+                });
+                
+                clearTimeout(timeoutId);
+                
+                if (!response.ok) {
+                    console.error("Sync failed:", response.statusText);
+                    reject(new Error(`Sync failed: ${response.statusText}`));
+                    return;
+                }
+                
+                const data = await response.json();
+                await updateDB(data);
+                await deleteMeasurements();
+                resolve();
+            } catch (error) {
+                console.error("Error syncing:", error);
+                reject(error);
+            }
+        };
+    });
+}
+
+function updateDB(data) {
+    return new Promise((resolve, reject) => {
+        const transaction = db.transaction(["classes", "disciplines", "participants"], "readwrite");
+        transaction.oncomplete = (event) => {
+            console.log("Database updated after sync!");
+            resolve();
+        };
+
+        transaction.onerror = (event) => {
+            console.error("Error updating DB:", event);
+            reject(event);
+        };
+
+        // Clear and update classes
+        const classStore = transaction.objectStore("classes");
+        classStore.clear().onsuccess = () => {
+            if (data.classes) {
+                data.classes.forEach((el) => {
+                    classStore.add(el);
+                });
+            }
+        };
+
+        // Clear and update disciplines
+        const disciplineStore = transaction.objectStore("disciplines");
+        disciplineStore.clear().onsuccess = () => {
+            if (data.disciplines) {
+                data.disciplines.forEach((el) => {
+                    disciplineStore.add(el);
+                });
+            }
+        };
+
+        // Clear and update participants
+        const participantStore = transaction.objectStore("participants");
+        participantStore.clear().onsuccess = () => {
+            if (data.participants) {
+                data.participants.forEach((el) => {
+                    participantStore.add(el);
+                });
+            }
+        };
+    });
+}
+
+function deleteMeasurements() {
+    return new Promise((resolve, reject) => {
+        const transaction = db.transaction(["measurements"], "readwrite");
+        transaction.oncomplete = (event) => {
+            console.log("All measurements deleted after sync!");
+            resolve();
+        };
+
+        transaction.onerror = (event) => {
+            console.error("Error deleting measurements:", event);
+            reject(event);
+        };
+
+        const measurementStore = transaction.objectStore("measurements");
+        measurementStore.clear();
+    });
+}
+
+async function startSyncFlow() {
+    if (syncFlowRunning) {
+        console.log("Sync flow already running");
+        return;
+    }
+    
+    syncFlowRunning = true;
+    console.log("Starting sync flow...");
+    
+    while (syncFlowRunning) {
+        try {
+            await sync();
+            console.log("Sync successful, waiting", SYNC_INTERVAL_A, "ms before next sync");
+            await new Promise(resolve => setTimeout(resolve, SYNC_INTERVAL_A));
+        } catch (error) {
+            console.error("Sync failed (offline or timeout):", error.message);
+            console.log("Waiting", SYNC_RETRY_INTERVAL_C, "ms before retry...");
+            await new Promise(resolve => setTimeout(resolve, SYNC_RETRY_INTERVAL_C));
+        }
+    }
+}
+
+function stopSyncFlow() {
+    syncFlowRunning = false;
+    console.log("Sync flow stopped");
 }
