@@ -9,17 +9,18 @@ const SYNC_RETRY_INTERVAL_C = 2000; // Wait time after failed sync (offline/time
 var db;
 var syncFlowRunning = false;
 
-function getData() {
-    return fetch("http://localhost:80/data")
-        .then(response => response.json())
-        .catch(error => {
-            console.error("Error fetching data from API:", error);
-            return {
-                "classes": [],
-                "participants": [],
-                "disciplines": []
-            };
-        });
+async function getData() {
+    try {
+        const response = await fetch("http://localhost:80/data");
+        return await response.json();
+    } catch (error) {
+        console.error("Error fetching data from API:", error);
+        return {
+            "classes": [],
+            "participants": [],
+            "disciplines": []
+        };
+    }
 }
 
 function openDB() {
@@ -57,8 +58,8 @@ function openDB() {
     };
 }
 
-function fillDB() {
-    var data = getData();
+async function fillDB() {
+    var data = await getData();
     const transaction = db.transaction(["participants", "classes", "disciplines"], "readwrite");
     transaction.oncomplete = (event) => {
         console.log("All starting Data injested!");
@@ -83,104 +84,120 @@ function fillDB() {
 }
 openDB();
 
-function showDisciples() {
-    const transaction = db.transaction(["disciplines"], "readonly");
-    transaction.oncomplete = (event) => {
-        console.log("Loaded all disciplines!");
-    };
+async function showDisciples() {
+    return new Promise((resolve) => {
+        const transaction = db.transaction(["disciplines"], "readonly");
+        transaction.oncomplete = (event) => {
+            console.log("Loaded all disciplines!");
+            resolve();
+        };
 
-    transaction.onerror = (event) => {
-        console.error(event)
-    };
+        transaction.onerror = (event) => {
+            console.error(event)
+            resolve();
+        };
 
-    const disciblineStore = transaction.objectStore("disciplines");
-    disciblineStore.getAll().onsuccess = (response) => {
-        response.target.result.forEach(el => {
-            document.querySelector("#discipline-selector-con").innerHTML += '<button data-id="' + el.id + '">' + el.name + '</button><br>';
-        })
-        document.querySelectorAll("#discipline-selector-con button").forEach((el) => {
-            el.addEventListener("click", () => {
-                showDiscipline(el.dataset.id)
+        const disciblineStore = transaction.objectStore("disciplines");
+        disciblineStore.getAll().onsuccess = (response) => {
+            response.target.result.forEach(el => {
+                document.querySelector("#discipline-selector-con").innerHTML += '<button data-id="' + el.id + '">' + el.name + '</button><br>';
             })
-        })
-    };
-}
-
-function showDiscipline(id) {
-    document.querySelector("#discipline-selector-con").style.display = "none";
-    document.querySelector("#discipline-con").style.display = "";
-
-    const transaction = db.transaction(["disciplines", "classes"], "readonly");
-    transaction.oncomplete = (event) => {
-        console.log("Loaded discipline!");
-    };
-
-    transaction.onerror = (event) => {
-        console.error(event)
-    };
-
-    const disciblineStore = transaction.objectStore("disciplines");
-    disciblineStore.get(parseInt(id)).onsuccess = (response) => {
-        console.log(response.target.result)
-        document.querySelector("#discipline-con #discipline-header").innerHTML = response.target.result.name + "<br>";
-        localStorage.setItem("currentDiscipline", response.target.result.name);
-        showClasses();
-    };
-}
-
-function showClasses() {
-    const transaction = db.transaction(["classes"], "readonly");
-    transaction.oncomplete = (event) => {
-        console.log("Loaded all classes!");
-    };
-
-    transaction.onerror = (event) => {
-        console.error(event)
-    };
-
-    const classStore = transaction.objectStore("classes");
-    classStore.getAll().onsuccess = (response) => {
-        response.target.result.forEach(el => {
-            document.querySelector("#discipline-con #class-selector-con").innerHTML += '<button data-id="' + el.name + '">' + el.name + '</button><br>';
-        })
-        document.querySelectorAll("#class-selector-con button").forEach((el) => {
-            el.addEventListener("click", () => {
-                showClass(el.dataset.id)
-            })
-        })
-    };
-}
-
-function showClass(id) {
-    document.querySelector("#class-selector-con").style.display = "none";
-    document.querySelector("#class-con").style.display = "";
-
-    const transaction = db.transaction(["participants"], "readonly");
-    transaction.oncomplete = (event) => {
-        console.log("Loaded class!");
-    };
-
-    transaction.onerror = (event) => {
-        console.error(event)
-    };
-
-    const participantStore = transaction.objectStore("participants");
-    participantStore.index("class").openCursor(IDBKeyRange.only(id)).onsuccess = (response) => {
-        const cursor = event.target.result;
-        if (cursor) {
-            var participant = cursor.value;
-            document.querySelector("#class-body").innerHTML += "<tr><td>" + participant.id + "</td><td>" + participant.name + "</td><td>" + participant.forename + "</td><td>" + (participant.remarks === null ? "" : participant.remarks) + "</td><td class='actions-con' data-id='" + participant.id + "'></td></tr>";
-            cursor.continue();
-        } else {
-            localStorage.setItem("timestamp", (new Date()).getTime() + "." + (new Date()).getMilliseconds())
-            document.querySelectorAll(".actions-con").forEach((el) => {
-                el.innerHTML += "<button data-id='" + el.dataset.id + "'>Messung stoppen</button>";
-                el.querySelector("button").addEventListener("click", (event) => {
-                    console.log(((new Date()).getTime() + ((new Date()).getMilliseconds() / 1000)) - (new Date(parseFloat(localStorage.getItem("timestamp"))).getTime()))
+            document.querySelectorAll("#discipline-selector-con button").forEach((el) => {
+                el.addEventListener("click", () => {
+                    showDiscipline(el.dataset.id)
                 })
             })
-        }
-    };
+        };
+    });
+}
+
+async function showDiscipline(id) {
+    return new Promise((resolve) => {
+        document.querySelector("#discipline-selector-con").style.display = "none";
+        document.querySelector("#discipline-con").style.display = "";
+
+        const transaction = db.transaction(["disciplines", "classes"], "readonly");
+        transaction.oncomplete = (event) => {
+            console.log("Loaded discipline!");
+        };
+
+        transaction.onerror = (event) => {
+            console.error(event)
+            resolve();
+        };
+
+        const disciblineStore = transaction.objectStore("disciplines");
+        disciblineStore.get(parseInt(id)).onsuccess = (response) => {
+            console.log(response.target.result)
+            document.querySelector("#discipline-con #discipline-header").innerHTML = response.target.result.name + "<br>";
+            localStorage.setItem("currentDiscipline", response.target.result.name);
+            showClasses();
+            resolve();
+        };
+    });
+}
+
+async function showClasses() {
+    return new Promise((resolve) => {
+        const transaction = db.transaction(["classes"], "readonly");
+        transaction.oncomplete = (event) => {
+            console.log("Loaded all classes!");
+            resolve();
+        };
+
+        transaction.onerror = (event) => {
+            console.error(event)
+            resolve();
+        };
+
+        const classStore = transaction.objectStore("classes");
+        classStore.getAll().onsuccess = (response) => {
+            response.target.result.forEach(el => {
+                document.querySelector("#discipline-con #class-selector-con").innerHTML += '<button data-id="' + el.name + '">' + el.name + '</button><br>';
+            })
+            document.querySelectorAll("#class-selector-con button").forEach((el) => {
+                el.addEventListener("click", () => {
+                    showClass(el.dataset.id)
+                })
+            })
+        };
+    });
+}
+
+async function showClass(id) {
+    return new Promise((resolve) => {
+        document.querySelector("#class-selector-con").style.display = "none";
+        document.querySelector("#class-con").style.display = "";
+
+        const transaction = db.transaction(["participants"], "readonly");
+        transaction.oncomplete = (event) => {
+            console.log("Loaded class!");
+            resolve();
+        };
+
+        transaction.onerror = (event) => {
+            console.error(event)
+            resolve();
+        };
+
+        const participantStore = transaction.objectStore("participants");
+        participantStore.index("class").openCursor(IDBKeyRange.only(id)).onsuccess = (response) => {
+            const cursor = event.target.result;
+            if (cursor) {
+                var participant = cursor.value;
+                document.querySelector("#class-body").innerHTML += "<tr><td>" + participant.id + "</td><td>" + participant.name + "</td><td>" + participant.forename + "</td><td>" + (participant.remarks === null ? "" : participant.remarks) + "</td><td class='actions-con' data-id='" + participant.id + "'></td></tr>";
+                cursor.continue();
+            } else {
+                localStorage.setItem("timestamp", (new Date()).getTime() + "." + (new Date()).getMilliseconds())
+                document.querySelectorAll(".actions-con").forEach((el) => {
+                    el.innerHTML += "<button data-id='" + el.dataset.id + "'>Messung stoppen</button>";
+                    el.querySelector("button").addEventListener("click", (event) => {
+                        console.log(((new Date()).getTime() + ((new Date()).getMilliseconds() / 1000)) - (new Date(parseFloat(localStorage.getItem("timestamp"))).getTime()))
+                    })
+                })
+            }
+        };
+    });
 }
 
 function sync() {
