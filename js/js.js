@@ -1,344 +1,299 @@
 const DB_NAME = "tournament";
 const DB_VERSION = 1;
 
-// Sync flow constants (in milliseconds)
-const SYNC_INTERVAL_A = 5000;      // Wait time after successful sync
-const SYNC_TIMEOUT_B = 10000;       // Timeout for server request
-const SYNC_RETRY_INTERVAL_C = 2000; // Wait time after failed sync (offline/timeout)
+const SYNC_INTERVAL_A = 5000;
+const SYNC_TIMEOUT_B = 10000;
+const SYNC_RETRY_INTERVAL_C = 2000;
 
-var db;
-var syncFlowRunning = false;
+let db;
+let syncFlowRunning = false;
 
-async function getData() {
+const el = (selector) => document.querySelector(selector);
+const elAll = (selector) => document.querySelectorAll(selector);
+
+const toggle = (selector, show) => {
+    el(selector).style.display = show ? "" : "none";
+};
+
+const wait = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+async function fetchJSON(url) {
     try {
-        const response = await fetch("http://localhost:80/data");
+        const response = await fetch(url);
         return await response.json();
     } catch (error) {
-        console.error("Error fetching data from API:", error);
-        return {
-            "classes": [],
-            "participants": [],
-            "disciplines": []
-        };
+        console.error(`Error fetching ${url}:`, error);
+        return null;
     }
 }
 
+function dbTransaction(stores, mode = "readonly") {
+    return new Promise((resolve, reject) => {
+        const transaction = db.transaction(stores, mode);
+        transaction.onerror = () => reject(transaction.error);
+        resolve(transaction);
+    });
+}
+
+async function dbOperation(stores, mode, operation) {
+    try {
+        const transaction = await dbTransaction(stores, mode);
+        return new Promise((resolve, reject) => {
+            transaction.oncomplete = () => resolve();
+            transaction.onerror = () => reject(transaction.error);
+            operation(transaction);
+        });
+    } catch (error) {
+        console.error("DB operation error:", error);
+        throw error;
+    }
+}
+
+async function dbRead(storeName, operation) {
+    return new Promise((resolve, reject) => {
+        const transaction = db.transaction([storeName], "readonly");
+        transaction.onerror = () => reject(transaction.error);
+        const store = transaction.objectStore(storeName);
+        const request = operation(store);
+        request.onsuccess = () => resolve(request.result);
+    });
+}
+
+async function dbAddItems(storeName, items) {
+    return dbOperation([storeName], "readwrite", (transaction) => {
+        const store = transaction.objectStore(storeName);
+        items.forEach(item => store.add(item));
+    });
+}
+
+async function dbClear(storeName) {
+    return dbOperation([storeName], "readwrite", (transaction) => {
+        transaction.objectStore(storeName).clear();
+    });
+}
+
+async function dbGetAll(storeName) {
+    return dbRead(storeName, (store) => store.getAll());
+}
+
+async function dbGet(storeName, key) {
+    return dbRead(storeName, (store) => store.get(key));
+}
+
+async function dbGetByIndex(storeName, indexName, value) {
+    return new Promise((resolve, reject) => {
+        const transaction = db.transaction([storeName], "readonly");
+        transaction.onerror = () => reject(transaction.error);
+        const store = transaction.objectStore(storeName);
+        const results = [];
+        const cursor = store.index(indexName).openCursor(IDBKeyRange.only(value));
+        cursor.onsuccess = (event) => {
+            const cur = event.target.result;
+            if (cur) {
+                results.push(cur.value);
+                cur.continue();
+            } else {
+                resolve(results);
+            }
+        };
+    });
+}
+
+async function dbCount(storeName) {
+    return dbRead(storeName, (store) => store.count());
+}
+
+function createInitStores(result) {
+    const stores = {
+        participants: { keyPath: 'id', indices: [['name', false], ['class', false]] },
+        classes: { keyPath: 'name', indices: [['level', false]] },
+        disciplines: { keyPath: 'id', indices: [['name', false]] },
+        measurements: { keyPath: 'id', autoIncrement: true, indices: [['participant', false], ['discibline', false]] }
+    };
+
+    Object.entries(stores).forEach(([name, config]) => {
+        const store = result.createObjectStore(name, { keyPath: config.keyPath, autoIncrement: config.autoIncrement });
+        config.indices?.forEach(([indexName, unique]) => store.createIndex(indexName, indexName, { unique }));
+    });
+}
+
 function openDB() {
-    console.log("Openening DB...")
-    var req = indexedDB.open(DB_NAME, DB_VERSION);
-    req.onsuccess = function (event) {
-        db = this.result;
-        console.log("Opened DB!");
-        showDisciples()
+    const req = indexedDB.open(DB_NAME, DB_VERSION);
+    req.onsuccess = (e) => {
+        db = e.target.result;
+        fillDB();
     };
-    req.onerror = function (event) {
-        console.error("Error while opening DB:", event.target.errorCode);
-    };
-
-    req.onupgradeneeded = function (event) {
-        console.log("DB Upgrade needed");
-
-        // id, name, forename, class, remarks
-        var participantStore = event.currentTarget.result.createObjectStore("participants", { keyPath: 'id' });
-        participantStore.createIndex("name", "name", { unique: false });
-        participantStore.createIndex("class", "class", { unique: false });
-
-        // name, level
-        var classStore = event.currentTarget.result.createObjectStore("classes", { keyPath: 'name' });
-        classStore.createIndex("level", "level", { unique: false });
-
-        // id, name, unit, timer
-        var disciblineStore = event.currentTarget.result.createObjectStore("disciplines", { keyPath: 'id' });
-        disciblineStore.createIndex("name", "name", { unique: false });
-
-        // id, participant, discipline, value, 
-        var measurementStore = event.currentTarget.result.createObjectStore("measurements", { keyPath: 'id', autoIncrement: true });
-        measurementStore.createIndex("participant", "participant", { unique: false });
-        measurementStore.createIndex("discibline", "discibline", { unique: false });
+    req.onerror = (e) => console.error("DB error:", e.target.errorCode);
+    req.onupgradeneeded = (e) => {
+        console.log("Creating database...");
+        createInitStores(e.currentTarget.result);
     };
 }
 
 async function fillDB() {
-    var data = await getData();
-    const transaction = db.transaction(["participants", "classes", "disciplines"], "readwrite");
-    transaction.oncomplete = (event) => {
-        console.log("All starting Data injested!");
-    };
+    try {
+        if (await dbCount("classes") > 0) {
+            console.log("DB already populated");
+            return showDisciples();
+        }
 
-    transaction.onerror = (event) => {
-        console.error(event)
-    };
+        const data = await fetchJSON("http://localhost:80/data");
+        if (!data) throw new Error("No data from API");
 
-    const classStore = transaction.objectStore("classes");
-    data.classes.forEach((el) => {
-        classStore.add(el)
-    })
-    const participantStore = transaction.objectStore("participants");
-    data.participants.forEach((el) => {
-        participantStore.add(el)
-    })
-    const disciblineStore = transaction.objectStore("disciplines");
-    data.disciplines.forEach((el) => {
-        disciblineStore.add(el)
-    })
+        await Promise.all([
+            dbAddItems("classes", data.classes),
+            dbAddItems("disciplines", data.disciplines),
+            dbAddItems("participants", data.participants)
+        ]);
+
+        console.log("Database initialized");
+        await showDisciples();
+    } catch (error) {
+        console.error("Error filling DB:", error);
+    }
 }
-openDB();
+
+function createButtonRow(id, name) {
+    return `<button data-id="${id}">${name}</button><br>`;
+}
+
+async function renderItems(containerId, items, idField, nameField, onClick) {
+    el(containerId).innerHTML = "";
+    items.forEach(item => {
+        el(containerId).innerHTML += createButtonRow(item[idField], item[nameField]);
+    });
+    
+    elAll(`${containerId} button`).forEach(btn => {
+        btn.addEventListener("click", () => onClick(btn.dataset.id));
+    });
+}
 
 async function showDisciples() {
-    return new Promise((resolve) => {
-        const transaction = db.transaction(["disciplines"], "readonly");
-        transaction.oncomplete = (event) => {
-            console.log("Loaded all disciplines!");
-            resolve();
-        };
-
-        transaction.onerror = (event) => {
-            console.error(event)
-            resolve();
-        };
-
-        const disciblineStore = transaction.objectStore("disciplines");
-        disciblineStore.getAll().onsuccess = (response) => {
-            response.target.result.forEach(el => {
-                document.querySelector("#discipline-selector-con").innerHTML += '<button data-id="' + el.id + '">' + el.name + '</button><br>';
-            })
-            document.querySelectorAll("#discipline-selector-con button").forEach((el) => {
-                el.addEventListener("click", () => {
-                    showDiscipline(el.dataset.id)
-                })
-            })
-        };
-    });
+    try {
+        const disciplines = await dbGetAll("disciplines");
+        renderItems("#discipline-selector-con", disciplines, "id", "name", showDiscipline);
+    } catch (error) {
+        console.error("Error loading disciplines:", error);
+    }
 }
 
 async function showDiscipline(id) {
-    return new Promise((resolve) => {
-        document.querySelector("#discipline-selector-con").style.display = "none";
-        document.querySelector("#discipline-con").style.display = "";
+    try {
+        toggle("#discipline-selector-con", false);
+        toggle("#discipline-con", true);
 
-        const transaction = db.transaction(["disciplines", "classes"], "readonly");
-        transaction.oncomplete = (event) => {
-            console.log("Loaded discipline!");
-        };
-
-        transaction.onerror = (event) => {
-            console.error(event)
-            resolve();
-        };
-
-        const disciblineStore = transaction.objectStore("disciplines");
-        disciblineStore.get(parseInt(id)).onsuccess = (response) => {
-            console.log(response.target.result)
-            document.querySelector("#discipline-con #discipline-header").innerHTML = response.target.result.name + "<br>";
-            localStorage.setItem("currentDiscipline", response.target.result.name);
-            showClasses();
-            resolve();
-        };
-    });
+        const discipline = await dbGet("disciplines", parseInt(id));
+        el("#discipline-con #discipline-header").innerHTML = discipline.name + "<br>";
+        localStorage.setItem("currentDiscipline", discipline.name);
+        await showClasses();
+    } catch (error) {
+        console.error("Error loading discipline:", error);
+    }
 }
 
 async function showClasses() {
-    return new Promise((resolve) => {
-        const transaction = db.transaction(["classes"], "readonly");
-        transaction.oncomplete = (event) => {
-            console.log("Loaded all classes!");
-            resolve();
-        };
-
-        transaction.onerror = (event) => {
-            console.error(event)
-            resolve();
-        };
-
-        const classStore = transaction.objectStore("classes");
-        classStore.getAll().onsuccess = (response) => {
-            response.target.result.forEach(el => {
-                document.querySelector("#discipline-con #class-selector-con").innerHTML += '<button data-id="' + el.name + '">' + el.name + '</button><br>';
-            })
-            document.querySelectorAll("#class-selector-con button").forEach((el) => {
-                el.addEventListener("click", () => {
-                    showClass(el.dataset.id)
-                })
-            })
-        };
-    });
+    try {
+        const classes = await dbGetAll("classes");
+        renderItems("#discipline-con #class-selector-con", classes, "name", "name", showClass);
+    } catch (error) {
+        console.error("Error loading classes:", error);
+    }
 }
 
-async function showClass(id) {
-    return new Promise((resolve) => {
-        document.querySelector("#class-selector-con").style.display = "none";
-        document.querySelector("#class-con").style.display = "";
+async function showClass(className) {
+    try {
+        toggle("#class-selector-con", false);
+        toggle("#class-con", true);
 
-        const transaction = db.transaction(["participants"], "readonly");
-        transaction.oncomplete = (event) => {
-            console.log("Loaded class!");
-            resolve();
-        };
+        const participants = await dbGetByIndex("participants", "class", className);
+        el("#class-body").innerHTML = "";
 
-        transaction.onerror = (event) => {
-            console.error(event)
-            resolve();
-        };
+        participants.forEach(p => {
+            el("#class-body").innerHTML += `<tr>
+                <td>${p.id}</td>
+                <td>${p.name}</td>
+                <td>${p.forename}</td>
+                <td>${p.remarks || ""}</td>
+                <td class='actions-con' data-id='${p.id}'></td>
+            </tr>`;
+        });
 
-        const participantStore = transaction.objectStore("participants");
-        participantStore.index("class").openCursor(IDBKeyRange.only(id)).onsuccess = (response) => {
-            const cursor = event.target.result;
-            if (cursor) {
-                var participant = cursor.value;
-                document.querySelector("#class-body").innerHTML += "<tr><td>" + participant.id + "</td><td>" + participant.name + "</td><td>" + participant.forename + "</td><td>" + (participant.remarks === null ? "" : participant.remarks) + "</td><td class='actions-con' data-id='" + participant.id + "'></td></tr>";
-                cursor.continue();
-            } else {
-                localStorage.setItem("timestamp", (new Date()).getTime() + "." + (new Date()).getMilliseconds())
-                document.querySelectorAll(".actions-con").forEach((el) => {
-                    el.innerHTML += "<button data-id='" + el.dataset.id + "'>Messung stoppen</button>";
-                    el.querySelector("button").addEventListener("click", (event) => {
-                        console.log(((new Date()).getTime() + ((new Date()).getMilliseconds() / 1000)) - (new Date(parseFloat(localStorage.getItem("timestamp"))).getTime()))
-                    })
-                })
-            }
-        };
-    });
+        const timestamp = Date.now();
+        localStorage.setItem("timestamp", timestamp);
+
+        elAll(".actions-con").forEach(el_val => {
+            el_val.innerHTML += `<button data-id='${el_val.dataset.id}'>Messung stoppen</button>`;
+            el_val.querySelector("button").addEventListener("click", () => {
+                console.log(Date.now() - timestamp);
+            });
+        });
+    } catch (error) {
+        console.error("Error loading class:", error);
+    }
 }
 
-function sync() {
-    return new Promise((resolve, reject) => {
-        const transaction = db.transaction(["measurements"], "readonly");
-        transaction.oncomplete = (event) => {
-            console.log("Sync transaction completed!");
-        };
+async function sync() {
+    try {
+        const measurements = await dbGetAll("measurements");
 
-        transaction.onerror = (event) => {
-            console.error("Transaction error:", event);
-            reject(event);
-        };
+        if (!measurements.length) {
+            console.log("No measurements to sync");
+            return;
+        }
 
-        const measurementStore = transaction.objectStore("measurements");
-        measurementStore.getAll().onsuccess = async (event) => {
-            const measurements = event.target.result;
-            
-            if (measurements.length === 0) {
-                console.log("No measurements to sync");
-                resolve();
-                return;
-            }
-            
-            try {
-                const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), SYNC_TIMEOUT_B);
-                
-                const response = await fetch("http://localhost:80/sync", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify(measurements),
-                    signal: controller.signal
-                });
-                
-                clearTimeout(timeoutId);
-                
-                if (!response.ok) {
-                    console.error("Sync failed:", response.statusText);
-                    reject(new Error(`Sync failed: ${response.statusText}`));
-                    return;
-                }
-                
-                const data = await response.json();
-                await updateDB(data);
-                await deleteMeasurements();
-                resolve();
-            } catch (error) {
-                console.error("Error syncing:", error);
-                reject(error);
-            }
-        };
-    });
-}
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), SYNC_TIMEOUT_B);
 
-function updateDB(data) {
-    return new Promise((resolve, reject) => {
-        const transaction = db.transaction(["classes", "disciplines", "participants"], "readwrite");
-        transaction.oncomplete = (event) => {
-            console.log("Database updated after sync!");
-            resolve();
-        };
+        const response = await fetch("http://localhost:80/sync", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(measurements),
+            signal: controller.signal
+        });
 
-        transaction.onerror = (event) => {
-            console.error("Error updating DB:", event);
-            reject(event);
-        };
+        clearTimeout(timeout);
 
-        // Clear and update classes
-        const classStore = transaction.objectStore("classes");
-        classStore.clear().onsuccess = () => {
-            if (data.classes) {
-                data.classes.forEach((el) => {
-                    classStore.add(el);
-                });
-            }
-        };
+        if (!response.ok) throw new Error(`Sync failed: ${response.statusText}`);
 
-        // Clear and update disciplines
-        const disciplineStore = transaction.objectStore("disciplines");
-        disciplineStore.clear().onsuccess = () => {
-            if (data.disciplines) {
-                data.disciplines.forEach((el) => {
-                    disciplineStore.add(el);
-                });
-            }
-        };
+        const data = await response.json();
 
-        // Clear and update participants
-        const participantStore = transaction.objectStore("participants");
-        participantStore.clear().onsuccess = () => {
-            if (data.participants) {
-                data.participants.forEach((el) => {
-                    participantStore.add(el);
-                });
-            }
-        };
-    });
-}
+        await Promise.all([
+            dbClear("classes"),
+            dbClear("disciplines"),
+            dbClear("participants")
+        ]);
 
-function deleteMeasurements() {
-    return new Promise((resolve, reject) => {
-        const transaction = db.transaction(["measurements"], "readwrite");
-        transaction.oncomplete = (event) => {
-            console.log("All measurements deleted after sync!");
-            resolve();
-        };
+        await Promise.all([
+            data.classes && dbAddItems("classes", data.classes),
+            data.disciplines && dbAddItems("disciplines", data.disciplines),
+            data.participants && dbAddItems("participants", data.participants)
+        ].filter(Boolean));
 
-        transaction.onerror = (event) => {
-            console.error("Error deleting measurements:", event);
-            reject(event);
-        };
-
-        const measurementStore = transaction.objectStore("measurements");
-        measurementStore.clear();
-    });
+        await dbClear("measurements");
+        console.log("Sync completed");
+    } catch (error) {
+        console.error("Sync error:", error);
+        throw error;
+    }
 }
 
 async function startSyncFlow() {
-    if (syncFlowRunning) {
-        console.log("Sync flow already running");
-        return;
-    }
-    
+    if (syncFlowRunning) return;
+
     syncFlowRunning = true;
-    console.log("Starting sync flow...");
-    
+
     while (syncFlowRunning) {
         try {
             await sync();
-            console.log("Sync successful, waiting", SYNC_INTERVAL_A, "ms before next sync");
-            await new Promise(resolve => setTimeout(resolve, SYNC_INTERVAL_A));
-        } catch (error) {
-            console.error("Sync failed (offline or timeout):", error.message);
-            console.log("Waiting", SYNC_RETRY_INTERVAL_C, "ms before retry...");
-            await new Promise(resolve => setTimeout(resolve, SYNC_RETRY_INTERVAL_C));
+            await wait(SYNC_INTERVAL_A);
+        } catch {
+            await wait(SYNC_RETRY_INTERVAL_C);
         }
     }
 }
 
-function stopSyncFlow() {
+const stopSyncFlow = () => {
     syncFlowRunning = false;
-    console.log("Sync flow stopped");
-}
+};
+
+openDB();
