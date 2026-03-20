@@ -228,9 +228,24 @@ function openDB() {
 
 async function fillDB() {
     try {
+        // Check for saved selections BEFORE showing disciplines
+        const lastDisciplineId = localStorage.getItem("lastDisciplineId");
+        const lastClassName = localStorage.getItem("lastClassName");
+        
         if (await dbCount("classes") > 0) {
             console.log("DB already populated");
-            return showDisciples();
+            // If we have saved selections, resume immediately without clearing
+            if (lastDisciplineId && lastClassName) {
+                await showDiscipline(lastDisciplineId);
+                await showClass(lastClassName);
+                return;
+            } else if (lastDisciplineId) {
+                await showDiscipline(lastDisciplineId);
+                return;
+            }
+            // Otherwise show discipline selector
+            await showDisciples();
+            return;
         }
 
         const data = await fetchJSON("http://localhost:80/data");
@@ -243,7 +258,16 @@ async function fillDB() {
         ]);
 
         console.log("Database initialized");
-        await showDisciples();
+        // If we have saved selections, resume immediately without clearing
+        if (lastDisciplineId && lastClassName) {
+            await showDiscipline(lastDisciplineId);
+            await showClass(lastClassName);
+        } else if (lastDisciplineId) {
+            await showDiscipline(lastDisciplineId);
+        } else {
+            // Otherwise show discipline selector
+            await showDisciples();
+        }
     } catch (error) {
         console.error("Error filling DB:", error);
     }
@@ -268,6 +292,11 @@ async function showDisciples() {
     try {
         const disciplines = await dbGetAll("disciplines");
         renderItems("#discipline-selector-con", disciplines, "id", "name", showDiscipline);
+        
+        // Hide discipline and class views
+        toggle("#discipline-con", false);
+        toggle("#discipline-selector-con", true);
+        toggle("#global-timer-con", false);
     } catch (error) {
         console.error("Error loading disciplines:", error);
     }
@@ -282,10 +311,22 @@ async function showDiscipline(id) {
         el("#discipline-con #discipline-header").innerHTML = discipline.name + "<br>";
         localStorage.setItem("currentDiscipline", discipline.name);
         localStorage.setItem("currentDisciplineId", discipline.id);
+        localStorage.setItem("lastDisciplineId", id);
         localStorage.setItem("currentDisciplineUnit", discipline.unit);
         currentDisciplineTimer = discipline.timer || false;
         localStorage.setItem("currentDisciplineTimer", currentDisciplineTimer);
         await showClasses();
+        
+        // Attach back button listener after all DOM elements are ready
+        await wait(10);
+        const backBtn = el("#back-to-disciplines-btn");
+        if (backBtn) {
+            backBtn.onclick = () => {
+                localStorage.removeItem("lastDisciplineId");
+                localStorage.removeItem("lastClassName");
+                showDisciples();
+            };
+        }
     } catch (error) {
         console.error("Error loading discipline:", error);
     }
@@ -295,6 +336,8 @@ async function showClasses() {
     try {
         const classes = await dbGetAll("classes");
         renderItems("#discipline-con #class-selector-con", classes, "name", "name", showClass);
+        // Hide global timer when showing class selector
+        toggle("#global-timer-con", false);
     } catch (error) {
         console.error("Error loading classes:", error);
     }
@@ -304,6 +347,9 @@ async function showClass(className) {
     try {
         toggle("#class-selector-con", false);
         toggle("#class-con", true);
+        
+        // Save the selected class
+        localStorage.setItem("lastClassName", className);
 
         const participants = await dbGetByIndex("participants", "class", className);
         currentClassParticipants = participants;
@@ -350,6 +396,18 @@ async function showClass(className) {
         }
 
         attachMeasurementListeners(participants);
+        
+        // Attach back button listener after all DOM elements are ready
+        await wait(10);
+        const backBtn = el("#back-to-classes-btn");
+        if (backBtn) {
+            backBtn.onclick = () => {
+                localStorage.removeItem("lastClassName");
+                toggle("#class-con", false);
+                toggle("#class-selector-con", true);
+                toggle("#global-timer-con", false);
+            };
+        }
     } catch (error) {
         console.error("Error loading class:", error);
     }
