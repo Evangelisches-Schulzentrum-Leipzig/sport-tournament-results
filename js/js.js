@@ -10,26 +10,16 @@ var db;
 var syncFlowRunning = false;
 
 function getData() {
-    return {
-        "classes": [
-            {"name": "10a", "level": 10},
-            {"name": "10b", "level": 10},
-            {"name": "10c", "level": 10},
-        ],
-        "participants": [
-            {"id": 1, "name": "Müller", "forename": "Max", "class": "10a", "remarks": null},
-            {"id": 2, "name": "Müller", "forename": "Marie", "class": "10a", "remarks": null},
-            {"id": 3, "name": "King", "forename": "Alice", "class": "10b", "remarks": "Isst nur Tomaten"},
-            {"id": 4, "name": "von Burg", "forename": "Bob", "class": "10b", "remarks": "Kann nicht springen"},
-            {"id": 5, "name": "Conel", "forename": "Craig", "class": "10c", "remarks": null},
-        ],
-        "disciplines": [
-            {"id": 1, "name": "800m Lauf", "unit": "s", "timer": true},
-            {"id": 2, "name": "Sprint", "unit": "s", "timer": false},
-            {"id": 3, "name": "Weitwurf", "unit": "m", "timer": false},
-            {"id": 4, "name": "3-Fach Schritt", "unit": "m", "timer": false},
-        ]
-    }
+    return fetch("http://localhost:80/data")
+        .then(response => response.json())
+        .catch(error => {
+            console.error("Error fetching data from API:", error);
+            return {
+                "classes": [],
+                "participants": [],
+                "disciplines": []
+            };
+        });
 }
 
 function openDB() {
