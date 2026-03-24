@@ -1,0 +1,1078 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sport Tournament - Central</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        * {
+            scrollbar-width: thin;
+            scrollbar-color: rgb(209, 213, 219) rgb(249, 250, 251);
+        }
+        
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: rgb(249, 250, 251);
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: rgb(209, 213, 219);
+            border-radius: 4px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgb(156, 163, 175);
+        }
+
+        .nav-tab {
+            transition: all 0.2s;
+            border-bottom: 3px solid transparent;
+        }
+
+        .nav-tab.active {
+            border-bottom-color: rgb(31, 41, 55);
+            color: rgb(31, 41, 55);
+            font-weight: 600;
+        }
+
+        .nav-tab:not(.active) {
+            color: rgb(107, 114, 128);
+        }
+
+        .nav-tab:hover:not(.active) {
+            color: rgb(55, 65, 81);
+        }
+
+        .stat-card {
+            background: white;
+            border: 1px solid rgb(229, 231, 235);
+            border-radius: 8px;
+            padding: 20px;
+            transition: all 0.2s;
+        }
+
+        .stat-card:hover {
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07);
+        }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+
+        .status-badge.complete {
+            background: rgb(220, 252, 231);
+            color: rgb(22, 163, 74);
+        }
+
+        .status-badge.pending {
+            background: rgb(254, 243, 199);
+            color: rgb(161, 98, 7);
+        }
+
+        .status-badge.error {
+            background: rgb(254, 226, 226);
+            color: rgb(220, 38, 38);
+        }
+
+        .status-badge.online {
+            background: rgb(220, 252, 231);
+            color: rgb(22, 163, 74);
+        }
+
+        .status-badge.offline {
+            background: rgb(243, 244, 246);
+            color: rgb(107, 114, 128);
+        }
+
+        .sync-indicator {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: rgb(34, 197, 94);
+        }
+
+        .sync-indicator.syncing {
+            background: rgb(251, 146, 60);
+            animation: pulse 1.5s infinite;
+        }
+
+        .sync-indicator.error {
+            background: rgb(239, 68, 68);
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .page {
+            display: none;
+        }
+
+        .page.active {
+            display: block;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        thead tr {
+            border-bottom: 2px solid rgb(229, 231, 235);
+            background: rgb(249, 250, 251);
+        }
+
+        th {
+            padding: 12px 16px;
+            text-align: left;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            color: rgb(75, 85, 99);
+        }
+
+        td {
+            padding: 12px 16px;
+            border-bottom: 1px solid rgb(243, 244, 246);
+            font-size: 14px;
+            color: rgb(55, 65, 81);
+        }
+
+        tbody tr:hover {
+            background: rgb(249, 250, 251);
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <div class="flex flex-col h-screen">
+        <!-- Header -->
+        <div class="bg-white border-b border-gray-200 px-8 py-4 shadow-sm flex justify-between items-center">
+            <h1 class="text-2xl font-bold text-gray-900">Sport Tournament Central</h1>
+            <div class="flex items-center gap-4">
+                <div class="flex items-center gap-2 px-3 py-1 bg-gray-100 rounded-lg">
+                    <span class="sync-indicator"></span>
+                    <span class="text-sm font-medium text-gray-700">Sync: <span id="syncPending">0</span> pending</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Navigation -->
+        <div class="bg-white border-b border-gray-200 px-8">
+            <div class="flex gap-8">
+                <button class="nav-tab active py-4 px-1 cursor-pointer" onclick="switchPage('dashboard')">
+                    Dashboard
+                </button>
+                <button class="nav-tab py-4 px-1 cursor-pointer" onclick="switchPage('participants')">
+                    Participants
+                </button>
+                <button class="nav-tab py-4 px-1 cursor-pointer" onclick="switchPage('rankings')">
+                    Rankings
+                </button>
+                <button class="nav-tab py-4 px-1 cursor-pointer" onclick="switchPage('sync')">
+                    Synchronization
+                </button>
+                <button class="nav-tab py-4 px-1 cursor-pointer" onclick="switchPage('settings')">
+                    Settings
+                </button>
+                <button class="nav-tab py-4 px-1 cursor-pointer" onclick="switchPage('reports')">
+                    Reports
+                </button>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="flex-1 overflow-y-auto">
+            <!-- Dashboard Page -->
+            <div id="dashboard" class="page active">
+                <div class="p-8 space-y-8">
+                    <!-- Import Base Data -->
+                    <div class="stat-card">
+                        <h3 class="text-sm font-semibold text-gray-600 mb-4 uppercase tracking-wider">Base Data & Configuration</h3>
+                        <div class="flex items-center gap-4">
+                            <input type="file" id="importFile" class="px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900" accept=".csv,.xlsx,.json">
+                            <button class="px-4 py-2 bg-gray-900 text-white text-sm font-medium rounded hover:bg-gray-800 transition-colors" onclick="handleImportData()">
+                                Import Data
+                            </button>
+                            <span class="text-sm text-gray-600">Status: Ready</span>
+                        </div>
+                    </div>
+
+                    <!-- Quick Stats -->
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <div class="stat-card">
+                            <h3 class="text-sm font-semibold text-gray-600 mb-4 uppercase tracking-wider">Quick Stats</h3>
+                            <div class="space-y-3">
+                                <div class="flex justify-between items-center">
+                                    <span class="text-gray-700">Disciplines:</span>
+                                    <span class="font-semibold text-gray-900">4</span>
+                                </div>
+                                <div class="flex justify-between items-center">
+                                    <span class="text-gray-700">Classes:</span>
+                                    <span class="font-semibold text-gray-900">4</span>
+                                </div>
+                                <div class="flex justify-between items-center">
+                                    <span class="text-gray-700">Helpers:</span>
+                                    <span class="font-semibold text-gray-900">8</span>
+                                </div>
+                                <div class="flex justify-between items-center">
+                                    <span class="text-gray-700">Participants:</span>
+                                    <span class="font-semibold text-gray-900">120</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="stat-card lg:col-span-2">
+                            <h3 class="text-sm font-semibold text-gray-600 mb-4 uppercase tracking-wider">Class Levels</h3>
+                            <div class="space-y-2">
+                                <div class="flex justify-between items-center pb-2 border-b border-gray-200">
+                                    <span class="text-gray-700">Beginner (U10)</span>
+                                    <span class="text-sm text-gray-600">30 participants</span>
+                                </div>
+                                <div class="flex justify-between items-center pb-2 border-b border-gray-200">
+                                    <span class="text-gray-700">Intermediate (U12, U14)</span>
+                                    <span class="text-sm text-gray-600">60 participants</span>
+                                </div>
+                                <div class="flex justify-between items-center">
+                                    <span class="text-gray-700">Advanced (U16)</span>
+                                    <span class="text-sm text-gray-600">30 participants</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Helper Status -->
+                    <div class="stat-card">
+                        <h3 class="text-sm font-semibold text-gray-600 mb-4 uppercase tracking-wider">Helper Status</h3>
+                        <div class="space-y-3">
+                            <div class="flex items-center justify-between pb-3 border-b border-gray-200">
+                                <div>
+                                    <p class="font-medium text-gray-900">Station 1</p>
+                                    <p class="text-sm text-gray-600">Last sync: 1m ago</p>
+                                </div>
+                                <div class="flex items-center gap-4">
+                                    <span class="status-badge online">Online</span>
+                                    <span class="text-sm font-semibold text-gray-700">3 pending</span>
+                                </div>
+                            </div>
+                            <div class="flex items-center justify-between pb-3 border-b border-gray-200">
+                                <div>
+                                    <p class="font-medium text-gray-900">Station 2</p>
+                                    <p class="text-sm text-gray-600">Last sync: 3m ago</p>
+                                </div>
+                                <div class="flex items-center gap-4">
+                                    <span class="status-badge online">Online</span>
+                                    <span class="text-sm font-semibold text-gray-700">2 pending</span>
+                                </div>
+                            </div>
+                            <div class="flex items-center justify-between pb-3 border-b border-gray-200">
+                                <div>
+                                    <p class="font-medium text-gray-900">Station 3</p>
+                                    <p class="text-sm text-gray-600">Last sync: 2m ago</p>
+                                </div>
+                                <div class="flex items-center gap-4">
+                                    <span class="status-badge online">Online</span>
+                                    <span class="text-sm font-semibold text-gray-700">4 pending</span>
+                                </div>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <p class="font-medium text-gray-900">Station 4</p>
+                                    <p class="text-sm text-gray-600">Last sync: 15m ago</p>
+                                </div>
+                                <div class="flex items-center gap-4">
+                                    <span class="status-badge offline">Offline</span>
+                                    <span class="text-sm font-semibold text-gray-700">3 pending</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Helper Sync Activity -->
+                    <div class="stat-card">
+                        <h3 class="text-sm font-semibold text-gray-600 mb-4 uppercase tracking-wider">Helper Sync Activity</h3>
+                        <div class="space-y-3">
+                            <div class="flex items-center justify-between pb-3 border-b border-gray-200">
+                                <div>
+                                    <p class="font-medium text-gray-900">Station 3 - 800m</p>
+                                    <p class="text-sm text-gray-600">12 entries synced</p>
+                                </div>
+                                <span class="status-badge complete">Synced</span>
+                            </div>
+                            <div class="flex items-center justify-between pb-3 border-b border-gray-200">
+                                <div>
+                                    <p class="font-medium text-gray-900">Station 1 - 50m</p>
+                                    <p class="text-sm text-gray-600">8 entries pending</p>
+                                </div>
+                                <span class="status-badge pending">Pending</span>
+                            </div>
+                            <div class="flex items-center justify-between pb-3 border-b border-gray-200">
+                                <div>
+                                    <p class="font-medium text-gray-900">Station 2 - 3-Jump</p>
+                                    <p class="text-sm text-gray-600">5 entries synced</p>
+                                </div>
+                                <span class="status-badge complete">Synced</span>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <p class="font-medium text-gray-900">Conflict detected</p>
+                                    <p class="text-sm text-gray-600">David Weber, 3-Jump attempt 1</p>
+                                </div>
+                                <span class="status-badge error">Error</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Participants Page -->
+            <div id="participants" class="page">
+                <div class="p-8 space-y-6">
+                    <div class="flex justify-between items-center gap-4">
+                        <div class="flex gap-4">
+                            <select class="px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900" onchange="handleFilter()">
+                                <option>All Classes</option>
+                                <option>U10</option>
+                                <option>U12</option>
+                                <option>U14</option>
+                                <option>U16</option>
+                            </select>
+                            <select class="px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900" onchange="handleFilter()">
+                                <option>All Genders</option>
+                                <option>Male</option>
+                                <option>Female</option>
+                            </select>
+                            <input type="text" placeholder="Search participants..." class="px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900" onkeyup="handleSearch()">
+                        </div>
+                        <div class="flex gap-2">
+                            <button class="px-4 py-2 bg-gray-900 text-white text-sm font-medium rounded hover:bg-gray-800 transition-colors" onclick="handleAddParticipant()">
+                                + Add Participant
+                            </button>
+                            <button class="px-4 py-2 border border-gray-300 text-gray-700 text-sm font-medium rounded hover:bg-gray-50 transition-colors" onclick="handleExport()">
+                                Export
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-lg border border-gray-200 overflow-x-auto">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>First Name</th>
+                                    <th>Last Name</th>
+                                    <th>Class</th>
+                                    <th>Gender</th>
+                                    <th>Status</th>
+                                    <th>Competition Progress</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>001</td>
+                                    <td>Anna</td>
+                                    <td>Mueller</td>
+                                    <td>U10</td>
+                                    <td>Female</td>
+                                    <td><span class="status-badge complete">Complete</span></td>
+                                    <td>4/4</td>
+                                    <td><button class="text-gray-600 hover:text-gray-900" onclick="handleEdit()">Edit</button></td>
+                                </tr>
+                                <tr>
+                                    <td>002</td>
+                                    <td>Bruno</td>
+                                    <td>Schmitz</td>
+                                    <td>U10</td>
+                                    <td>Male</td>
+                                    <td><span class="status-badge pending">Pending</span></td>
+                                    <td>2/4</td>
+                                    <td><button class="text-gray-600 hover:text-gray-900" onclick="handleEdit()">Edit</button></td>
+                                </tr>
+                                <tr>
+                                    <td>003</td>
+                                    <td>Clara</td>
+                                    <td>Rossi</td>
+                                    <td>U10</td>
+                                    <td>Female</td>
+                                    <td><span class="status-badge complete">Complete</span></td>
+                                    <td>4/4</td>
+                                    <td><button class="text-gray-600 hover:text-gray-900" onclick="handleEdit()">Edit</button></td>
+                                </tr>
+                                <tr>
+                                    <td>004</td>
+                                    <td>David</td>
+                                    <td>Weber</td>
+                                    <td>U10</td>
+                                    <td>Male</td>
+                                    <td><span class="status-badge error">Error</span></td>
+                                    <td>3/4</td>
+                                    <td><button class="text-gray-600 hover:text-gray-900" onclick="handleEdit()">Edit</button></td>
+                                </tr>
+                                <tr>
+                                    <td>005</td>
+                                    <td>Eva</td>
+                                    <td>Keller</td>
+                                    <td>U10</td>
+                                    <td>Female</td>
+                                    <td><span class="status-badge complete">Complete</span></td>
+                                    <td>4/4</td>
+                                    <td><button class="text-gray-600 hover:text-gray-900" onclick="handleEdit()">Edit</button></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Rankings Page -->
+            <div id="rankings" class="page">
+                <div class="p-8 space-y-6">
+                    <div class="flex gap-4 border-b border-gray-200 pb-4">
+                        <button class="px-4 py-2 border-b-2 border-gray-900 font-medium text-gray-900" onclick="switchRankingTab('overall')">
+                            Overall
+                        </button>
+                        <button class="px-4 py-2 border-b-2 border-transparent font-medium text-gray-600 hover:text-gray-900" onclick="switchRankingTab('byclass')">
+                            By Class Level
+                        </button>
+                        <button class="px-4 py-2 border-b-2 border-transparent font-medium text-gray-600 hover:text-gray-900" onclick="switchRankingTab('bydiscipline')">
+                            By Discipline
+                        </button>
+                    </div>
+
+                    <div class="flex gap-4 mb-4">
+                        <select class="px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900" onchange="handleFilter()">
+                            <option>All Class Levels</option>
+                            <option>Beginner</option>
+                            <option>Intermediate</option>
+                            <option>Advanced</option>
+                            <option>Elite</option>
+                        </select>
+                        <button class="px-4 py-2 text-sm text-gray-600 hover:text-gray-900" onclick="handleRefresh()">Refresh</button>
+                    </div>
+
+                    <div class="bg-white rounded-lg border border-gray-200 overflow-x-auto">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Rank</th>
+                                    <th>Name</th>
+                                    <th colspan="2">800m</th>
+                                    <th colspan="2">50m</th>
+                                    <th colspan="2">3-Jump</th>
+                                    <th colspan="2">Throw</th>
+                                    <th>Aggregate</th>
+                                </tr>
+                                <tr style="border-top: none; background: white;">
+                                    <th></th>
+                                    <th></th>
+                                    <th style="font-size: 11px;">Val</th>
+                                    <th style="font-size: 11px;">Pts</th>
+                                    <th style="font-size: 11px;">Val</th>
+                                    <th style="font-size: 11px;">Pts</th>
+                                    <th style="font-size: 11px;">Val</th>
+                                    <th style="font-size: 11px;">Pts</th>
+                                    <th style="font-size: 11px;">Val</th>
+                                    <th style="font-size: 11px;">Pts</th>
+                                    <th style="font-size: 11px;">Pts</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><span class="font-bold text-lg">1</span></td>
+                                    <td>Anna Mueller</td>
+                                    <td>182.5s</td>
+                                    <td>25</td>
+                                    <td>7.5s</td>
+                                    <td>24</td>
+                                    <td>6.2m</td>
+                                    <td>23</td>
+                                    <td>32m</td>
+                                    <td>25</td>
+                                    <td class="font-bold text-gray-900">97</td>
+                                </tr>
+                                <tr>
+                                    <td><span class="font-bold text-lg">2</span></td>
+                                    <td>Clara Rossi</td>
+                                    <td>184.1s</td>
+                                    <td>23</td>
+                                    <td>7.3s</td>
+                                    <td>25</td>
+                                    <td>5.8m</td>
+                                    <td>21</td>
+                                    <td>31m</td>
+                                    <td>23</td>
+                                    <td class="font-bold text-gray-900">92</td>
+                                </tr>
+                                <tr>
+                                    <td><span class="font-bold text-lg">3</span></td>
+                                    <td>Eva Keller</td>
+                                    <td>185.5s</td>
+                                    <td>22</td>
+                                    <td>7.8s</td>
+                                    <td>22</td>
+                                    <td>6.5m</td>
+                                    <td>24</td>
+                                    <td>30m</td>
+                                    <td>22</td>
+                                    <td class="font-bold text-gray-900">90</td>
+                                </tr>
+                                <tr>
+                                    <td><span class="font-bold text-lg">4</span></td>
+                                    <td>David Weber</td>
+                                    <td>190s</td>
+                                    <td>20</td>
+                                    <td>-</td>
+                                    <td>0</td>
+                                    <td>6.1m</td>
+                                    <td>22</td>
+                                    <td>29m</td>
+                                    <td>21</td>
+                                    <td class="font-bold text-gray-900">63</td>
+                                </tr>
+                                <tr>
+                                    <td><span class="font-bold text-lg">5</span></td>
+                                    <td>Bruno Schmitz</td>
+                                    <td>-</td>
+                                    <td>0</td>
+                                    <td>-</td>
+                                    <td>0</td>
+                                    <td>5.5m</td>
+                                    <td>19</td>
+                                    <td>28m</td>
+                                    <td>20</td>
+                                    <td class="font-bold text-gray-900">39</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="flex gap-2">
+                        <button class="px-4 py-2 border border-gray-300 text-gray-700 text-sm font-medium rounded hover:bg-gray-50 transition-colors" onclick="handleExport()">
+                            Export PDF
+                        </button>
+                        <button class="px-4 py-2 border border-gray-300 text-gray-700 text-sm font-medium rounded hover:bg-gray-50 transition-colors" onclick="handleExport()">
+                            Export CSV
+                        </button>
+                        <button class="px-4 py-2 border border-gray-300 text-gray-700 text-sm font-medium rounded hover:bg-gray-50 transition-colors" onclick="handlePrint()">
+                            Print
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Synchronization Page -->
+            <div id="sync" class="page">
+                <div class="p-8 space-y-6">
+                    <div class="stat-card">
+                        <div class="flex justify-between items-start mb-4">
+                            <h3 class="text-sm font-semibold text-gray-600 uppercase tracking-wider">Helper Sync Control</h3>
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input type="checkbox" checked onchange="toggleAutoSync()">
+                                <span class="text-sm text-gray-700">Auto-Sync Enabled</span>
+                            </label>
+                        </div>
+                        <div class="grid grid-cols-3 gap-4">
+                            <button class="px-4 py-2 bg-gray-900 text-white text-sm font-medium rounded hover:bg-gray-800 transition-colors" onclick="handleSync()">
+                                Sync Now
+                            </button>
+                            <div>
+                                <p class="text-sm text-gray-600">Last Global Sync</p>
+                                <p class="font-semibold text-gray-900">2 minutes ago</p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-600">Next Sync</p>
+                                <p class="font-semibold text-gray-900">In 58 seconds</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <h3 class="text-sm font-semibold text-gray-600 mb-4 uppercase tracking-wider">Helper Stations</h3>
+                        <div class="bg-white rounded-lg border border-gray-200 overflow-x-auto">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Station</th>
+                                        <th>Status</th>
+                                        <th>Last Sync</th>
+                                        <th>Pending</th>
+                                        <th>Errors</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>Station 1</td>
+                                        <td><span class="status-badge online">Online</span></td>
+                                        <td>1m ago</td>
+                                        <td class="font-semibold">3</td>
+                                        <td>0</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Station 2</td>
+                                        <td><span class="status-badge online">Online</span></td>
+                                        <td>3m ago</td>
+                                        <td class="font-semibold">2</td>
+                                        <td>0</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Station 3</td>
+                                        <td><span class="status-badge online">Online</span></td>
+                                        <td>2m ago</td>
+                                        <td class="font-semibold">4</td>
+                                        <td>0</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Station 4</td>
+                                        <td><span class="status-badge offline">Offline</span></td>
+                                        <td>15m ago</td>
+                                        <td class="font-semibold">3</td>
+                                        <td>1</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <h3 class="text-sm font-semibold text-gray-600 mb-4 uppercase tracking-wider">Pending Entries Queue (12)</h3>
+                        <div class="bg-white rounded-lg border border-gray-200 overflow-x-auto">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Station</th>
+                                        <th>Name</th>
+                                        <th>Discipline</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>Station 1</td>
+                                        <td>Bruno Schmitz</td>
+                                        <td>50m</td>
+                                        <td><span class="status-badge pending">Waiting</span></td>
+                                    </tr>
+                                    <tr>
+                                        <td>Station 1</td>
+                                        <td>David Weber</td>
+                                        <td>800m</td>
+                                        <td><span class="status-badge pending">Waiting</span></td>
+                                    </tr>
+                                    <tr>
+                                        <td>Station 3</td>
+                                        <td>Eva Keller</td>
+                                        <td>3-Jump</td>
+                                        <td><span class="status-badge error">Conflict</span></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="stat-card border-red-200 bg-red-50">
+                        <h3 class="text-sm font-semibold text-red-900 mb-4 uppercase tracking-wider">Conflict Resolution</h3>
+                        <div class="space-y-4">
+                            <div>
+                                <p class="font-medium text-red-900">Station 3 - Eva Keller, 3-Jump, Attempt 1</p>
+                                <p class="text-sm text-red-800 mt-1">Conflict detected between station and database data</p>
+                            </div>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div class="p-3 bg-white rounded border border-red-200">
+                                    <p class="text-xs text-gray-600 uppercase">Station Value</p>
+                                    <p class="text-lg font-semibold text-gray-900">6.5m</p>
+                                </div>
+                                <div class="p-3 bg-white rounded border border-red-200">
+                                    <p class="text-xs text-gray-600 uppercase">Database Value</p>
+                                    <p class="text-lg font-semibold text-gray-900">6.2m</p>
+                                </div>
+                            </div>
+                            <div class="flex gap-2">
+                                <button class="px-4 py-2 bg-red-600 text-white text-sm font-medium rounded hover:bg-red-700 transition-colors" onclick="handleResolve('accept')">
+                                    Accept Station (6.5m)
+                                </button>
+                                <button class="px-4 py-2 bg-gray-300 text-gray-900 text-sm font-medium rounded hover:bg-gray-400 transition-colors" onclick="handleResolve('keep')">
+                                    Keep Database (6.2m)
+                                </button>
+                                <button class="px-4 py-2 border border-gray-300 text-gray-700 text-sm font-medium rounded hover:bg-gray-50 transition-colors" onclick="handleResolve('manual')">
+                                    Manual Review
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Settings Page -->
+            <div id="settings" class="page">
+                <div class="p-8 space-y-6">
+                    <div class="stat-card">
+                        <h3 class="text-sm font-semibold text-gray-600 mb-6 uppercase tracking-wider">Disciplines Management</h3>
+                        <div class="flex justify-end mb-4">
+                            <button class="px-4 py-2 bg-gray-900 text-white text-sm font-medium rounded hover:bg-gray-800 transition-colors" onclick="handleAddDiscipline()">
+                                + Add Discipline
+                            </button>
+                        </div>
+                        <div class="bg-white rounded-lg border border-gray-200 overflow-x-auto">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Name</th>
+                                        <th>Type</th>
+                                        <th>Max Attempts</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>800m Run</td>
+                                        <td>Time (seconds)</td>
+                                        <td>1</td>
+                                        <td><button class="text-gray-600 hover:text-gray-900" onclick="handleEdit()">Edit</button></td>
+                                    </tr>
+                                    <tr>
+                                        <td>50m Sprint</td>
+                                        <td>Time (seconds)</td>
+                                        <td>1</td>
+                                        <td><button class="text-gray-600 hover:text-gray-900" onclick="handleEdit()">Edit</button></td>
+                                    </tr>
+                                    <tr>
+                                        <td>3-Jump</td>
+                                        <td>Distance (meters)</td>
+                                        <td>2</td>
+                                        <td><button class="text-gray-600 hover:text-gray-900" onclick="handleEdit()">Edit</button></td>
+                                    </tr>
+                                    <tr>
+                                        <td>Distance Throw</td>
+                                        <td>Distance (meters)</td>
+                                        <td>2</td>
+                                        <td><button class="text-gray-600 hover:text-gray-900" onclick="handleEdit()">Edit</button></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <h3 class="text-sm font-semibold text-gray-600 mb-6 uppercase tracking-wider">Classes & Class Levels</h3>
+                        <div class="flex justify-end mb-4">
+                            <button class="px-4 py-2 bg-gray-900 text-white text-sm font-medium rounded hover:bg-gray-800 transition-colors" onclick="handleAddClass()">
+                                + Add Class
+                            </button>
+                        </div>
+                        <div class="bg-white rounded-lg border border-gray-200 overflow-x-auto">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Class Name</th>
+                                        <th>Class Level</th>
+                                        <th>Min Age</th>
+                                        <th>Max Age</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>U10</td>
+                                        <td>Beginner</td>
+                                        <td>8</td>
+                                        <td>10</td>
+                                        <td><button class="text-gray-600 hover:text-gray-900" onclick="handleEdit()">Edit</button></td>
+                                    </tr>
+                                    <tr>
+                                        <td>U12</td>
+                                        <td>Intermediate</td>
+                                        <td>10</td>
+                                        <td>12</td>
+                                        <td><button class="text-gray-600 hover:text-gray-900" onclick="handleEdit()">Edit</button></td>
+                                    </tr>
+                                    <tr>
+                                        <td>U14</td>
+                                        <td>Intermediate</td>
+                                        <td>12</td>
+                                        <td>14</td>
+                                        <td><button class="text-gray-600 hover:text-gray-900" onclick="handleEdit()">Edit</button></td>
+                                    </tr>
+                                    <tr>
+                                        <td>U16</td>
+                                        <td>Elite</td>
+                                        <td>14</td>
+                                        <td>16</td>
+                                        <td><button class="text-gray-600 hover:text-gray-900" onclick="handleEdit()">Edit</button></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <h3 class="text-sm font-semibold text-gray-600 mb-6 uppercase tracking-wider">Scoring Tables (by Class Level)</h3>
+                        <div class="grid grid-cols-2 gap-4 mb-6">
+                            <select class="px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900" onchange="updateScoringTable()">
+                                <option>800m Run</option>
+                                <option>50m Sprint</option>
+                                <option>3-Jump</option>
+                                <option>Distance Throw</option>
+                            </select>
+                            <select class="px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900" onchange="updateScoringTable()">
+                                <option selected>Beginner</option>
+                                <option>Intermediate</option>
+                                <option>Advanced</option>
+                                <option>Elite</option>
+                            </select>
+                        </div>
+                        <div class="flex justify-end mb-4">
+                            <button class="px-4 py-2 bg-gray-900 text-white text-sm font-medium rounded hover:bg-gray-800 transition-colors" onclick="handleAddScoringEntry()">
+                                + Add Entry
+                            </button>
+                        </div>
+                        <div class="bg-white rounded-lg border border-gray-200 overflow-x-auto">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Performance</th>
+                                        <th>Points</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>&le; 180s</td>
+                                        <td>25</td>
+                                        <td><button class="text-gray-600 hover:text-gray-900" onclick="handleEdit()">Edit</button></td>
+                                    </tr>
+                                    <tr>
+                                        <td>180 - 190s</td>
+                                        <td>24</td>
+                                        <td><button class="text-gray-600 hover:text-gray-900" onclick="handleEdit()">Edit</button></td>
+                                    </tr>
+                                    <tr>
+                                        <td>190 - 200s</td>
+                                        <td>23</td>
+                                        <td><button class="text-gray-600 hover:text-gray-900" onclick="handleEdit()">Edit</button></td>
+                                    </tr>
+                                    <tr>
+                                        <td>200 - 210s</td>
+                                        <td>22</td>
+                                        <td><button class="text-gray-600 hover:text-gray-900" onclick="handleEdit()">Edit</button></td>
+                                    </tr>
+                                    <tr>
+                                        <td>&gt; 210s</td>
+                                        <td>20</td>
+                                        <td><button class="text-gray-600 hover:text-gray-900" onclick="handleEdit()">Edit</button></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Reports Page -->
+            <div id="reports" class="page">
+                <div class="p-8 space-y-6">
+                    <div class="stat-card">
+                        <h3 class="text-sm font-semibold text-gray-600 mb-6 uppercase tracking-wider">Generate Report</h3>
+                        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
+                            <select class="px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900" onchange="updateReportOptions()">
+                                <option>Select Report Type</option>
+                                <option>Overall Rankings</option>
+                                <option>By Class</option>
+                                <option>By Discipline</option>
+                                <option>Participant List</option>
+                            </select>
+                            <select class="px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900">
+                                <option>PDF</option>
+                                <option>CSV</option>
+                                <option>Excel</option>
+                            </select>
+                            <button class="px-4 py-2 bg-gray-900 text-white text-sm font-medium rounded hover:bg-gray-800 transition-colors" onclick="handleGenerateReport()">
+                                Generate Report
+                            </button>
+                        </div>
+                        <div class="space-y-2">
+                            <label class="flex items-center gap-2">
+                                <input type="checkbox" checked>
+                                <span class="text-sm">Include Charts</span>
+                            </label>
+                            <label class="flex items-center gap-2">
+                                <input type="checkbox" checked>
+                                <span class="text-sm">Include Statistics</span>
+                            </label>
+                            <label class="flex items-center gap-2">
+                                <input type="checkbox">
+                                <span class="text-sm">Include Detailed Results</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <h3 class="text-sm font-semibold text-gray-600 mb-4 uppercase tracking-wider">Recent Reports</h3>
+                        <div class="space-y-3">
+                            <div class="flex items-center justify-between pb-3 border-b border-gray-200">
+                                <div>
+                                    <p class="font-medium text-gray-900">Overall Rankings</p>
+                                    <p class="text-sm text-gray-600">2026-03-20 10:30</p>
+                                </div>
+                                <div class="flex gap-2">
+                                    <button class="text-sm text-gray-600 hover:text-gray-900" onclick="handleDownload()">PDF</button>
+                                    <button class="text-sm text-gray-600 hover:text-gray-900" onclick="handleDownload()">CSV</button>
+                                </div>
+                            </div>
+                            <div class="flex items-center justify-between pb-3 border-b border-gray-200">
+                                <div>
+                                    <p class="font-medium text-gray-900">By Class (U10)</p>
+                                    <p class="text-sm text-gray-600">2026-03-20 09:15</p>
+                                </div>
+                                <div class="flex gap-2">
+                                    <button class="text-sm text-gray-600 hover:text-gray-900" onclick="handleDownload()">PDF</button>
+                                    <button class="text-sm text-gray-600 hover:text-gray-900" onclick="handleDownload()">CSV</button>
+                                </div>
+                            </div>
+                            <div class="flex items-center justify-between pb-3 border-b border-gray-200">
+                                <div>
+                                    <p class="font-medium text-gray-900">800m Discipline Rankings</p>
+                                    <p class="text-sm text-gray-600">2026-03-20 08:45</p>
+                                </div>
+                                <div class="flex gap-2">
+                                    <button class="text-sm text-gray-600 hover:text-gray-900" onclick="handleDownload()">PDF</button>
+                                    <button class="text-sm text-gray-600 hover:text-gray-900" onclick="handleDownload()">CSV</button>
+                                </div>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <p class="font-medium text-gray-900">Participant List</p>
+                                    <p class="text-sm text-gray-600">2026-03-20 08:00</p>
+                                </div>
+                                <div class="flex gap-2">
+                                    <button class="text-sm text-gray-600 hover:text-gray-900" onclick="handleDownload()">PDF</button>
+                                    <button class="text-sm text-gray-600 hover:text-gray-900" onclick="handleDownload()">CSV</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function switchPage(pageName) {
+            // Hide all pages
+            document.querySelectorAll('.page').forEach(page => {
+                page.classList.remove('active');
+            });
+            
+            // Show selected page
+            document.getElementById(pageName).classList.add('active');
+            
+            // Update navigation tabs
+            document.querySelectorAll('.nav-tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            event.target.classList.add('active');
+        }
+
+        function switchRankingTab(tab) {
+            // For mockup purposes, just update active state
+            document.querySelectorAll('#rankings button').forEach(btn => {
+                if (btn.classList.contains('border-b-2')) {
+                    btn.classList.remove('border-gray-900');
+                    btn.classList.add('border-transparent', 'text-gray-600', 'hover:text-gray-900');
+                }
+            });
+            event.target.classList.add('border-gray-900', 'text-gray-900');
+            event.target.classList.remove('border-transparent', 'text-gray-600', 'hover:text-gray-900');
+        }
+
+        // UI Interaction Handlers
+        function handleImportData() {
+            alert('Import base data - Not implemented in mockup');
+        }
+
+        function handleSync() {
+            alert('Sync initiated - Not implemented in mockup');
+        }
+
+        function handleFilter() {
+            alert('Filter applied - Not implemented in mockup');
+        }
+
+        function handleRefresh() {
+            alert('Refresh data - Not implemented in mockup');
+        }
+
+        function handleSearch() {
+            alert('Search performed - Not implemented in mockup');
+        }
+
+        function handleAddParticipant() {
+            alert('Open add participant dialog - Not implemented in mockup');
+        }
+
+        function handleExport() {
+            alert('Export initiated - Not implemented in mockup');
+        }
+
+        function handleEdit() {
+            alert('Open edit dialog - Not implemented in mockup');
+        }
+
+        function handlePrint() {
+            alert('Print dialog - Not implemented in mockup');
+        }
+
+        function toggleAutoSync() {
+            const state = event.target.checked ? 'enabled' : 'disabled';
+            alert(`Auto-sync ${state} - Not implemented in mockup`);
+        }
+
+        function handleResolve(action) {
+            alert(`Resolve conflict with action: ${action} - Not implemented in mockup`);
+        }
+
+        function handleAddDiscipline() {
+            alert('Open add discipline dialog - Not implemented in mockup');
+        }
+
+        function handleAddClass() {
+            alert('Open add class dialog - Not implemented in mockup');
+        }
+
+        function handleAddScoringEntry() {
+            alert('Open add scoring entry dialog - Not implemented in mockup');
+        }
+
+        function updateScoringTable() {
+            alert('Update scoring table display - Not implemented in mockup');
+        }
+
+        function updateReportOptions() {
+            alert('Update report options - Not implemented in mockup');
+        }
+
+        function handleGenerateReport() {
+            alert('Generate report - Not implemented in mockup');
+        }
+
+        function handleDownload() {
+            alert('Download report - Not implemented in mockup');
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,904 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sport Tournament - Helper</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            height: 100%;
+            width: 100%;
+            overflow: hidden;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: #f5f5f5;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Top Bar */
+        .topbar {
+            background: white;
+            border-bottom: 1px solid #e0e0e0;
+            padding: 12px 20px;
+            display: flex;
+            align-items: center;
+            gap: 40px;
+            flex-shrink: 0;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+
+        .logo {
+            font-size: 18px;
+            font-weight: 600;
+            color: #1a1a1a;
+            min-width: 150px;
+        }
+
+        .topbar-controls {
+            display: flex;
+            gap: 30px;
+            flex: 1;
+            align-items: center;
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            min-width: 200px;
+        }
+
+        .control-group label {
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            color: #666;
+            letter-spacing: 0.5px;
+        }
+
+        .control-group select {
+            padding: 8px 12px;
+            border: 1px solid #d0d0d0;
+            border-radius: 4px;
+            font-size: 14px;
+            background: white;
+            cursor: pointer;
+            transition: border-color 0.2s;
+        }
+
+        .control-group select:hover {
+            border-color: #999;
+        }
+
+        .control-group select:focus {
+            outline: none;
+            border-color: #333;
+            box-shadow: 0 0 0 2px rgba(51, 51, 51, 0.1);
+        }
+
+        .topbar-right {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+            margin-left: auto;
+        }
+
+        .sync-container {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 12px;
+            background: #f5f5f5;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .sync-container:hover {
+            background: #e8e8e8;
+        }
+
+        .sync-indicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #4caf50;
+            position: relative;
+        }
+
+        .sync-indicator.syncing {
+            background: #ff9800;
+            animation: pulse 1.5s infinite;
+        }
+
+        .sync-indicator.error {
+            background: #f44336;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+
+        .sync-text {
+            font-size: 13px;
+            color: #333;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .sync-text-main {
+            font-weight: 500;
+        }
+
+        .sync-text-sub {
+            font-size: 11px;
+            color: #999;
+        }
+
+        /* Main Content Area */
+        .main-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .table-container {
+            flex: 1;
+            overflow-y: auto;
+            overflow-x: auto;
+            background: white;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+        }
+
+        thead {
+            background: #fafafa;
+            border-bottom: 2px solid #e0e0e0;
+            position: sticky;
+            top: 0;
+            z-index: 1;
+        }
+
+        th {
+            padding: 12px 16px;
+            text-align: left;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            color: #666;
+            letter-spacing: 0.5px;
+            white-space: nowrap;
+        }
+
+        td {
+            padding: 12px 16px;
+            border-bottom: 1px solid #f0f0f0;
+            font-size: 14px;
+            color: #333;
+        }
+
+        tbody tr {
+            transition: background 0.15s;
+        }
+
+        tbody tr:hover {
+            background: #fafafa;
+        }
+
+        tbody tr.completed {
+            opacity: 0.6;
+            order: 999;
+        }
+
+        .participant-id {
+            font-size: 13px;
+            color: #999;
+            font-weight: 500;
+            min-width: 40px;
+        }
+
+        .participant-name {
+            font-weight: 500;
+            color: #1a1a1a;
+            min-width: 200px;
+        }
+
+        .input-cell {
+            min-width: 120px;
+        }
+
+        .input-cell input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #d0d0d0;
+            border-radius: 3px;
+            font-size: 14px;
+            font-family: 'Courier New', monospace;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        .input-cell input:focus {
+            outline: none;
+            border-color: #333;
+            box-shadow: 0 0 0 2px rgba(51, 51, 51, 0.1);
+        }
+
+        .input-cell input:disabled {
+            background: #f5f5f5;
+            cursor: not-allowed;
+        }
+
+        .status-cell {
+            min-width: 100px;
+        }
+
+        .status-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .status-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+
+        .status-dot.empty {
+            background: #bdbdbd;
+        }
+
+        .status-dot.saved {
+            background: #2196f3;
+        }
+
+        .status-dot.synced {
+            background: #4caf50;
+        }
+
+        .status-dot.pending {
+            background: #ff9800;
+        }
+
+        .status-text {
+            color: #666;
+            font-size: 12px;
+        }
+
+        /* Footer */
+        .footer {
+            background: white;
+            border-top: 1px solid #e0e0e0;
+            padding: 12px 20px;
+            display: flex;
+            gap: 16px;
+            align-items: center;
+            flex-shrink: 0;
+        }
+
+        .search-container {
+            flex: 1;
+        }
+
+        .search-container input {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #d0d0d0;
+            border-radius: 4px;
+            font-size: 14px;
+            transition: border-color 0.2s;
+        }
+
+        .search-container input:focus {
+            outline: none;
+            border-color: #333;
+            box-shadow: 0 0 0 2px rgba(51, 51, 51, 0.1);
+        }
+
+        .footer-buttons {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        button {
+            padding: 8px 14px;
+            border: 1px solid #d0d0d0;
+            background: white;
+            border-radius: 4px;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+
+        button:hover {
+            background: #f5f5f5;
+            border-color: #999;
+        }
+
+        button:active {
+            background: #e8e8e8;
+        }
+
+        button.primary {
+            background: #1a1a1a;
+            color: white;
+            border-color: #1a1a1a;
+        }
+
+        button.primary:hover {
+            background: #333;
+            border-color: #333;
+        }
+
+        button.control {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .toggle {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+        }
+
+        .toggle-switch {
+            width: 36px;
+            height: 20px;
+            background: #ccc;
+            border-radius: 10px;
+            position: relative;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .toggle-switch.active {
+            background: #4caf50;
+        }
+
+        .toggle-switch::after {
+            content: '';
+            position: absolute;
+            width: 16px;
+            height: 16px;
+            background: white;
+            border-radius: 50%;
+            top: 2px;
+            left: 2px;
+            transition: left 0.3s;
+        }
+
+        .toggle-switch.active::after {
+            left: 18px;
+        }
+
+        /* Popup Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.show {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 6px;
+            padding: 24px;
+            max-width: 400px;
+            width: 90%;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        .modal-header {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            color: #1a1a1a;
+        }
+
+        .modal-body {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 20px;
+        }
+
+        .modal-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .modal-item:last-child {
+            border-bottom: none;
+        }
+
+        .modal-count {
+            font-weight: 600;
+            color: #1a1a1a;
+        }
+
+        .modal-footer {
+            display: flex;
+            gap: 8px;
+            justify-content: flex-end;
+        }
+
+        .modal-footer button {
+            padding: 8px 16px;
+        }
+
+        /* Timer Display */
+        .timer-display {
+            display: none;
+            font-family: 'Courier New', monospace;
+            font-size: 24px;
+            font-weight: 600;
+            color: #1a1a1a;
+            min-width: 80px;
+            text-align: center;
+        }
+
+        .timer-display.active {
+            display: block;
+        }
+
+        /* Points/Mark Columns */
+        .points-mark-col {
+            display: none;
+        }
+
+        .points-mark-col.show {
+            display: table-cell;
+        }
+
+        /* Responsive */
+        @media (max-width: 1200px) {
+            .topbar-controls {
+                gap: 20px;
+            }
+
+            .control-group {
+                min-width: 150px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .topbar {
+                flex-wrap: wrap;
+                gap: 12px;
+            }
+
+            .topbar-controls {
+                width: 100%;
+                gap: 12px;
+            }
+
+            .topbar-right {
+                width: 100%;
+                margin-left: 0;
+            }
+
+            .footer {
+                flex-wrap: wrap;
+            }
+
+            .search-container {
+                width: 100%;
+                min-width: unset;
+            }
+
+            .footer-buttons {
+                width: 100%;
+                flex-wrap: wrap;
+            }
+
+            th, td {
+                padding: 10px 12px;
+                font-size: 13px;
+            }
+
+            .participant-name {
+                min-width: 120px;
+            }
+        }
+
+        /* Scrollbar styling */
+        .table-container::-webkit-scrollbar {
+            width: 10px;
+            height: 10px;
+        }
+
+        .table-container::-webkit-scrollbar-track {
+            background: #f5f5f5;
+        }
+
+        .table-container::-webkit-scrollbar-thumb {
+            background: #ccc;
+            border-radius: 5px;
+        }
+
+        .table-container::-webkit-scrollbar-thumb:hover {
+            background: #999;
+        }
+    </style>
+</head>
+<body>
+    <!-- Top Bar -->
+    <div class="topbar">
+        <div class="logo">Sport Tournament</div>
+        
+        <div class="topbar-controls">
+            <div class="control-group">
+                <label for="discipline">Discipline</label>
+                <select id="discipline" onchange="updateTableFields()">
+                    <option value="">Select Discipline</option>
+                    <option value="800m">800m Run</option>
+                    <option value="50m">50m Sprint</option>
+                    <option value="3jump">3-Jump (Triple Jump)</option>
+                    <option value="throw">Distance Throw</option>
+                </select>
+            </div>
+
+            <div class="control-group">
+                <label for="class">Class</label>
+                <select id="class" onchange="updateTableContent()">
+                    <option value="">Select Class</option>
+                    <option value="u10">U10 (Class A)</option>
+                    <option value="u12">U12 (Class B)</option>
+                    <option value="u14">U14 (Class C)</option>
+                    <option value="u16">U16 (Class D)</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="topbar-right">
+            <div class="sync-container" onclick="showSyncPopup()">
+                <div class="sync-indicator"></div>
+                <div class="sync-text">
+                    <div class="sync-text-main">Synced</div>
+                    <div class="sync-text-sub">0 pending</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content Area -->
+    <div class="main-area">
+        <div class="table-container">
+            <table id="participantsTable">
+                <thead>
+                    <tr>
+                        <th style="width: 60px;">ID</th>
+                        <th style="width: 200px;">Name</th>
+                        <th style="width: 120px;">Performance</th>
+                        <th style="width: 100px;">Attempt</th>
+                        <th style="width: 100px;">Status</th>
+                        <th class="points-mark-col" style="width: 80px;">Points</th>
+                        <th class="points-mark-col" style="width: 80px;">Mark</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody">
+                    <tr style="text-align: center; color: #999;">
+                        <td colspan="7" style="padding: 40px;">Select a discipline and class to view participants</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
+        <div class="search-container">
+            <input type="text" id="searchInput" placeholder="Search participants..." onkeyup="filterTable()">
+        </div>
+
+        <div class="footer-buttons">
+            <button class="control" onclick="showQuickInput()">
+                <span>+</span> Add Performance
+            </button>
+
+            <div class="toggle" onclick="toggleFilled()">
+                <span>Move filled to bottom</span>
+                <div class="toggle-switch" id="toggleSwitch"></div>
+            </div>
+
+            <div class="toggle" onclick="togglePointsMark()">
+                <span>Show Points/Mark</span>
+                <div class="toggle-switch" id="togglePointsMarkSwitch"></div>
+            </div>
+
+            <button class="control primary" id="timerButton" onclick="toggleTimer()">
+                <span id="timerButtonText">Start Timer</span>
+                <div class="timer-display" id="timerDisplay">00:00</div>
+            </button>
+        </div>
+    </div>
+
+    <!-- Sync Popup Modal -->
+    <div class="modal" id="syncModal" onclick="closeSyncPopup(event)">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <div class="modal-header">Synchronization Status</div>
+            <div class="modal-body">
+                <div class="modal-item">
+                    <span>Synced</span>
+                    <span class="modal-count">12</span>
+                </div>
+                <div class="modal-item">
+                    <span>Pending Sync</span>
+                    <span class="modal-count">3</span>
+                </div>
+                <div class="modal-item">
+                    <span>Saved Locally</span>
+                    <span class="modal-count">15</span>
+                </div>
+                <div class="modal-item">
+                    <span>Not Started</span>
+                    <span class="modal-count">2</span>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button onclick="closeSyncPopup()">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Sample data
+        const participantsData = {
+            u10: {
+                '800m': [
+                    { id: 1, first: 'Anna', last: 'Mueller', time: 185.2, status: 'synced' },
+                    { id: 2, first: 'Bruno', last: 'Schmitz', time: null, status: 'empty' },
+                    { id: 3, first: 'Clara', last: 'Rossi', time: 182.5, status: 'saved' },
+                    { id: 4, first: 'David', last: 'Weber', time: null, status: 'pending' },
+                    { id: 5, first: 'Eva', last: 'Keller', time: 190.1, status: 'synced' },
+                    { id: 6, first: 'Felix', last: 'Bruegger', time: null, status: 'empty' },
+                    { id: 7, first: 'Greta', last: 'Tanner', time: 188.3, status: 'synced' },
+                    { id: 8, first: 'Hans', last: 'Meier', time: null, status: 'empty' },
+                    { id: 9, first: 'Iris', last: 'Schneider', time: 183.7, status: 'saved' },
+                    { id: 10, first: 'Jakob', last: 'Kohler', time: null, status: 'pending' },
+                ],
+                '50m': [
+                    { id: 11, first: 'Anna', last: 'Mueller', time: 7.8, status: 'synced' },
+                    { id: 12, first: 'Bruno', last: 'Schmitz', time: null, status: 'empty' },
+                    { id: 13, first: 'Clara', last: 'Rossi', time: 7.5, status: 'saved' },
+                    { id: 14, first: 'David', last: 'Weber', time: 8.1, status: 'synced' },
+                    { id: 15, first: 'Eva', last: 'Keller', time: null, status: 'pending' },
+                ],
+                '3jump': [
+                    { id: 1, first: 'Anna', last: 'Mueller', distance: 6.2, attempt: 1, status: 'synced' },
+                    { id: 2, first: 'Bruno', last: 'Schmitz', distance: null, attempt: 1, status: 'empty' },
+                    { id: 3, first: 'Clara', last: 'Rossi', distance: 5.8, attempt: 2, status: 'saved' },
+                    { id: 4, first: 'David', last: 'Weber', distance: null, attempt: 1, status: 'empty' },
+                    { id: 5, first: 'Eva', last: 'Keller', distance: 6.5, attempt: 1, status: 'synced' },
+                ],
+                'throw': [
+                    { id: 1, first: 'Anna', last: 'Mueller', distance: 28.3, attempt: 1, status: 'synced' },
+                    { id: 2, first: 'Bruno', last: 'Schmitz', distance: null, attempt: 1, status: 'pending' },
+                    { id: 3, first: 'Clara', last: 'Rossi', distance: 25.1, attempt: 2, status: 'synced' },
+                    { id: 4, first: 'David', last: 'Weber', distance: null, attempt: 1, status: 'empty' },
+                    { id: 5, first: 'Eva', last: 'Keller', distance: 31.2, attempt: 1, status: 'saved' },
+                ]
+            }
+        };
+
+        let currentDiscipline = '';
+        let isTimerRunning = false;
+        let timerSeconds = 0;
+        let timerInterval = null;
+        let sortByFilled = false;
+        let showPointsMark = false;
+        let allParticipants = [];
+
+        function updateTableFields() {
+            currentDiscipline = document.getElementById('discipline').value;
+            updateTableContent();
+        }
+
+        function updateTableContent() {
+            const classVal = document.getElementById('class').value;
+            const discipline = document.getElementById('discipline').value;
+            const tbody = document.getElementById('tableBody');
+
+            if (!classVal || !discipline) {
+                tbody.innerHTML = '<tr style="text-align: center; color: #999;"><td colspan="5" style="padding: 40px;">Select a discipline and class to view participants</td></tr>';
+                return;
+            }
+
+            const participants = participantsData[classVal]?.[discipline] || [];
+            allParticipants = participants;
+
+            renderTable(participants);
+        }
+
+        function renderTable(participants) {
+            const tbody = document.getElementById('tableBody');
+            const discipline = document.getElementById('discipline').value;
+
+            let rows = participants.map(p => {
+                const value = discipline.includes('800m') || discipline.includes('50m') 
+                    ? (p.time || '') 
+                    : (p.distance || '');
+                
+                const attemptCol = (discipline.includes('3jump') || discipline.includes('throw'))
+                    ? `<td>${p.attempt || '1'}</td>`
+                    : '<td>-</td>';
+
+                const statusClass = p.status === 'synced' ? 'synced' : 
+                                   p.status === 'saved' ? 'saved' : 
+                                   p.status === 'pending' ? 'pending' : 'empty';
+
+                const statusText = p.status.charAt(0).toUpperCase() + p.status.slice(1);
+
+                const rowClass = value ? 'completed' : '';
+
+                // Calculate mock points and mark based on performance value
+                let points = '';
+                let mark = '';
+                if (value) {
+                    if (discipline.includes('800m')) {
+                        // Slower time = better, so invert the scoring logic
+                        points = Math.max(0, Math.round(200 - (value * 0.5)));
+                        mark = value < 183 ? 'Excellent' : value < 190 ? 'Good' : 'Fair';
+                    } else if (discipline.includes('50m')) {
+                        // Faster time = better
+                        points = Math.max(0, Math.round(150 - (value * 10)));
+                        mark = value < 7.6 ? 'Excellent' : value < 8.0 ? 'Good' : 'Fair';
+                    } else if (discipline.includes('3jump')) {
+                        // Longer distance = better
+                        points = Math.round(value * 20);
+                        mark = value >= 6.2 ? 'Excellent' : value >= 5.8 ? 'Good' : 'Fair';
+                    } else if (discipline.includes('throw')) {
+                        // Longer distance = better
+                        points = Math.round(value * 2);
+                        mark = value >= 28 ? 'Excellent' : value >= 25 ? 'Good' : 'Fair';
+                    }
+                }
+
+                return `
+                    <tr class="${rowClass}">
+                        <td class="participant-id">${String(p.id).padStart(2, '0')}</td>
+                        <td class="participant-name">${p.first} ${p.last}</td>
+                        <td class="input-cell">
+                            <input type="number" placeholder="---" value="${value}" step="0.1" min="0" onchange="updateStatus(this)">
+                        </td>
+                        ${attemptCol}
+                        <td class="status-cell">
+                            <div class="status-indicator">
+                                <span class="status-dot ${statusClass}"></span>
+                                <span class="status-text">${statusText}</span>
+                            </div>
+                        </td>
+                        <td class="points-mark-col">${points}</td>
+                        <td class="points-mark-col">${mark}</td>
+                    </tr>
+                `;
+            });
+
+            if (sortByFilled) {
+                const completed = rows.filter((_, i) => participants[i].time || participants[i].distance);
+                const notCompleted = rows.filter((_, i) => !participants[i].time && !participants[i].distance);
+                rows = [...notCompleted, ...completed];
+            }
+
+            tbody.innerHTML = rows.join('');
+        }
+
+        function updateStatus(input) {
+            const row = input.closest('tr');
+            const statusIndicator = row.querySelector('.status-dot');
+            statusIndicator.className = 'status-dot saved';
+            row.querySelector('.status-text').textContent = 'Saved';
+        }
+
+        function filterTable() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            const rows = document.querySelectorAll('#participantsTable tbody tr');
+            
+            rows.forEach(row => {
+                const nameCell = row.querySelector('.participant-name');
+                const name = nameCell ? nameCell.textContent.toLowerCase() : '';
+                row.style.display = name.includes(searchTerm) ? '' : 'none';
+            });
+        }
+
+        function toggleFilled() {
+            sortByFilled = !sortByFilled;
+            document.getElementById('toggleSwitch').classList.toggle('active', sortByFilled);
+            renderTable(allParticipants);
+        }
+
+        function togglePointsMark() {
+            showPointsMark = !showPointsMark;
+            document.getElementById('togglePointsMarkSwitch').classList.toggle('active', showPointsMark);
+            const pointsMarkCols = document.querySelectorAll('.points-mark-col');
+            pointsMarkCols.forEach(col => col.classList.toggle('show', showPointsMark));
+        }
+
+        function toggleTimer() {
+            isTimerRunning = !isTimerRunning;
+            const button = document.getElementById('timerButton');
+            const display = document.getElementById('timerDisplay');
+            const buttonText = document.getElementById('timerButtonText');
+
+            if (isTimerRunning) {
+                timerSeconds = 0;
+                buttonText.textContent = 'Stop Timer';
+                display.classList.add('active');
+                
+                timerInterval = setInterval(() => {
+                    timerSeconds++;
+                    const mins = Math.floor(timerSeconds / 60);
+                    const secs = timerSeconds % 60;
+                    display.textContent = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+                }, 1000);
+            } else {
+                clearInterval(timerInterval);
+                buttonText.textContent = 'Start Timer';
+                display.classList.remove('active');
+                timerSeconds = 0;
+            }
+        }
+
+        function showSyncPopup() {
+            document.getElementById('syncModal').classList.add('show');
+        }
+
+        function closeSyncPopup(event) {
+            if (!event || event.target.id === 'syncModal') {
+                document.getElementById('syncModal').classList.remove('show');
+            }
+        }
+
+        function showQuickInput() {
+            const discipline = document.getElementById('discipline').value;
+            if (!discipline) {
+                alert('Please select a discipline first');
+                return;
+            }
+            alert('Quick input dialog - not implemented in mockup');
+        }
+
+        // Close modal on escape key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                closeSyncPopup();
+            }
+        });
+    </script>
+</body>
+</html>
