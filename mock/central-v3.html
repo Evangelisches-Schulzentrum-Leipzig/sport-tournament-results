@@ -1,0 +1,833 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Terminal — Central v3</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden;font-family:'Menlo','Consolas','Courier New',monospace;font-size:13px;background:#0a0c0f;color:#c5c8c6}
+
+/* ─── TITLE BAR ─── */
+#titlebar{position:fixed;top:0;left:0;right:0;height:36px;background:#111317;border-bottom:1px solid #1e2229;display:flex;align-items:center;padding:0 16px;gap:0;z-index:100;user-select:none}
+#tb-title{color:#abb2bf;font-weight:700;font-size:12px;margin-right:16px}
+#tb-live{display:flex;align-items:center;gap:5px;font-size:11px;color:#98c379}
+#tb-live-dot{width:7px;height:7px;border-radius:50%;background:#98c379;animation:blink 2s ease infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
+#tb-pending{font-size:11px;margin-left:12px}
+.pending-ok{color:#61afef}
+.pending-warn{color:#e5c07b}
+#tb-muted{font-size:10px;color:#565c64;margin-left:8px;cursor:pointer;padding:2px 6px;border:1px solid #2c313a;border-radius:3px;transition:color .15s}
+#tb-muted:hover{color:#abb2bf}
+
+/* ─── LOG ─── */
+#log-wrap{position:fixed;top:36px;left:0;right:0;bottom:48px;overflow-y:auto;padding:12px 0}
+#log-wrap::-webkit-scrollbar{width:6px}
+#log-wrap::-webkit-scrollbar-track{background:transparent}
+#log-wrap::-webkit-scrollbar-thumb{background:#2c313a;border-radius:3px}
+
+/* Wide screens: cap log column */
+#log{max-width:860px;margin:0 auto;padding:0 16px}
+
+/* Command input block */
+.log-cmd{display:flex;gap:0;margin-bottom:2px;margin-top:16px}
+.log-prompt{color:#61afef;margin-right:8px;flex-shrink:0;user-select:none}
+.log-cmd-text{color:#e5c07b;word-break:break-all}
+
+/* Response block */
+.log-response{margin-bottom:6px;padding-left:0}
+.log-response pre{white-space:pre-wrap;word-break:break-word;line-height:1.65;font-family:inherit;font-size:13px;color:#c5c8c6}
+.log-response .r-title{color:#e5c07b;font-weight:700}
+.log-response .r-rule{color:#3e4451;letter-spacing:.05em}
+.log-response .r-green{color:#98c379}
+.log-response .r-blue{color:#61afef}
+.log-response .r-orange{color:#e5c07b}
+.log-response .r-red{color:#e06c75}
+.log-response .r-gray{color:#5c6370}
+.log-response .r-gold{color:#d19a66}
+.log-response .r-rank1{color:#ffd700;font-weight:700}
+.log-response .r-rank2{color:#c0c0c0;font-weight:700}
+.log-response .r-rank3{color:#cd7f32;font-weight:700}
+
+/* Live event entries */
+.log-event{padding:3px 0 3px 10px;border-left:2px solid #2c313a;margin:4px 0;display:flex;align-items:baseline;gap:10px;opacity:.7}
+.log-event .ev-time{color:#5c6370;font-size:11px;flex-shrink:0}
+.log-event .ev-st-sync{color:#98c379}
+.log-event .ev-st-conflict{color:#e5c07b}
+.log-event .ev-body{color:#7f848e;font-size:12px}
+
+/* Error line */
+.log-error{color:#e06c75;padding:2px 0;display:flex;align-items:baseline;gap:6px}
+.log-error::before{content:'✗';flex-shrink:0}
+
+/* System line */
+.log-sys{color:#5c6370;font-style:italic;margin-top:8px;padding:3px 0;display:flex;align-items:center;gap:6px}
+
+/* ─── INPUT BAR ─── */
+#inputbar{position:fixed;bottom:0;left:0;right:0;height:48px;background:#111317;border-top:1px solid #1e2229;display:flex;align-items:center;padding:0 16px;gap:8px;z-index:100}
+#input-prompt{color:#61afef;font-size:14px;font-weight:700;flex-shrink:0;user-select:none}
+#input-wrap{flex:1;position:relative}
+#cmd-input{width:100%;background:transparent;border:none;outline:none;color:#abb2bf;font-family:inherit;font-size:13px;caret-color:#98c379}
+#autocomplete-hint{position:absolute;top:0;left:0;color:#3e4451;pointer-events:none;font-family:inherit;font-size:13px;white-space:nowrap;overflow:hidden}
+#input-hint{font-size:10px;color:#3e4451;flex-shrink:0;white-space:nowrap}
+@media(max-width:600px){#input-hint{display:none}}
+
+/* ─── HELP OVERLAY ─── */
+#help-overlay{position:fixed;inset:0;z-index:500;background:rgba(0,0,0,.75);display:none;align-items:center;justify-content:center;padding:24px}
+#help-overlay.open{display:flex}
+#help-box{background:#1b1f27;border:1px solid #2c313a;border-radius:8px;padding:20px 24px;max-width:560px;width:100%;max-height:80vh;overflow-y:auto;font-size:12px;line-height:1.9}
+#help-box h2{color:#e5c07b;font-size:13px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center}
+.help-close{background:none;border:none;color:#5c6370;cursor:pointer;font-size:14px;padding:2px 5px}
+.help-close:hover{color:#abb2bf}
+.help-row{display:grid;grid-template-columns:200px 1fr;gap:8px;padding:3px 0;border-bottom:1px solid #1e2229}
+.help-cmd{color:#61afef}
+.help-desc{color:#7f848e}
+.help-section{color:#5c6370;font-size:10px;text-transform:uppercase;letter-spacing:.1em;margin:.8em 0 .3em;padding-top:.5em;grid-column:span 2;border-top:1px solid #1e2229}
+.help-flags{margin-top:10px;padding-top:8px;border-top:1px solid #2c313a;color:#5c6370;font-size:11px}
+
+/* ─── TOAST ─── */
+#toast{position:fixed;bottom:56px;left:0;right:0;display:flex;justify-content:center;pointer-events:none;z-index:200}
+.toast-msg{background:#1b1f27;border:1px solid #2c313a;border-radius:4px;padding:6px 14px;font-size:12px;color:#abb2bf;opacity:0;transition:opacity .2s;display:flex;align-items:center;gap:8px;max-width:500px}
+.toast-msg.show{opacity:1}
+.toast-msg.err{border-color:#e06c75;color:#e06c75}
+.toast-msg.warn{border-color:#e5c07b;color:#e5c07b}
+</style>
+</head>
+<body>
+
+<!-- TITLE BAR -->
+<div id="titlebar">
+  <span id="tb-title">🏆 Bundesjugendspiele 2026</span>
+  <span id="tb-live"><span id="tb-live-dot"></span> LIVE</span>
+  <span id="tb-pending" class="pending-warn">⊘ 7 ausstehend</span>
+  <span id="tb-muted" title="Live-Events stummschalten">● LIVE</span>
+</div>
+
+<!-- LOG -->
+<div id="log-wrap"><div id="log"></div></div>
+
+<!-- INPUT BAR -->
+<div id="inputbar">
+  <span id="input-prompt">&gt;</span>
+  <div id="input-wrap">
+    <div id="autocomplete-hint"></div>
+    <input id="cmd-input" type="text" placeholder="Befehl eingeben…" autocomplete="off" spellcheck="false" autocorrect="off" autocapitalize="off">
+  </div>
+  <span id="input-hint">Tab: autovervollständigen &nbsp;·&nbsp; ↑↓: Verlauf &nbsp;·&nbsp; F1: Hilfe</span>
+</div>
+
+<!-- HELP OVERLAY -->
+<div id="help-overlay">
+  <div id="help-box">
+    <h2>BEFEHLSREFERENZ <button class="help-close" id="help-close">Esc schließen</button></h2>
+    <div class="help-row"><span class="help-cmd">status</span><span class="help-desc">Turnierübersicht</span></div>
+    <div class="help-row"><span class="help-cmd">rank [--flags]</span><span class="help-desc">Rangliste (gesamt, nach Klasse, Disziplin…)</span></div>
+    <div class="help-row"><span class="help-cmd">show &lt;#id|"Name"&gt;</span><span class="help-desc">Teilnehmer-Detail</span></div>
+    <div class="help-row"><span class="help-cmd">list [--flags]</span><span class="help-desc">Gefilterte Teilnehmerlisten</span></div>
+    <div class="help-row"><span class="help-cmd">helpers</span><span class="help-desc">Status der Helfer-Geräte</span></div>
+    <div class="help-row"><span class="help-cmd">progress</span><span class="help-desc">Fortschrittsmatrix (Klassen × Disziplinen)</span></div>
+    <div class="help-row"><span class="help-cmd">conflicts</span><span class="help-desc">Sync-Konflikte anzeigen</span></div>
+    <div class="help-row"><span class="help-cmd">resolve &lt;n&gt; --keep-local</span><span class="help-desc">Konflikt lösen (lokaler Wert)</span></div>
+    <div class="help-row"><span class="help-cmd">resolve &lt;n&gt; --accept-server</span><span class="help-desc">Konflikt lösen (Server-Wert)</span></div>
+    <div class="help-row"><span class="help-cmd">resolve all --accept-server</span><span class="help-desc">Alle Konflikte mit Server lösen</span></div>
+    <div class="help-row"><span class="help-cmd">edit #id disc try val</span><span class="help-desc">Wert ändern (z.B. edit #07 3-jump try1 5.45)</span></div>
+    <div class="help-row"><span class="help-cmd">export --format csv</span><span class="help-desc">CSV-Export aller Ergebnisse</span></div>
+    <div class="help-row"><span class="help-cmd">export --format pdf [--class X]</span><span class="help-desc">PDF-Export (optional je Klasse)</span></div>
+    <div class="help-row"><span class="help-cmd">export --format pdf --certificates</span><span class="help-desc">Urkunden für alle Teilnehmer</span></div>
+    <div class="help-row"><span class="help-cmd">config disciplines</span><span class="help-desc">Disziplinen-Konfiguration</span></div>
+    <div class="help-row"><span class="help-cmd">config classes</span><span class="help-desc">Klassen-Konfiguration</span></div>
+    <div class="help-row"><span class="help-cmd">mute / unmute</span><span class="help-desc">Live-Event-Stream ein-/ausschalten</span></div>
+    <div class="help-row"><span class="help-cmd">alias &lt;a&gt; &lt;cmd&gt;</span><span class="help-desc">Befehlskürzel anlegen</span></div>
+    <div class="help-row"><span class="help-cmd">clear</span><span class="help-desc">Log leeren</span></div>
+    <div class="help-flags">Flags: --class, --discipline, --gender, --format, --missing, --pending &nbsp;·&nbsp; ↑↓: Verlauf &nbsp;·&nbsp; Ctrl+R: Suche</div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="toast"><div class="toast-msg" id="toast-msg"></div></div>
+
+<script>
+// ═══════════════════════════════════════════════
+//  MOCK DATA
+// ═══════════════════════════════════════════════
+const DISC_CFG = {
+  '800m':  { label:'800m Lauf',   unit:'s',  tries:1, higher_better:false },
+  '50m':   { label:'50m Sprint',  unit:'s',  tries:1, higher_better:false },
+  '3jump': { label:'3-Jump',      unit:'m',  tries:2, higher_better:true  },
+  'throw': { label:'Distanzwurf', unit:'m',  tries:2, higher_better:true  },
+};
+const DISC_NAMES = Object.keys(DISC_CFG);
+
+const PARTICIPANTS = [
+  {id:'01',name:'Müller, Anna',      cls:'5a',gender:'f'},
+  {id:'02',name:'Weber, Clara',      cls:'5b',gender:'f'},
+  {id:'03',name:'Klein, Eva',        cls:'5a',gender:'f'},
+  {id:'04',name:'Schmidt, Ben',      cls:'5a',gender:'m'},
+  {id:'05',name:'Fischer, David',    cls:'6a',gender:'m'},
+  {id:'06',name:'Koch, Max',         cls:'5b',gender:'m'},
+  {id:'07',name:'Braun, Felix',      cls:'5a',gender:'m'},
+  {id:'08',name:'Lang, Mia',         cls:'5b',gender:'f'},
+  {id:'09',name:'Richter, Lena',     cls:'6a',gender:'f'},
+  {id:'10',name:'Wolf, Tobias',      cls:'6b',gender:'m'},
+  {id:'11',name:'Zimmermann, Paul',  cls:'5a',gender:'m'},
+  {id:'12',name:'Bauer, Tim',        cls:'6b',gender:'m'},
+  {id:'13',name:'Berger, Sophie',    cls:'5b',gender:'f'},
+  {id:'14',name:'Schulz, Noah',      cls:'6a',gender:'m'},
+  {id:'15',name:'Wagner, Leon',      cls:'5a',gender:'m'},
+];
+
+// Lightly seeded scores
+function rnd(mn,mx){ return +(mn+Math.random()*(mx-mn)).toFixed(2); }
+const PTS = {
+  '800m':  v => Math.max(0,Math.round(300-(v-150)*0.8)),
+  '50m':   v => Math.max(0,Math.round(300-(v-6)*25)),
+  '3jump': v => Math.round(v*36),
+  'throw': v => Math.round(v*8.5),
+};
+const SCORES = {};
+PARTICIPANTS.forEach((p,pi) => {
+  SCORES[p.id] = {};
+  const completeness = p.cls==='6a' ? 0.2 : 0.75;
+  DISC_NAMES.forEach(disc => {
+    if (Math.random() > completeness) return;
+    let v1,v2;
+    if (disc==='800m') v1=rnd(160,220);
+    else if (disc==='50m') v1=rnd(7.2,10.5);
+    else if (disc==='3jump'){ v1=rnd(3.8,6.5); v2=rnd(3.8,6.5); }
+    else { v1=rnd(15,32); v2=rnd(15,32); }
+    const best = v2!==undefined ? (DISC_CFG[disc].higher_better?Math.max(v1,v2):Math.min(v1,v2)) : v1;
+    SCORES[p.id][disc] = { v1, v2, best, pts:PTS[disc](best), status:Math.random()>.12?'synced':'saved' };
+  });
+});
+
+// Two conflicts
+SCORES['11']['3jump'] = { v1:6.01, v2:5.88, best:6.01, pts:216, status:'conflict', serverVal:5.98 };
+SCORES['14']['50m']   = { v1:8.21, best:8.21, pts:148, status:'conflict', serverVal:8.25 };
+
+let conflictsResolved = {}; // id -> bool
+let aliases = {};
+let liveStreamMuted = false;
+let pendingCount = 7;
+
+function totalPts(pid){ return Object.values(SCORES[pid]||{}).reduce((a,s)=>a+s.pts,0); }
+function completedDiscs(pid){ return Object.keys(SCORES[pid]||{}).length; }
+function overallDone(){ return PARTICIPANTS.reduce((a,p)=>a+completedDiscs(p.id),0); }
+const TOTAL_VALS = PARTICIPANTS.length * 4;
+
+// ═══════════════════════════════════════════════
+//  LOG RENDERER
+// ═══════════════════════════════════════════════
+const log = document.getElementById('log');
+
+function appendNode(el){ log.appendChild(el); scrollLog(); }
+
+function appendCmd(text) {
+  const el = document.createElement('div');
+  el.className = 'log-cmd';
+  el.innerHTML = `<span class="log-prompt">&gt;</span><span class="log-cmd-text">${esc(text)}</span>`;
+  appendNode(el);
+}
+
+function appendResponse(html) {
+  const el = document.createElement('div');
+  el.className = 'log-response';
+  el.innerHTML = `<pre>${html}</pre>`;
+  appendNode(el);
+}
+
+function appendError(msg) {
+  const el = document.createElement('div');
+  el.className = 'log-error';
+  el.textContent = msg;
+  appendNode(el);
+}
+
+function appendSys(msg) {
+  const el = document.createElement('div');
+  el.className = 'log-sys';
+  el.innerHTML = `<span style="color:#3e4451">•</span>${esc(msg)}`;
+  appendNode(el);
+}
+
+function appendEvent(ev) {
+  const el = document.createElement('div');
+  el.className = 'log-event';
+  const stCls = ev.status === 'conflict' ? 'ev-st-conflict' : 'ev-st-sync';
+  const stIcon = ev.status === 'conflict' ? '⚡' : '☁✓';
+  el.innerHTML = `<span class="ev-time">${ev.time}</span><span class="${stCls}">${stIcon}</span><span class="ev-body">${esc(ev.body)}</span>`;
+  appendNode(el);
+}
+
+function scrollLog(){ document.getElementById('log-wrap').scrollTop = 99999; }
+
+function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function pad(s,n,ch=' '){ s=String(s); while(s.length<n) s+=ch; return s; }
+function lpad(s,n,ch=' '){ s=String(s); while(s.length<n) s=ch+s; return s; }
+function rule(n,ch='─'){ return `<span class="r-rule">${ch.repeat(n)}</span>`; }
+
+function nowTime(){
+  const d=new Date();
+  return `${lpad(d.getHours(),2,'0')}:${lpad(d.getMinutes(),2,'0')}:${lpad(d.getSeconds(),2,'0')}`;
+}
+
+// ═══════════════════════════════════════════════
+//  COMMAND PROCESSING
+// ═══════════════════════════════════════════════
+const KNOWN_CMDS = ['status','rank','show','list','helpers','progress','conflicts','resolve','edit','export','config','mute','unmute','alias','clear','help'];
+
+function parseFlags(args) {
+  const flags = {};
+  const pos = [];
+  let i = 0;
+  while (i < args.length) {
+    if (args[i].startsWith('--')) {
+      const k = args[i].slice(2);
+      if (i+1 < args.length && !args[i+1].startsWith('--')) { flags[k] = args[i+1]; i += 2; }
+      else { flags[k] = true; i++; }
+    } else { pos.push(args[i]); i++; }
+  }
+  return { flags, pos };
+}
+
+function runCmd(raw) {
+  // alias substitution
+  const trimmed = raw.trim();
+  if (!trimmed) return;
+
+  // chaining (;)
+  const parts = trimmed.split(/\s*;\s*/);
+  if (parts.length > 1) {
+    parts.forEach((p,i) => { if(i>0) appendSys(''); runCmd(p.trim()); });
+    return;
+  }
+
+  const tokens = trimmed.match(/(?:[^\s"]+|"[^"]*")+/g) || [];
+  let verb = tokens[0]?.toLowerCase();
+  if (aliases[verb]) { const sub = aliases[verb].split(' '); verb = sub[0]; tokens.splice(0,1,...sub); }
+
+  const rest = tokens.slice(1);
+  const { flags, pos } = parseFlags(rest);
+
+  switch(verb) {
+    case 'status':    cmdStatus(); break;
+    case 'rank':      cmdRank(flags); break;
+    case 'show':      cmdShow(pos[0], flags); break;
+    case 'list':      cmdList(flags); break;
+    case 'helpers':   cmdHelpers(); break;
+    case 'progress':  cmdProgress(); break;
+    case 'conflicts': cmdConflicts(); break;
+    case 'resolve':   cmdResolve(pos, flags); break;
+    case 'edit':      cmdEdit(pos, flags); break;
+    case 'export':    cmdExport(flags); break;
+    case 'config':    cmdConfig(pos[0], flags); break;
+    case 'mute':      cmdMute(flags); break;
+    case 'unmute':    liveStreamMuted=false; appendSys('Live-Events wieder aktiv.'); updateMuteBtn(); break;
+    case 'alias':     cmdAlias(pos); break;
+    case 'clear':     log.innerHTML=''; break;
+    case 'help':      document.getElementById('help-overlay').classList.add('open'); break;
+    default:
+      appendError(`Unbekannter Befehl: "${verb}". Gib "help" ein für eine Übersicht.`);
+  }
+}
+
+// ─── status ───
+function cmdStatus() {
+  const done = overallDone();
+  const synced = PARTICIPANTS.reduce((a,p)=>a+Object.values(SCORES[p.id]||{}).filter(s=>s.status==='synced').length,0);
+  const conflicts = PARTICIPANTS.reduce((a,p)=>a+Object.values(SCORES[p.id]||{}).filter(s=>s.status==='conflict').length,0);
+  appendResponse(
+    `<span class="r-title">TURNIERSTATUS</span>\n${rule(40)}\n` +
+    `<span class="r-gray">Disziplinen:</span>  <span class="r-green">4 aktiv</span> (800m, 50m, 3-Jump, Wurf)\n` +
+    `<span class="r-gray">Klassen:    </span>  4 (5a, 5b, 6a, 6b)\n` +
+    `<span class="r-gray">Teilnehmer: </span>  ${PARTICIPANTS.length} gesamt\n` +
+    `<span class="r-gray">Erfasst:    </span>  <span class="r-blue">${done} / ${TOTAL_VALS} Werte (${Math.round(done/TOTAL_VALS*100)}%)</span>\n` +
+    `<span class="r-gray">Synchron.:  </span>  <span class="r-green">${synced} / ${done} (${done?Math.round(synced/done*100):0}%)</span>\n` +
+    `<span class="r-gray">Ausstehend: </span>  <span class="r-orange">${pendingCount} Einträge</span>\n` +
+    `<span class="r-gray">Helfer:     </span>  3 online, <span class="r-red">1 offline (Helper-3)</span>\n` +
+    `<span class="r-gray">Konflikte:  </span>  <span class="${conflicts?'r-red':'r-green'}">${conflicts} ungelöst</span>`
+  );
+}
+
+// ─── rank ───
+function cmdRank(flags) {
+  let ps = [...PARTICIPANTS];
+  const cls = flags['class']; const disc = flags['discipline']; const gender = flags['gender'];
+  let title = 'GESAMTRANGLISTE';
+  if (cls)    { ps = ps.filter(p=>p.cls===cls); title += ` — Klasse ${cls}`; }
+  if (gender) { ps = ps.filter(p=>p.gender===(gender==='weiblich'||gender==='f'?'f':'m')); title += ` (${gender==='f'||gender==='weiblich'?'Weiblich':'Männlich'})`; }
+
+  let sorted;
+  if (disc) {
+    const dk = disc.toLowerCase().replace('3-jump','3jump').replace('wurf','throw').replace('sprint','50m').replace('lauf','800m');
+    sorted = ps.filter(p=>SCORES[p.id]?.[dk]).sort((a,b)=>{
+      const sa=SCORES[a.id][dk],sb=SCORES[b.id][dk];
+      return DISC_CFG[dk]?.higher_better ? sb.best-sa.best : sa.best-sb.best;
+    });
+    title = `RANGLISTE — ${DISC_CFG[dk]?.label || disc}${cls?' · Klasse '+cls:''}`;
+    let lines = `<span class="r-title">${esc(title)}</span>\n${rule(52)}\n`;
+    lines += pad(' #',3)+' '+pad('Name',22)+pad('Best',10)+pad('Punkte',8)+'\n';
+    lines += rule(43,'-')+'\n';
+    sorted.slice(0,15).forEach((p,i)=>{
+      const s=SCORES[p.id][dk];
+      const rankCls = i===0?'r-rank1':i===1?'r-rank2':i===2?'r-rank3':'';
+      lines += `<span class="${rankCls}">${lpad(i+1,2)}.</span>  ${pad(esc(p.name),22)}${pad(s.best+DISC_CFG[dk].unit,10)}<span class="r-green">${s.pts}</span>\n`;
+    });
+    appendResponse(lines);
+    return;
+  }
+
+  sorted = ps.filter(p=>completedDiscs(p.id)>0).sort((a,b)=>totalPts(b.id)-totalPts(a.id));
+  let lines = `<span class="r-title">${esc(title)} (Top ${Math.min(10,sorted.length)})</span>\n${rule(68)}\n`;
+  lines += pad(' #',3)+' '+pad('Name',22)+pad('Kl.',5)+pad('800m',7)+pad('50m',7)+pad('3-Jm',7)+pad('Wurf',7)+pad('Ges.',6)+'\n';
+  lines += rule(58,'-')+'\n';
+  sorted.slice(0,10).forEach((p,i)=>{
+    const v = k => SCORES[p.id][k]?.pts ? lpad(SCORES[p.id][k].pts,4) : '  —';
+    const rankCls = i===0?'r-rank1':i===1?'r-rank2':i===2?'r-rank3':'';
+    lines += `<span class="${rankCls}">${lpad(i+1,2)}.</span>  ${pad(esc(p.name),22)}${pad(p.cls,5)}${v('800m')} ${v('50m')} ${v('3jump')} ${v('throw')} <span class="r-green">${lpad(totalPts(p.id),5)}</span>\n`;
+  });
+  appendResponse(lines);
+}
+
+// ─── show ───
+function cmdShow(arg, flags) {
+  if (!arg) { appendError('Verwendung: show #id  oder  show "Name"'); return; }
+  let matches = [];
+  if (arg.startsWith('#')) {
+    const id = arg.slice(1).padStart(2,'0');
+    matches = PARTICIPANTS.filter(p=>p.id===id);
+  } else {
+    const q = arg.replace(/"/g,'').toLowerCase();
+    matches = PARTICIPANTS.filter(p=>p.name.toLowerCase().includes(q));
+  }
+  if (matches.length === 0) { appendError('Kein Teilnehmer gefunden: '+arg); return; }
+  if (matches.length > 1) {
+    let lines = `${matches.length} Treffer:\n`;
+    matches.forEach(p => { lines += `  <span class="r-blue">#${p.id}</span>  ${esc(p.name)}  (${p.cls}, ${p.gender==='f'?'weiblich':'männlich'})\n`; });
+    lines += `\nVerwende: <span class="r-orange">show #${matches[0].id}</span>   oder   <span class="r-orange">show #${matches[1].id}</span>`;
+    appendResponse(lines); return;
+  }
+  const p = matches[0];
+  const s = SCORES[p.id] || {};
+  let lines = `<span class="r-title">TEILNEHMER #${p.id} — ${esc(p.name)}</span>\n${rule(46)}\n`;
+  lines += `<span class="r-gray">Klasse: ${p.cls}  ·  ${p.gender==='f'?'Weiblich':'Männlich'}</span>\n\n`;
+  lines += `  <span class="r-gray">${pad('Disziplin',18)}${pad('Wert',16)}${pad('Punkte',8)}Status</span>\n`;
+  lines += `  ${rule(56,'-')}\n`;
+  DISC_NAMES.forEach(disc => {
+    const sc = s[disc];
+    if (!sc) { lines += `  ${pad(DISC_CFG[disc].label,18)}<span class="r-gray">—</span>\n`; return; }
+    const valStr = sc.v2!==undefined ? `${sc.v1}${DISC_CFG[disc].unit} / ${sc.v2}${DISC_CFG[disc].unit}` : `${sc.best}${DISC_CFG[disc].unit}`;
+    const stCls = sc.status==='synced'?'r-green':sc.status==='conflict'?'r-gold':'r-blue';
+    const stIcon = sc.status==='synced'?'☁✓':sc.status==='conflict'?'⚡ Konflikt':'💾';
+    lines += `  ${pad(esc(DISC_CFG[disc].label),18)}${pad(esc(valStr),16)}<span class="r-green">${lpad(sc.pts,6)}</span>  <span class="${stCls}">${stIcon}</span>\n`;
+  });
+  const total = totalPts(p.id);
+  const mark = total>700?'1 (sehr gut)':total>600?'2 (gut)':total>500?'3 (befriedigend)':'4 (ausreichend)';
+  lines += `\n  <span class="r-gray">Gesamt:</span> <span class="r-green">${total} Pkt</span>  ·  <span class="r-orange">Note: ${mark}</span>`;
+  appendResponse(lines);
+}
+
+// ─── list ───
+function cmdList(flags) {
+  if (flags['pending']) {
+    const entries = [];
+    PARTICIPANTS.forEach(p => {
+      Object.entries(SCORES[p.id]||{}).forEach(([disc,s]) => {
+        if (s.status !== 'synced') entries.push({p, disc, s});
+      });
+    });
+    if (!entries.length) { appendResponse(`<span class="r-green">✓ Alle Einträge synchronisiert.</span>`); return; }
+    let lines = `<span class="r-title">NICHT SYNCHRONISIERTE EINTRÄGE</span>\n${rule(54)}\n`;
+    entries.forEach(({p,disc,s}) => {
+      const stCls=s.status==='conflict'?'r-gold':'r-blue';
+      const stIc=s.status==='conflict'?'⚡ Konflikt':'💾 gespeichert';
+      lines += `  <span class="r-blue">#${p.id}</span>  ${pad(esc(p.name),22)}${pad(DISC_CFG[disc].label,15)}<span class="${stCls}">${stIc}</span>\n`;
+    });
+    lines += `\n${entries.length} Einträge gesamt.`;
+    appendResponse(lines); return;
+  }
+
+  const cls = flags['class']; const missingDisc = flags['missing'];
+  if (missingDisc) {
+    const dk = missingDisc.toLowerCase().replace('3-jump','3jump').replace('wurf','throw');
+    const missing = PARTICIPANTS.filter(p => (!cls || p.cls===cls) && !SCORES[p.id]?.[dk]);
+    let lines = `<span class="r-title">FEHLENDE ${esc(DISC_CFG[dk]?.label||missingDisc).toUpperCase()} DATEN${cls?' — KLASSE '+cls:''}</span>\n${rule(54)}\n`;
+    if (!missing.length) { lines += `<span class="r-green">✓ Alle Teilnehmer haben ${DISC_CFG[dk]?.label||missingDisc}-Daten.</span>`; }
+    else { missing.forEach(p=>{ lines += `  <span class="r-blue">#${p.id}</span>  ${esc(p.name)}  <span class="r-gray">(${p.cls})</span>\n`; }); lines += `\n${missing.length} Teilnehmer ohne Daten.`; }
+    appendResponse(lines); return;
+  }
+
+  let ps = PARTICIPANTS.filter(p => !cls || p.cls === cls);
+  let lines = `<span class="r-title">TEILNEHMERLISTE${cls?' — KLASSE '+cls:''}</span>\n${rule(50)}\n`;
+  lines += `  ${pad('#',4)}${pad('Name',22)}${pad('Kl.',5)}${pad('Erf.',6)}\n  ${rule(36,'-')}\n`;
+  ps.forEach(p => {
+    const done = completedDiscs(p.id);
+    const bar = done===4?'<span class="r-green">████</span>':done===0?'<span class="r-gray">░░░░</span>':
+      `<span class="r-blue">${'█'.repeat(done)}</span><span class="r-gray">${'░'.repeat(4-done)}</span>`;
+    lines += `  <span class="r-blue">#${p.id}</span>  ${pad(esc(p.name),22)}${pad(p.cls,5)}${bar} ${done}/4\n`;
+  });
+  appendResponse(lines);
+}
+
+// ─── helpers ───
+function cmdHelpers() {
+  const H = [
+    {name:'Helper-1', disc:'800m Lauf',   online:true,  lastSec:0,  pct:100},
+    {name:'Helper-2', disc:'50m Sprint',  online:true,  lastSec:3,  pct:87},
+    {name:'Helper-3', disc:'3-Jump',      online:false, lastSec:51, pct:42},
+    {name:'Helper-4', disc:'Distanzwurf', online:true,  lastSec:1,  pct:94},
+  ];
+  let lines = `<span class="r-title">HELFER-STATIONEN</span>\n${rule(72)}\n`;
+  lines += `  ${pad('Name',12)}${pad('Disziplin',18)}${pad('Status',14)}${pad('Letzter Sync',14)}Synchron.\n  ${rule(67,'-')}\n`;
+  H.forEach(h => {
+    const stCls=h.online?'r-green':'r-red';
+    const stTxt=h.online?'☁✓ online':'⊘ OFFLINE';
+    const lastTxt=h.lastSec+'s ago';
+    lines += `  ${pad(h.name,12)}${pad(h.disc,18)}<span class="${stCls}">${pad(stTxt,14)}</span>${pad(lastTxt,14)}<span class="${h.pct===100?'r-green':'r-blue'}">${h.pct}%</span>\n`;
+  });
+  appendResponse(lines);
+}
+
+// ─── progress ───
+function cmdProgress() {
+  let lines = `<span class="r-title">FORTSCHRITTSMATRIX</span>\n${rule(50)}\n`;
+  lines += `  ${pad('',8)}${pad('800m',10)}${pad('50m',10)}${pad('3-Jump',10)}Wurf\n  ${rule(42,'-')}\n`;
+  ['5a','5b','6a','6b'].forEach(cls => {
+    let row = `  ${pad(cls,8)}`;
+    let total = 0;
+    DISC_NAMES.forEach(disc => {
+      const ps = PARTICIPANTS.filter(p=>p.cls===cls);
+      const done = ps.filter(p=>SCORES[p.id]?.[disc]).length;
+      const pct = ps.length ? Math.round(done/ps.length*100) : 0;
+      total += pct;
+      const bars = Math.round(pct/20);
+      const filled = '█'.repeat(bars);
+      const empty = '░'.repeat(5-bars);
+      const colorCls = pct===100?'r-green':pct>=50?'r-blue':pct>0?'r-orange':'r-gray';
+      row += `<span class="${colorCls}">${filled}${empty}</span> `;
+    });
+    lines += row + `<span class="r-gray">${Math.round(total/4)}%</span>\n`;
+  });
+  const done = overallDone();
+  lines += `\n  <span class="r-gray">Gesamt: <span class="r-blue">${Math.round(done/TOTAL_VALS*100)}%</span> abgeschlossen</span>\n  █ = 20%`;
+  appendResponse(lines);
+}
+
+// ─── conflicts ───
+let conflictList = [
+  { id:1, pid:'11', name:'Zimmermann, P.',  disc:'3jump', discLabel:'3-Jump V.1',   local:'6.01m', server:'5.98m', unit:'m' },
+  { id:2, pid:'14', name:'Schulz, N.',       disc:'50m',   discLabel:'50m Sprint', local:'8.21s', server:'8.25s', unit:'s' },
+];
+
+function openConflicts() {
+  return conflictList.filter(c => !conflictsResolved[c.id]);
+}
+
+function cmdConflicts() {
+  const open = openConflicts();
+  if (!open.length) { appendResponse(`<span class="r-green">✓ Keine offenen Konflikte.</span>`); return; }
+  let lines = `<span class="r-title">OFFENE KONFLIKTE (${open.length})</span>\n${rule(68)}\n`;
+  open.forEach(c => {
+    lines += `  <span class="r-gold">[${c.id}]</span>  <span class="r-blue">#${c.pid}</span> ${pad(esc(c.name),18)}${pad(c.discLabel,16)}<span class="r-orange">lokal: ${c.local}</span>   <span class="r-gray">server: ${c.server}</span>\n`;
+  });
+  lines += `\nLösen mit:  <span class="r-blue">resolve 1 --keep-local</span>   oder   <span class="r-blue">resolve 1 --accept-server</span>`;
+  appendResponse(lines);
+}
+
+function cmdResolve(pos, flags) {
+  const open = openConflicts();
+  if (!open.length) { appendResponse(`<span class="r-green">✓ Keine offenen Konflikte.</span>`); return; }
+
+  const all = pos[0] === 'all';
+  const targets = all ? open : open.filter(c => String(c.id) === pos[0]);
+  if (!targets.length) { appendError('Konflikt-Nr. nicht gefunden: ' + pos[0]); return; }
+
+  const useLocal = flags['keep-local'] || (!flags['accept-server'] && !flags['keep-local']);
+  targets.forEach(c => {
+    conflictsResolved[c.id] = true;
+    const val = useLocal ? c.local : c.server;
+    SCORES[c.pid][c.disc].status = 'synced';
+    if (!useLocal) SCORES[c.pid][c.disc].best = parseFloat(c.server);
+    pendingCount = Math.max(0, pendingCount - 1);
+    updateTitleBar();
+    appendResponse(`<span class="r-green">✓</span> Konflikt #${c.id} gelöst. ${useLocal?'<span class="r-orange">Lokaler</span>':'<span class="r-blue">Server-</span>'}Wert ${val} für <span class="r-blue">#${c.pid}</span> ${esc(c.name)} übernommen.`);
+  });
+  const remaining = openConflicts().length;
+  if (remaining === 0) appendSys('Alle Konflikte gelöst.');
+  else appendSys(`${remaining} Konflikt${remaining!==1?'e':''} verbleibend.`);
+}
+
+// ─── edit ───
+function cmdEdit(pos, flags) {
+  if (pos.length < 3) { appendError('Verwendung: edit #id disziplin [try1|try2] wert'); return; }
+  const id = pos[0].replace(/^#/,'').padStart(2,'0');
+  const p = PARTICIPANTS.find(x=>x.id===id);
+  if (!p) { appendError('Teilnehmer nicht gefunden: '+pos[0]); return; }
+  const discKey = pos[1].toLowerCase().replace('3-jump','3jump').replace('wurf','throw').replace('sprint','50m').replace('lauf','800m');
+  if (!DISC_CFG[discKey]) { appendError('Unbekannte Disziplin: '+pos[1]); return; }
+  const valStr = pos[pos.length-1];
+  const val = parseFloat(valStr);
+  if (isNaN(val)||val<=0) { appendError('Ungültiger Wert: '+valStr); return; }
+  const old = SCORES[id][discKey] ? SCORES[id][discKey].best : null;
+  const pts = PTS[discKey](val);
+  SCORES[id][discKey] = SCORES[id][discKey] || {};
+  SCORES[id][discKey].best = val; SCORES[id][discKey].pts = pts; SCORES[id][discKey].status = 'saved';
+  pendingCount++;
+  setTimeout(()=>{if(SCORES[id]?.[discKey]?.status==='saved'){SCORES[id][discKey].status='synced';pendingCount=Math.max(0,pendingCount-1);updateTitleBar();}}, 1500);
+  const oldStr = old !== null ? `${old}${DISC_CFG[discKey].unit}` : '—';
+  appendResponse(
+    `<span class="r-green">✓</span> Aktualisiert: <span class="r-blue">#${id}</span> ${esc(p.name)} — ${DISC_CFG[discKey].label}: <span class="r-orange">${oldStr}</span> → <span class="r-green">${val}${DISC_CFG[discKey].unit}</span>\n  Punkte: <span class="r-green">${pts}</span>   Speichern… <span class="r-blue">💾 gespeichert</span>. Synchronisiere…`
+  );
+  updateTitleBar();
+}
+
+// ─── export ───
+function cmdExport(flags) {
+  const fmt = flags['format'] || 'csv';
+  const cls = flags['class'];
+  const certs = flags['certificates'];
+  if (certs) {
+    appendResponse(`Generiere Urkunden…\n<span class="r-green">✓</span> Heruntergeladen: <span class="r-blue">urkunden-2026-03-24.pdf</span> (${PARTICIPANTS.length} Seiten)`);
+    return;
+  }
+  if (fmt === 'csv') {
+    appendResponse(`Generiere CSV…\n<span class="r-green">✓</span> Heruntergeladen: <span class="r-blue">ergebnisse-2026-03-24.csv</span> (${PARTICIPANTS.length} Teilnehmer, ${overallDone()} Werte)`);
+  } else {
+    const label = cls ? ` für Klasse ${cls}` : '';
+    const count = cls ? PARTICIPANTS.filter(p=>p.cls===cls).length : PARTICIPANTS.length;
+    appendResponse(`Generiere PDF${label}…\n<span class="r-green">✓</span> Heruntergeladen: <span class="r-blue">ergebnisse${cls?'-'+cls:''}-2026-03-24.pdf</span> (${count} Teilnehmer)`);
+  }
+  showToast('📥 Export simuliert (kein echter Download)', 'ok');
+}
+
+// ─── config ───
+function cmdConfig(sub, flags) {
+  if (!sub || sub === 'disciplines') {
+    let lines = `<span class="r-title">DISZIPLINEN</span>\n${rule(56)}\n`;
+    Object.entries(DISC_CFG).forEach(([k,v],i) => {
+      lines += `  ${i+1}. ${pad(v.label,18)}<span class="r-gray">Einheit: ${v.unit}    Versuche: ${v.tries}</span>\n`;
+    });
+    appendResponse(lines); return;
+  }
+  if (sub === 'classes') {
+    let lines = `<span class="r-title">KLASSEN</span>\n${rule(50)}\n`;
+    ['5a','5b','6a','6b'].forEach(cls => {
+      const count = PARTICIPANTS.filter(p=>p.cls===cls).length;
+      lines += `  <span class="r-blue">${cls}</span>    ${pad(count+' Teilnehmer',18)}<span class="r-gray">Niveau: ${cls.startsWith('5')?'Intermediate':'Advanced'}</span>\n`;
+    });
+    appendResponse(lines); return;
+  }
+  appendError('Unbekannte config-Untersektion: '+sub+'. Verfügbar: disciplines, classes');
+}
+
+// ─── mute ───
+function cmdMute(flags) {
+  liveStreamMuted = true;
+  if (flags['except']) appendSys(`Live-Events stummgeschaltet (ausgenommen: ${flags['except']}).`);
+  else appendSys('Live-Events stummgeschaltet. Tippe "unmute" zum Reaktivieren.');
+  updateMuteBtn();
+}
+
+function updateMuteBtn() {
+  const btn = document.getElementById('tb-muted');
+  btn.textContent = liveStreamMuted ? '⦸ STUMM' : '● LIVE';
+  btn.style.color = liveStreamMuted ? '#e06c75' : '#5c6370';
+}
+
+// ─── alias ───
+function cmdAlias(pos) {
+  if (pos.length < 2) { appendError('Verwendung: alias <kürzel> <befehl>'); return; }
+  const [a, ...cmd] = pos;
+  if (KNOWN_CMDS.includes(a)) { appendError(`"${a}" ist ein reservierter Befehlsname.`); return; }
+  aliases[a] = cmd.join(' ');
+  appendResponse(`<span class="r-green">✓</span> Alias gesetzt: <span class="r-orange">${esc(a)}</span> → <span class="r-blue">${esc(aliases[a])}</span>`);
+}
+
+// ═══════════════════════════════════════════════
+//  TITLE BAR
+// ═══════════════════════════════════════════════
+function updateTitleBar() {
+  const el = document.getElementById('tb-pending');
+  if (pendingCount === 0) { el.textContent = '✓ synchron'; el.className='pending-ok'; }
+  else { el.textContent = `⊘ ${pendingCount} ausstehend`; el.className='pending-warn'; }
+}
+
+// ═══════════════════════════════════════════════
+//  AUTOCOMPLETE
+// ═══════════════════════════════════════════════
+const ALL_CMDS = [...KNOWN_CMDS];
+const DISC_ALIASES = ['800m','50m','3jump','3-jump','throw','wurf'];
+const CLASS_NAMES  = ['5a','5b','6a','6b'];
+
+function getAutocomplete(raw) {
+  if (!raw) return '';
+  const tokens = raw.trimStart().split(/\s+/);
+  const verb = tokens[0].toLowerCase();
+  // Complete verb
+  if (tokens.length === 1) {
+    const all = [...ALL_CMDS, ...Object.keys(aliases)];
+    const match = all.find(c => c.startsWith(verb) && c !== verb);
+    return match ? raw + match.slice(verb.length) : '';
+  }
+  // Flag completion
+  const lastToken = tokens[tokens.length-1];
+  if (lastToken.startsWith('--')) {
+    const flagsFor = {
+      rank: ['--class','--discipline','--gender'],
+      list: ['--class','--missing','--pending'],
+      export: ['--format','--class','--certificates'],
+      resolve: ['--keep-local','--accept-server'],
+    };
+    const available = flagsFor[verb] || [];
+    const match = available.find(f => f.startsWith(lastToken) && f !== lastToken);
+    return match ? raw + match.slice(lastToken.length) : '';
+  }
+  return '';
+}
+
+// ═══════════════════════════════════════════════
+//  INPUT HANDLING
+// ═══════════════════════════════════════════════
+const input = document.getElementById('cmd-input');
+const acHint = document.getElementById('autocomplete-hint');
+let history = [], histIdx = -1, histBuffer = '';
+
+input.addEventListener('input', () => {
+  const ac = getAutocomplete(input.value);
+  if (ac && ac !== input.value) {
+    acHint.textContent = ac;
+    acHint.style.visibility = 'visible';
+  } else {
+    acHint.textContent = '';
+  }
+  histIdx = -1;
+});
+
+input.addEventListener('keydown', e => {
+  // Autocomplete
+  if (e.key === 'Tab') {
+    e.preventDefault();
+    const ac = getAutocomplete(input.value);
+    if (ac && ac !== input.value) { input.value = ac; acHint.textContent = ''; }
+    return;
+  }
+  // History
+  if (e.key === 'ArrowUp') {
+    e.preventDefault();
+    if (histIdx === -1) histBuffer = input.value;
+    if (histIdx < history.length - 1) { histIdx++; input.value = history[history.length - 1 - histIdx]; }
+    return;
+  }
+  if (e.key === 'ArrowDown') {
+    e.preventDefault();
+    if (histIdx > 0) { histIdx--; input.value = history[history.length - 1 - histIdx]; }
+    else if (histIdx === 0) { histIdx = -1; input.value = histBuffer; }
+    return;
+  }
+  // Submit
+  if (e.key === 'Enter') {
+    const raw = input.value.trim();
+    if (!raw) return;
+    history.push(raw);
+    histIdx = -1;
+    input.value = '';
+    acHint.textContent = '';
+    appendCmd(raw);
+    runCmd(raw);
+    return;
+  }
+  // F1
+  if (e.key === 'F1') {
+    e.preventDefault();
+    document.getElementById('help-overlay').classList.add('open');
+  }
+});
+
+document.getElementById('help-close').addEventListener('click', () => {
+  document.getElementById('help-overlay').classList.remove('open');
+  input.focus();
+});
+document.getElementById('help-overlay').addEventListener('click', e => {
+  if (e.target === document.getElementById('help-overlay')) {
+    document.getElementById('help-overlay').classList.remove('open');
+    input.focus();
+  }
+});
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    document.getElementById('help-overlay').classList.remove('open');
+    input.focus();
+  }
+});
+
+document.getElementById('tb-muted').addEventListener('click', () => {
+  liveStreamMuted = !liveStreamMuted;
+  appendSys(liveStreamMuted ? 'Live-Events stummgeschaltet.' : 'Live-Events wieder aktiv.');
+  updateMuteBtn();
+});
+
+// ═══════════════════════════════════════════════
+//  TOAST
+// ═══════════════════════════════════════════════
+let toastTimer = null;
+function showToast(msg, type='ok') {
+  const el = document.getElementById('toast-msg');
+  el.textContent = msg;
+  el.className = `toast-msg ${type==='err'?'err':type==='warn'?'warn':''} show`;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 3500);
+}
+
+// ═══════════════════════════════════════════════
+//  LIVE EVENT STREAM
+// ═══════════════════════════════════════════════
+const DISC_LABELS = { '800m':'800m','50m':'50m','3jump':'3-Jump','throw':'Wurf' };
+let liveIdxCounter = 0;
+
+function simulateLiveEvent() {
+  const p = PARTICIPANTS[liveIdxCounter % PARTICIPANTS.length]; liveIdxCounter++;
+  const disc = DISC_NAMES[Math.floor(Math.random()*4)];
+  let val;
+  if (disc==='800m') val=rnd(165,215)+'s';
+  else if (disc==='50m') val=rnd(7.3,10.3)+'s';
+  else if (disc==='3jump') val=rnd(3.9,6.3)+'m';
+  else val=rnd(16,30)+'m';
+
+  const isConflict = Math.random() > .94;
+  const status = isConflict ? 'conflict' : 'synced';
+  const body = `#${p.id} ${p.name} → ${DISC_LABELS[disc]}: ${val}  (Helper-${Math.ceil(Math.random()*4)})`;
+
+  if (!liveStreamMuted) {
+    appendEvent({ time: nowTime(), body, status });
+  }
+
+  if (isConflict) {
+    showToast(`⚡ Konflikt: #${p.id} ${p.name} — ${DISC_LABELS[disc]}`, 'warn');
+  }
+
+  // Occasionally push an offline warning
+  if (Math.random() > .97 && !liveStreamMuted) {
+    showToast('🔴 Helper-3 offline (3-Jump-Station)', 'err');
+    appendEvent({ time: nowTime(), body: 'Helper-3 offline — 3-Jump-Station synchronisiert nicht.', status:'conflict' });
+  }
+}
+
+setInterval(simulateLiveEvent, 4500);
+setInterval(() => {
+  if (pendingCount > 0 && Math.random() > .7) {
+    pendingCount--;
+    updateTitleBar();
+  }
+}, 3000);
+
+// ═══════════════════════════════════════════════
+//  INIT — boot sequence
+// ═══════════════════════════════════════════════
+setTimeout(() => { appendSys('Bundesjugendspiele 2026 — Terminal bereit. Tippe "status" oder "help".'); input.focus(); }, 100);
+setTimeout(() => {
+  appendCmd('status');
+  runCmd('status');
+}, 600);
+</script>
+</body>
+</html>

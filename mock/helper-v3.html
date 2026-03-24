@@ -1,0 +1,925 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Field-Touch Helper v3</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f0f0f0;color:#000}
+
+/* ─── STATUS BAR ─── */
+#statusbar{position:fixed;top:0;left:0;right:0;height:48px;background:#1c1c1e;display:flex;align-items:center;padding:0 16px;gap:0;z-index:100;user-select:none}
+#sb-disc{font-size:15px;font-weight:700;color:#fff}
+#sb-sep{color:#555;margin:0 10px;font-size:14px}
+#sb-class{font-size:15px;font-weight:700;color:#fff}
+#sb-conn{margin-left:auto;font-size:13px;font-weight:700}
+.conn-online{color:#34c759}
+.conn-offline{color:#ff3b30}
+#sb-longpress-hint{font-size:10px;color:#555;margin-left:8px;transition:opacity .2s}
+
+/* ─── CARD AREA ─── */
+#card-area{position:fixed;top:48px;left:0;right:0;bottom:120px;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:14px;background:#f0f0f0}
+#card-area::-webkit-scrollbar{width:4px}
+#card-area::-webkit-scrollbar-thumb{background:#ccc;border-radius:2px}
+
+/* ─── PARTICIPANT CARD ─── */
+.card{background:#fff;border-radius:10px;border-left:5px solid #ccc;box-shadow:0 1px 4px rgba(0,0,0,.12);overflow:hidden;transition:border-color .3s,box-shadow .3s}
+.card.border-gray{border-left-color:#9a9a9a}
+.card.border-blue{border-left-color:#007aff}
+.card.border-green{border-left-color:#34c759}
+.card.border-red{border-left-color:#ff3b30}
+.card.border-gold{border-left-color:#f5a623;animation:goldPulse 1.2s ease infinite}
+@keyframes goldPulse{0%,100%{border-left-color:#f5a623}50%{border-left-color:#ffcc00;box-shadow:0 0 0 3px rgba(245,166,35,.3)}}
+.card.highlight{animation:cardHighlight 1s ease}
+@keyframes cardHighlight{0%,100%{box-shadow:0 1px 4px rgba(0,0,0,.12)}30%,70%{box-shadow:0 0 0 4px rgba(255,204,0,.6),0 1px 4px rgba(0,0,0,.12)}}
+
+.card-hd{display:flex;align-items:center;padding:12px 14px 8px;gap:8px;border-bottom:1px solid #e5e5e5}
+.card-id{font-size:13px;font-family:monospace;font-weight:700;color:#666;background:#f5f5f5;padding:2px 6px;border-radius:4px}
+.card-name{font-size:18px;font-weight:700;color:#000;flex:1}
+.card-info-btn{width:28px;height:28px;border-radius:50%;background:#f0f0f0;border:2px solid #ccc;display:flex;align-items:center;justify-content:center;font-size:14px;cursor:pointer;font-weight:700;color:#666;flex-shrink:0}
+.card-info-btn:active{background:#e0e0e0}
+
+.card-attempts{display:grid;padding:10px 14px 12px;gap:10px}
+.card-attempts.cols-2{grid-template-columns:1fr 1fr}
+.card-attempts.cols-1{grid-template-columns:1fr}
+
+.attempt-box{background:#f8f8f8;border:2px solid #e0e0e0;border-radius:8px;padding:10px;cursor:pointer;transition:border-color .15s,background .15s;min-height:80px;display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative}
+.attempt-box:active{background:#e8e8e8;border-color:#999}
+.attempt-box.active-edit{border-color:#007aff;background:#f0f8ff}
+.attempt-label{font-size:11px;font-weight:700;text-transform:uppercase;color:#888;margin-bottom:4px;letter-spacing:.05em;align-self:flex-start}
+.attempt-val{font-size:22px;font-weight:700;font-family:monospace;color:#000;display:flex;align-items:center;gap:6px}
+.attempt-val.empty{color:#bbb;font-size:18px}
+.attempt-star{color:#f5a623;font-size:18px}
+.attempt-status{margin-top:5px;display:flex;align-items:center;gap:4px;font-size:12px;font-weight:700}
+.st-empty{color:#aaa}
+.st-saved{color:#007aff}
+.st-synced{color:#34c759}
+.st-conflict{color:#f5a623;cursor:pointer}
+
+.card-complete{background:#d4f5de;border-top:1px solid #b2dfc0;text-align:center;padding:8px 0;font-size:13px;font-weight:700;color:#1a7a32;letter-spacing:.05em}
+
+.conflict-resolution{background:#fff8e6;border:2px solid #f5a623;border-radius:8px;padding:12px;margin:0 14px 12px}
+.cr-title{font-size:12px;font-weight:700;color:#b07800;margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.cr-values{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:0}
+.cr-box{background:#fff;border:2px solid #e0e0e0;border-radius:6px;padding:8px;text-align:center}
+.cr-label{font-size:10px;font-weight:700;text-transform:uppercase;color:#888;margin-bottom:4px}
+.cr-val{font-size:20px;font-weight:700;font-family:monospace;margin-bottom:8px}
+.cr-btn{width:100%;padding:8px;border:none;border-radius:5px;font-size:12px;font-weight:700;cursor:pointer;transition:opacity .15s}
+.cr-btn:active{opacity:.7}
+.cr-keep{background:#007aff;color:#fff}
+.cr-accept{background:#e0e0e0;color:#333}
+
+/* ─── INFO TOOLTIP ─── */
+.info-tooltip{position:absolute;right:14px;top:44px;background:#1c1c1e;color:#fff;border-radius:8px;padding:10px 12px;font-size:12px;z-index:50;line-height:1.7;box-shadow:0 4px 12px rgba(0,0,0,.3);white-space:nowrap}
+.info-tooltip::before{content:'';position:absolute;top:-6px;right:10px;border:6px solid transparent;border-bottom-color:#1c1c1e;border-top:none}
+
+/* ─── ACTION ZONE ─── */
+#action-zone{position:fixed;bottom:0;left:0;right:0;height:120px;background:#fff;border-top:2px solid #e0e0e0;padding:12px 16px;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:10px;z-index:100}
+.az-btn{border:2px solid #d0d0d0;border-radius:10px;background:#f8f8f8;font-size:14px;font-weight:700;color:#1c1c1e;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;transition:background .1s,border-color .1s}
+.az-btn:active{background:#e0e0e0}
+.az-btn.primary{background:#007aff;border-color:#0062cc;color:#fff}
+.az-btn.primary:active{background:#0062cc}
+.az-btn.success{background:#34c759;border-color:#28a745;color:#fff}
+.az-btn.warning{background:#ff9500;border-color:#e08000;color:#fff}
+
+/* ─── NUMPAD OVERLAY ─── */
+#numpad-overlay{position:fixed;inset:0;z-index:200;display:none;flex-direction:column}
+#numpad-overlay.open{display:flex}
+#numpad-context{flex:1;background:rgba(0,0,0,.08);display:flex;flex-direction:column;justify-content:flex-end;pointer-events:none;padding:0 12px 12px}
+.numpad-card-preview{background:#fff;border-radius:10px;padding:12px 14px;box-shadow:0 2px 8px rgba(0,0,0,.15);border-left:5px solid #007aff}
+.ncp-name{font-size:15px;font-weight:700;margin-bottom:4px}
+.ncp-label{font-size:12px;color:#666;font-weight:600}
+#numpad-panel{background:#fff;border-top:2px solid #e0e0e0;padding:12px 16px 20px;flex-shrink:0}
+#numpad-display{background:#f5f5f5;border:2px solid #d0d0d0;border-radius:8px;padding:10px 16px;text-align:right;font-size:30px;font-weight:700;font-family:monospace;margin-bottom:12px;min-height:56px;transition:border-color .15s}
+#numpad-display.error{border-color:#ff3b30;animation:shake .3s}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+.numpad-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px}
+.np-key{height:56px;border:2px solid #d0d0d0;border-radius:8px;background:#f8f8f8;font-size:22px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .1s}
+.np-key:active{background:#d0d0d0}
+.np-key.del{background:#ffe5e5;border-color:#ffb3b3;font-size:18px}
+.np-key.del:active{background:#ffb3b3}
+.numpad-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.np-cancel{height:52px;border:2px solid #d0d0d0;border-radius:8px;background:#f0f0f0;font-size:15px;font-weight:700;cursor:pointer;color:#666}
+.np-cancel:active{background:#d0d0d0}
+.np-confirm{height:52px;border:none;border-radius:8px;background:#007aff;font-size:15px;font-weight:700;cursor:pointer;color:#fff}
+.np-confirm:active{background:#0055d8}
+
+/* ─── SEARCH BOTTOM SHEET ─── */
+#search-overlay{position:fixed;inset:0;z-index:200;display:none}
+#search-overlay.open{display:block}
+#search-bg{position:absolute;top:0;left:0;right:0;height:40%;background:rgba(0,0,0,.3)}
+#search-sheet{position:absolute;bottom:0;left:0;right:0;height:62%;background:#fff;border-radius:16px 16px 0 0;display:flex;flex-direction:column;box-shadow:0 -4px 24px rgba(0,0,0,.15);transform:translateY(100%);transition:transform .25s cubic-bezier(.4,0,.2,1)}
+#search-overlay.open #search-sheet{transform:translateY(0)}
+.sheet-handle{width:36px;height:4px;background:#d0d0d0;border-radius:2px;margin:10px auto 8px}
+.sheet-search-wrap{padding:0 16px 10px;border-bottom:1px solid #e5e5e5}
+.sheet-search-input{width:100%;border:2px solid #007aff;border-radius:8px;padding:10px 14px;font-size:16px;outline:none;background:#f8f8f8}
+#search-results{flex:1;overflow-y:auto;padding:0}
+.sr-section{padding:10px 16px 4px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#888}
+.sr-row{padding:13px 16px;border-bottom:1px solid #f0f0f0;display:flex;align-items:center;gap:10px;cursor:pointer;transition:background .1s}
+.sr-row:active{background:#f5f5f5}
+.sr-id{font-size:12px;font-family:monospace;font-weight:700;color:#666;background:#f0f0f0;padding:2px 5px;border-radius:3px;flex-shrink:0}
+.sr-name{font-size:15px;font-weight:600;flex:1}
+.sr-st{font-size:13px;margin-left:auto}
+
+/* ─── TIMER OVERLAY ─── */
+#timer-overlay{position:fixed;inset:0;z-index:300;background:#1c1c1e;display:none;flex-direction:column;align-items:center;padding:20px 20px 32px}
+#timer-overlay.open{display:flex}
+/* Phase 1 */
+#timer-phase-ready{display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;width:100%}
+#timer-display-ready{font-size:72px;font-weight:700;font-family:monospace;color:#fff;letter-spacing:.02em;margin-bottom:48px}
+.timer-start-btn{width:100%;max-width:340px;height:80px;background:#34c759;border:none;border-radius:16px;font-size:22px;font-weight:700;color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;transition:background .1s}
+.timer-start-btn:active{background:#28a745}
+.timer-exit-btn{position:absolute;bottom:32px;right:24px;padding:10px 18px;background:transparent;border:2px solid #555;border-radius:8px;color:#888;font-size:14px;cursor:pointer}
+.timer-exit-btn:active{background:#333}
+/* Phase 2 */
+#timer-phase-running{display:none;flex-direction:column;width:100%;flex:1}
+#timer-display-running{font-size:60px;font-weight:700;font-family:monospace;color:#fff;text-align:center;margin-bottom:12px;display:flex;align-items:center;justify-content:center;gap:12px}
+.timer-live-dot{width:14px;height:14px;border-radius:50%;background:#ff3b30;animation:blink .8s infinite;flex-shrink:0}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.1}}
+#timer-list{flex:1;overflow-y:auto;margin-bottom:16px;background:#2c2c2e;border-radius:12px;overflow:hidden}
+.timer-row{padding:14px 16px;border-bottom:1px solid #3a3a3c;display:flex;align-items:center;gap:12px;cursor:pointer;transition:background .1s}
+.timer-row:active{background:#3a3a3c}
+.timer-row.recorded{background:#1a3a1a}
+.timer-row-name{font-size:16px;font-weight:600;color:#fff;flex:1}
+.timer-row-id{font-size:12px;font-family:monospace;color:#888;background:#3a3a3c;padding:2px 5px;border-radius:3px}
+.timer-row-val{font-size:15px;font-family:monospace;color:#34c759;font-weight:700}
+.timer-tap-hint{font-size:13px;color:#555;font-weight:700;padding:2px 8px;background:#3a3a3c;border-radius:4px}
+.timer-ctrl{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.timer-pause-btn{height:56px;background:#3a3a3c;border:none;border-radius:10px;font-size:16px;font-weight:700;color:#fff;cursor:pointer}
+.timer-stop-btn{height:56px;background:#ff3b30;border:none;border-radius:10px;font-size:16px;font-weight:700;color:#fff;cursor:pointer}
+/* Phase 3 */
+#timer-phase-done{display:none;flex-direction:column;width:100%;flex:1}
+#timer-display-done{font-size:52px;font-weight:700;font-family:monospace;color:#ccc;text-align:center;margin-bottom:16px}
+.td-stopped-label{font-size:14px;color:#888;text-align:center;margin-top:-8px;margin-bottom:20px}
+#timer-list-done{flex:1;overflow-y:auto;background:#2c2c2e;border-radius:12px;overflow:hidden;margin-bottom:16px}
+.trd-row{padding:13px 16px;border-bottom:1px solid #3a3a3c;display:flex;align-items:center;gap:12px}
+.trd-row.missed{background:#3a1010}
+.trd-row-name{font-size:15px;font-weight:600;flex:1}
+.trd-row-val{font-size:15px;font-family:monospace;font-weight:700}
+.trd-ok{color:#34c759}
+.trd-miss{color:#ff3b30}
+.timer-done-ctrl{display:grid;grid-template-columns:1fr 1fr;gap:10px;flex-shrink:0}
+.timer-save-btn{height:56px;background:#34c759;border:none;border-radius:10px;font-size:16px;font-weight:700;color:#fff;cursor:pointer}
+.timer-done-exit{height:56px;background:#3a3a3c;border:none;border-radius:10px;font-size:16px;font-weight:700;color:#fff;cursor:pointer}
+
+/* ─── CONFIG SELECTOR ─── */
+#config-overlay{position:fixed;inset:0;z-index:400;background:#fff;display:none;flex-direction:column}
+#config-overlay.open{display:flex}
+#config-hd{padding:16px;background:#1c1c1e;color:#fff;font-size:17px;font-weight:700;display:flex;align-items:center;justify-content:space-between}
+#config-hd .close-btn{background:none;border:none;color:#888;font-size:20px;cursor:pointer;padding:0 4px}
+.config-section{padding:16px}
+.config-label{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#888;margin-bottom:10px}
+.config-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px}
+.cfg-opt{padding:16px 12px;border:3px solid #e0e0e0;border-radius:10px;text-align:center;font-size:15px;font-weight:700;cursor:pointer;transition:border-color .15s,background .15s;background:#f8f8f8}
+.cfg-opt:active{background:#e0e0e0}
+.cfg-opt.selected{border-color:#007aff;background:#f0f8ff;color:#007aff}
+
+/* ─── SORT ANIMATION ─── */
+.card{transition:border-color .3s,box-shadow .3s,opacity .3s}
+.card.dimmed{opacity:.45}
+</style>
+</head>
+<body>
+
+<!-- STATUS BAR -->
+<div id="statusbar" id="statusbar-hold">
+  <span id="sb-disc">3-Jump</span>
+  <span id="sb-sep">·</span>
+  <span id="sb-class">Klasse 5a</span>
+  <span id="sb-conn" class="conn-online">☁✓ online</span>
+  <span id="sb-longpress-hint">Gedrückt halten zum Wechseln</span>
+</div>
+
+<!-- CARD AREA -->
+<div id="card-area"></div>
+
+<!-- ACTION ZONE -->
+<div id="action-zone">
+  <button class="az-btn" id="btn-find">🔍 FIND</button>
+  <button class="az-btn primary" id="btn-timer">⏱ TIMER</button>
+  <button class="az-btn" id="btn-sort">↕ SORT: ID</button>
+  <button class="az-btn success" id="btn-sync">☁ SYNC (3)</button>
+</div>
+
+<!-- NUMPAD OVERLAY -->
+<div id="numpad-overlay">
+  <div id="numpad-context">
+    <div class="numpad-card-preview">
+      <div class="ncp-name" id="np-name">–</div>
+      <div class="ncp-label" id="np-label">–</div>
+    </div>
+  </div>
+  <div id="numpad-panel">
+    <div id="numpad-display">–</div>
+    <div class="numpad-grid">
+      <button class="np-key" data-k="1">1</button>
+      <button class="np-key" data-k="2">2</button>
+      <button class="np-key" data-k="3">3</button>
+      <button class="np-key" data-k="4">4</button>
+      <button class="np-key" data-k="5">5</button>
+      <button class="np-key" data-k="6">6</button>
+      <button class="np-key" data-k="7">7</button>
+      <button class="np-key" data-k="8">8</button>
+      <button class="np-key" data-k="9">9</button>
+      <button class="np-key" data-k=".">.</button>
+      <button class="np-key" data-k="0">0</button>
+      <button class="np-key del" data-k="back">⌫</button>
+    </div>
+    <div class="numpad-actions">
+      <button class="np-cancel" id="np-cancel">ABBRECHEN</button>
+      <button class="np-confirm" id="np-confirm">BESTÄTIGEN ✓</button>
+    </div>
+  </div>
+</div>
+
+<!-- SEARCH BOTTOM SHEET -->
+<div id="search-overlay">
+  <div id="search-bg"></div>
+  <div id="search-sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-search-wrap">
+      <input class="sheet-search-input" id="search-input" type="search" placeholder="🔍  Nach Name oder Startnummer suchen…" autocomplete="off">
+    </div>
+    <div id="search-results"></div>
+  </div>
+</div>
+
+<!-- TIMER OVERLAY -->
+<div id="timer-overlay">
+  <!-- Phase 1: Ready -->
+  <div id="timer-phase-ready">
+    <div style="font-size:16px;color:#888;margin-bottom:20px;font-weight:600">ZEITMESSUNG — 3-Jump</div>
+    <div id="timer-display-ready">00:00.00</div>
+    <button class="timer-start-btn" id="timer-start-btn">▶ START</button>
+  </div>
+  <!-- Phase 2: Running -->
+  <div id="timer-phase-running" style="flex-direction:column;width:100%;flex:1">
+    <div id="timer-display-running">
+      <span class="timer-live-dot"></span>
+      <span id="timer-val-running">00:00.00</span>
+    </div>
+    <div id="timer-list"></div>
+    <div class="timer-ctrl">
+      <button class="timer-pause-btn" id="timer-pause-btn">⏸ PAUSE</button>
+      <button class="timer-stop-btn" id="timer-stop-btn">■ STOPP</button>
+    </div>
+  </div>
+  <!-- Phase 3: Done -->
+  <div id="timer-phase-done" style="flex-direction:column;width:100%;flex:1">
+    <div id="timer-display-done">—</div>
+    <div class="td-stopped-label">Gestoppt</div>
+    <div id="timer-list-done"></div>
+    <div class="timer-done-ctrl">
+      <button class="timer-save-btn" id="timer-save-btn">ALLE SPEICHERN ✓</button>
+      <button class="timer-done-exit" id="timer-exit-btn">BEENDEN</button>
+    </div>
+  </div>
+  <button class="timer-exit-btn" id="timer-abort-btn">✕ BEENDEN</button>
+</div>
+
+<!-- CONFIG SELECTOR -->
+<div id="config-overlay">
+  <div id="config-hd">
+    <span>Disziplin & Klasse ändern</span>
+    <button class="close-btn" id="config-close">✕</button>
+  </div>
+  <div class="config-section">
+    <div class="config-label">Disziplin</div>
+    <div class="config-grid" id="disc-opts">
+      <div class="cfg-opt" data-disc="3jump">3-Jump</div>
+      <div class="cfg-opt" data-disc="throw">Distanzwurf</div>
+      <div class="cfg-opt" data-disc="800m">800m Lauf</div>
+      <div class="cfg-opt" data-disc="50m">50m Sprint</div>
+    </div>
+    <div class="config-label">Klasse</div>
+    <div class="config-grid" id="class-opts">
+      <div class="cfg-opt selected" data-cls="5a">5a</div>
+      <div class="cfg-opt" data-cls="5b">5b</div>
+      <div class="cfg-opt" data-cls="6a">6a</div>
+      <div class="cfg-opt" data-cls="6b">6b</div>
+    </div>
+  </div>
+  <div style="padding:0 16px">
+    <button style="width:100%;height:56px;background:#007aff;border:none;border-radius:12px;font-size:17px;font-weight:700;color:#fff;cursor:pointer" id="config-apply">Übernehmen</button>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════
+//  DATA MODEL
+// ═══════════════════════════════════════════════
+const DISCS = {
+  '3jump': { label:'3-Jump',      unit:'m',  tries:2 },
+  'throw': { label:'Distanzwurf', unit:'m',  tries:2 },
+  '800m':  { label:'800m Lauf',   unit:'s',  tries:1 },
+  '50m':   { label:'50m Sprint',  unit:'s',  tries:1 },
+};
+
+let currentDisc = '3jump';
+let currentClass = '5a';
+
+const RAW = [
+  {id:'01',name:'Müller, Anna',     gender:'f'},
+  {id:'02',name:'Weber, Clara',     gender:'f'},
+  {id:'03',name:'Klein, Eva',       gender:'f'},
+  {id:'04',name:'Schmidt, Ben',     gender:'m'},
+  {id:'05',name:'Fischer, David',   gender:'m'},
+  {id:'06',name:'Koch, Max',        gender:'m'},
+  {id:'07',name:'Braun, Felix',     gender:'m'},
+  {id:'08',name:'Lang, Mia',        gender:'f'},
+  {id:'09',name:'Richter, Lena',    gender:'f'},
+  {id:'10',name:'Wolf, Tobias',     gender:'m'},
+  {id:'11',name:'Zimmermann, Paul', gender:'m'},
+  {id:'12',name:'Bauer, Tim',       gender:'m'},
+];
+
+// CD[id][disc][try_idx] = { value: '5.42', status: 'empty'|'saved'|'synced'|'conflict' }
+const CD = {};
+RAW.forEach(p => { CD[p.id] = {}; });
+
+// Seed some data
+function seed(id, disc, tries) {
+  CD[id][disc] = tries.map(v => ({ value: v ? String(v) : '', status: v ? (Math.random()>.3?'synced':'saved') : 'empty' }));
+}
+seed('01','3jump',[5.10,4.88]);   // green
+seed('02','3jump',[5.42,'']);     // blue (partial)
+seed('05','3jump',[6.01,'']);     // conflict on try1
+CD['05']['3jump'][0].status = 'conflict';
+seed('06','3jump',[4.22,4.55]);   // green
+
+let sortMode = 'id'; // 'id' | 'todo' | 'recent'
+let recentIds = ['05','02','01'];
+let pendingSync = 3;
+let isOnline = true;
+
+// ═══════════════════════════════════════════════
+//  CARD RENDERING
+// ═══════════════════════════════════════════════
+function getBorderClass(id, disc) {
+  const d = CD[id][disc];
+  if (!d) return 'border-gray';
+  const hasConflict = d.some(t => t.status === 'conflict');
+  if (hasConflict) return 'border-gold';
+  const hasError = d.some(t => t.status === 'error');
+  if (hasError) return 'border-red';
+  const allFilled = d.every(t => t.value);
+  const allSynced = allFilled && d.every(t => t.status === 'synced');
+  if (allSynced) return 'border-green';
+  const anyFilled = d.some(t => t.value);
+  if (anyFilled) return 'border-blue';
+  return 'border-gray';
+}
+
+function getBestIdx(id, disc) {
+  const d = CD[id][disc];
+  if (!d || DISCS[disc].tries < 2) return -1;
+  const vals = d.map(t => parseFloat(t.value)).filter(v => !isNaN(v));
+  if (vals.length < 2) return -1;
+  const isHigher = disc === '3jump' || disc === 'throw';
+  let bestVal = isHigher ? -Infinity : Infinity;
+  let bestIdx = -1;
+  d.forEach((t, i) => {
+    const v = parseFloat(t.value);
+    if (!isNaN(v)) {
+      if ((isHigher && v > bestVal) || (!isHigher && v < bestVal)) { bestVal = v; bestIdx = i; }
+    }
+  });
+  return bestIdx;
+}
+
+function statusIcon(status) {
+  if (status === 'synced')   return '<span class="attempt-status st-synced">☁✓ synchronisiert</span>';
+  if (status === 'saved')    return '<span class="attempt-status st-saved">💾 gespeichert</span>';
+  if (status === 'conflict') return '<span class="attempt-status st-conflict" title="Tippen zum Lösen">⚡ Konflikt</span>';
+  return '<span class="attempt-status st-empty">[ leer ]</span>';
+}
+
+function sortedParticipants() {
+  const ps = RAW.map(p => ({...p}));
+  if (sortMode === 'id') return ps;
+  if (sortMode === 'todo') {
+    return [...ps].sort((a,b) => {
+      const aFull = (CD[a.id][currentDisc]||[]).every(t=>t.value);
+      const bFull = (CD[b.id][currentDisc]||[]).every(t=>t.value);
+      return aFull - bFull;
+    });
+  }
+  if (sortMode === 'recent') {
+    return [...ps].sort((a,b) => {
+      const ai = recentIds.indexOf(a.id), bi = recentIds.indexOf(b.id);
+      const av = ai === -1 ? 999 : ai, bv = bi === -1 ? 999 : bi;
+      return av - bv;
+    });
+  }
+  return ps;
+}
+
+function renderCards() {
+  const area = document.getElementById('card-area');
+  const disc = DISCS[currentDisc];
+  const ps = sortedParticipants();
+
+  area.innerHTML = '';
+  ps.forEach(p => {
+    if (!CD[p.id][currentDisc]) {
+      CD[p.id][currentDisc] = Array.from({length: disc.tries}, () => ({ value:'', status:'empty' }));
+    }
+    const tries = CD[p.id][currentDisc];
+    const borderCls = getBorderClass(p.id, currentDisc);
+    const bestIdx = getBestIdx(p.id, currentDisc);
+    const allFilled = tries.every(t=>t.value);
+    const allSynced = allFilled && tries.every(t=>t.status==='synced');
+    const hasConflict = tries.some(t=>t.status==='conflict');
+    const isTodo = sortMode === 'todo' && allFilled;
+
+    const card = document.createElement('div');
+    card.className = `card ${borderCls}${isTodo ? ' dimmed' : ''}`;
+    card.dataset.pid = p.id;
+
+    let attemptsHtml = '';
+    tries.forEach((t, i) => {
+      const isConflict = t.status === 'conflict';
+      const valHtml = t.value
+        ? `<span class="attempt-val">
+            ${t.value}${disc.unit}
+            ${bestIdx === i ? '<span class="attempt-star">★</span>' : ''}
+           </span>`
+        : `<span class="attempt-val empty">── ──</span>`;
+
+      if (isConflict) {
+        attemptsHtml += `
+          <div class="attempt-box active-edit" data-pid="${p.id}" data-try="${i}" data-conflict="1">
+            <span class="attempt-label">${disc.tries > 1 ? 'Versuch ' + (i+1) : 'Zeit'}</span>
+            ${valHtml}
+            ${statusIcon(t.status)}
+          </div>`;
+      } else {
+        attemptsHtml += `
+          <div class="attempt-box" data-pid="${p.id}" data-try="${i}">
+            <span class="attempt-label">${disc.tries > 1 ? 'Versuch ' + (i+1) : 'Zeit'}</span>
+            ${valHtml}
+            ${statusIcon(t.status)}
+          </div>`;
+      }
+    });
+
+    let conflictHtml = '';
+    if (hasConflict) {
+      const ci = tries.findIndex(t=>t.status==='conflict');
+      conflictHtml = `
+        <div class="conflict-resolution" id="cr-${p.id}">
+          <div class="cr-title">⚡ KONFLIKT auf Versuch ${ci+1}</div>
+          <div class="cr-values">
+            <div class="cr-box">
+              <div class="cr-label">Dein Wert</div>
+              <div class="cr-val">${tries[ci].value}${disc.unit}</div>
+              <button class="cr-btn cr-keep" data-pid="${p.id}" data-try="${ci}" data-action="keep">Behalten ✓</button>
+            </div>
+            <div class="cr-box">
+              <div class="cr-label">Server-Wert</div>
+              <div class="cr-val">${(parseFloat(tries[ci].value) - 0.04).toFixed(2)}${disc.unit}</div>
+              <button class="cr-btn cr-keep cr-accept" data-pid="${p.id}" data-try="${ci}" data-action="accept" style="background:#e0e0e0;color:#333">Übernehmen</button>
+            </div>
+          </div>
+        </div>`;
+    }
+
+    card.innerHTML = `
+      <div class="card-hd">
+        <span class="card-id">#${p.id}</span>
+        <span class="card-name">${p.name}</span>
+        <button class="card-info-btn" data-pid="${p.id}">i</button>
+      </div>
+      <div class="card-attempts ${disc.tries > 1 ? 'cols-2' : 'cols-1'}">
+        ${attemptsHtml}
+      </div>
+      ${conflictHtml}
+      ${allSynced ? '<div class="card-complete">VOLLSTÄNDIG ✅</div>' : ''}`;
+
+    area.appendChild(card);
+  });
+
+  // Bind attempt boxes
+  area.querySelectorAll('.attempt-box:not([data-conflict])').forEach(box => {
+    box.addEventListener('click', () => openNumpad(box.dataset.pid, parseInt(box.dataset.try)));
+  });
+  area.querySelectorAll('[data-conflict]').forEach(box => {
+    box.addEventListener('click', () => {
+      document.getElementById(`cr-${box.dataset.pid}`)?.scrollIntoView({behavior:'smooth',block:'nearest'});
+    });
+  });
+  // Conflict resolve buttons
+  area.querySelectorAll('.cr-btn').forEach(btn => {
+    btn.addEventListener('click', () => resolveConflict(btn.dataset.pid, parseInt(btn.dataset.try), btn.dataset.action));
+  });
+  // Info button
+  area.querySelectorAll('.card-info-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => { e.stopPropagation(); showInfoTooltip(btn, btn.dataset.pid); });
+  });
+}
+
+function resolveConflict(pid, tryIdx, action) {
+  const t = CD[pid][currentDisc][tryIdx];
+  if (action === 'keep')   t.status = 'saved';
+  if (action === 'accept') { t.value = String((parseFloat(t.value)-0.04).toFixed(2)); t.status = 'synced'; }
+  pendingSync = Math.max(0, pendingSync - 1);
+  updateSyncBtn();
+  renderCards();
+}
+
+// ─── Info tooltip ───
+let tooltipEl = null;
+function showInfoTooltip(btn, pid) {
+  if (tooltipEl) { tooltipEl.remove(); tooltipEl = null; return; }
+  const p = RAW.find(x=>x.id===pid);
+  tooltipEl = document.createElement('div');
+  tooltipEl.className = 'info-tooltip';
+  tooltipEl.textContent = `Klasse: ${currentClass} · ${p.gender==='f'?'Weiblich':'Männlich'} · #${p.id}`;
+  btn.closest('.card').appendChild(tooltipEl);
+  setTimeout(() => { document.addEventListener('click', () => { if(tooltipEl){tooltipEl.remove();tooltipEl=null;} }, {once:true}); }, 50);
+}
+
+// ═══════════════════════════════════════════════
+//  NUMPAD
+// ═══════════════════════════════════════════════
+let npState = { pid:null, tryIdx:null, val:'' };
+
+function openNumpad(pid, tryIdx) {
+  const p = RAW.find(x=>x.id===pid);
+  const tries = CD[pid][currentDisc];
+  npState = { pid, tryIdx, val: tries[tryIdx].value || '' };
+  document.getElementById('np-name').textContent = `#${pid} ${p.name}`;
+  document.getElementById('np-label').textContent = DISCS[currentDisc].tries > 1
+    ? `Versuch ${tryIdx+1} — ${DISCS[currentDisc].label}`
+    : `Zeit — ${DISCS[currentDisc].label}`;
+  document.getElementById('numpad-display').textContent = npState.val || '0._';
+  document.getElementById('numpad-overlay').classList.add('open');
+  document.querySelectorAll('.attempt-box').forEach(b => b.classList.remove('active-edit'));
+  const activeBox = document.querySelector(`.attempt-box[data-pid="${pid}"][data-try="${tryIdx}"]`);
+  if (activeBox) activeBox.classList.add('active-edit');
+}
+
+function closeNumpad() {
+  document.getElementById('numpad-overlay').classList.remove('open');
+  document.querySelectorAll('.attempt-box').forEach(b => b.classList.remove('active-edit'));
+  npState = { pid:null, tryIdx:null, val:'' };
+}
+
+document.querySelectorAll('.np-key').forEach(key => {
+  key.addEventListener('click', () => {
+    const k = key.dataset.k;
+    if (k === 'back') {
+      npState.val = npState.val.slice(0,-1);
+    } else if (k === '.') {
+      if (!npState.val.includes('.')) npState.val += '.';
+    } else {
+      if (npState.val.length < 7) npState.val += k;
+    }
+    const disp = document.getElementById('numpad-display');
+    disp.textContent = npState.val || '0._';
+    disp.classList.remove('error');
+  });
+});
+
+document.getElementById('np-cancel').addEventListener('click', closeNumpad);
+
+document.getElementById('np-confirm').addEventListener('click', () => {
+  const v = parseFloat(npState.val);
+  const disp = document.getElementById('numpad-display');
+  if (isNaN(v) || v <= 0) {
+    disp.classList.add('error');
+    disp.style.borderColor = '#ff3b30';
+    setTimeout(() => { disp.style.borderColor=''; disp.classList.remove('error'); }, 600);
+    return;
+  }
+  const {pid, tryIdx} = npState;
+  CD[pid][currentDisc][tryIdx] = { value: String(v), status:'saved' };
+  if (!recentIds.includes(pid)) recentIds.unshift(pid);
+  else { recentIds = [pid, ...recentIds.filter(x=>x!==pid)]; }
+  if (recentIds.length > 5) recentIds.pop();
+  pendingSync++;
+  updateSyncBtn();
+
+  // Simulate sync after delay
+  setTimeout(() => {
+    if (CD[pid]?.[currentDisc]?.[tryIdx]?.status === 'saved') {
+      CD[pid][currentDisc][tryIdx].status = 'synced';
+      pendingSync = Math.max(0, pendingSync - 1);
+      updateSyncBtn();
+      renderCards();
+    }
+  }, 1400 + Math.random()*800);
+
+  closeNumpad();
+  renderCards();
+  autoAdvance(pid, tryIdx);
+});
+
+function autoAdvance(pid, tryIdx) {
+  const disc = DISCS[currentDisc];
+  // Same participant, next empty try
+  if (disc.tries > 1) {
+    const tries = CD[pid][currentDisc];
+    const nextEmpty = tries.findIndex((t, i) => i > tryIdx && !t.value);
+    if (nextEmpty !== -1) { setTimeout(() => openNumpad(pid, nextEmpty), 200); return; }
+  }
+  // Next unfilled participant
+  const all = sortedParticipants();
+  const myIdx = all.findIndex(p => p.id === pid);
+  for (let i = myIdx + 1; i < all.length; i++) {
+    const next = all[i];
+    const tries = CD[next.id][currentDisc];
+    const emptyTry = tries.findIndex(t => !t.value);
+    if (emptyTry !== -1) { setTimeout(() => openNumpad(next.id, emptyTry), 200); return; }
+  }
+}
+
+// ═══════════════════════════════════════════════
+//  SEARCH
+// ═══════════════════════════════════════════════
+function openSearch() {
+  document.getElementById('search-overlay').classList.add('open');
+  setTimeout(() => document.getElementById('search-input').focus(), 280);
+  populateSearch('');
+}
+function closeSearch() {
+  document.getElementById('search-overlay').classList.remove('open');
+  document.getElementById('search-input').value = '';
+}
+
+document.getElementById('btn-find').addEventListener('click', openSearch);
+document.getElementById('search-bg').addEventListener('click', closeSearch);
+document.getElementById('search-input').addEventListener('input', e => populateSearch(e.target.value));
+
+function populateSearch(q) {
+  const results = document.getElementById('search-results');
+  const lower = q.toLowerCase().trim();
+  const match = p => !lower || p.name.toLowerCase().includes(lower) || p.id.includes(lower);
+
+  const recent = recentIds.map(id => RAW.find(p=>p.id===id)).filter(Boolean).filter(match);
+  const unfilled = RAW.filter(p => {
+    const tries = CD[p.id][currentDisc];
+    return tries && tries.some(t=>!t.value) && match(p);
+  });
+
+  let html = '';
+  if (!lower && recent.length) {
+    html += `<div class="sr-section">Zuletzt bearbeitet</div>`;
+    recent.forEach(p => { html += srRow(p); });
+  }
+  if (!lower && unfilled.length) {
+    html += `<div class="sr-section">Ohne Eintrag (${unfilled.length})</div>`;
+    unfilled.forEach(p => { html += srRow(p); });
+  }
+  if (lower) {
+    const all = RAW.filter(match);
+    html += `<div class="sr-section">${all.length} Ergebnis${all.length!==1?'se':''}</div>`;
+    all.forEach(p => { html += srRow(p); });
+  }
+  if (!html) html = '<div class="sr-section" style="padding:20px 16px;color:#aaa">Keine Treffer</div>';
+  results.innerHTML = html;
+
+  results.querySelectorAll('.sr-row').forEach(row => {
+    row.addEventListener('click', () => {
+      const pid = row.dataset.pid;
+      closeSearch();
+      scrollToCard(pid);
+    });
+  });
+}
+
+function stIcon(pid) {
+  const tries = CD[pid][currentDisc];
+  if (!tries || tries.every(t=>!t.value)) return '<span class="sr-st">[ ]</span>';
+  if (tries.some(t=>t.status==='conflict')) return '<span class="sr-st st-conflict">⚡</span>';
+  if (tries.every(t=>t.value && t.status==='synced')) return '<span class="sr-st" style="color:#34c759">☁✓</span>';
+  return '<span class="sr-st" style="color:#007aff">💾</span>';
+}
+
+function srRow(p) {
+  return `<div class="sr-row" data-pid="${p.id}">
+    <span class="sr-id">#${p.id}</span>
+    <span class="sr-name">${p.name}</span>
+    ${stIcon(p.id)}
+  </div>`;
+}
+
+function scrollToCard(pid) {
+  const card = document.querySelector(`.card[data-pid="${pid}"]`);
+  if (!card) return;
+  card.scrollIntoView({ behavior:'smooth', block:'center' });
+  card.classList.remove('highlight');
+  void card.offsetWidth;
+  card.classList.add('highlight');
+}
+
+// ═══════════════════════════════════════════════
+//  SORT
+// ═══════════════════════════════════════════════
+const SORT_MODES = ['id','todo','recent'];
+const SORT_LABELS = { id:'↕ SORT: ID', todo:'↕ SORT: TODO', recent:'↕ SORT: RECENT' };
+document.getElementById('btn-sort').addEventListener('click', () => {
+  const i = SORT_MODES.indexOf(sortMode);
+  sortMode = SORT_MODES[(i+1) % SORT_MODES.length];
+  document.getElementById('btn-sort').textContent = SORT_LABELS[sortMode];
+  renderCards();
+});
+
+// ═══════════════════════════════════════════════
+//  SYNC BUTTON
+// ═══════════════════════════════════════════════
+function updateSyncBtn() {
+  const btn = document.getElementById('btn-sync');
+  if (!isOnline) { btn.textContent = '☁ SYNC (offline)'; btn.className='az-btn warning'; return; }
+  if (pendingSync === 0) { btn.textContent = '☁ SYNC ✓'; btn.className='az-btn success'; }
+  else { btn.textContent = `☁ SYNC (${pendingSync})`; btn.className='az-btn'; }
+}
+
+let syncAnim = null;
+document.getElementById('btn-sync').addEventListener('click', () => {
+  if (!isOnline) { document.getElementById('btn-sync').classList.add('warning'); return; }
+  if (pendingSync === 0) return;
+  if (syncAnim) clearInterval(syncAnim);
+  syncAnim = setInterval(() => {
+    pendingSync = Math.max(0, pendingSync - 1);
+    updateSyncBtn();
+    if (pendingSync === 0) { clearInterval(syncAnim); syncAnim = null; renderCards(); }
+  }, 600);
+});
+
+// ═══════════════════════════════════════════════
+//  TIMER
+// ═══════════════════════════════════════════════
+let timerInterval = null;
+let timerStartTime = 0;
+let timerElapsed = 0;
+let timerPaused = false;
+let timerRecorded = {}; // pid -> elapsed ms
+
+function openTimer() {
+  document.getElementById('timer-overlay').classList.add('open');
+  showTimerPhase('ready');
+}
+document.getElementById('btn-timer').addEventListener('click', openTimer);
+document.getElementById('timer-abort-btn').addEventListener('click', () => {
+  stopTimerInterval(); document.getElementById('timer-overlay').classList.remove('open');
+});
+
+function showTimerPhase(phase) {
+  document.getElementById('timer-phase-ready').style.display   = phase === 'ready'   ? 'flex' : 'none';
+  document.getElementById('timer-phase-running').style.display = phase === 'running' ? 'flex' : 'none';
+  document.getElementById('timer-phase-done').style.display    = phase === 'done'    ? 'flex' : 'none';
+  document.getElementById('timer-abort-btn').style.display     = phase === 'ready'   ? 'block' : 'none';
+}
+
+function fmtTimer(ms) {
+  const total = ms / 1000;
+  const min = Math.floor(total / 60);
+  const sec = (total % 60).toFixed(2).padStart(5,'0');
+  return `${String(min).padStart(2,'0')}:${sec}`;
+}
+
+document.getElementById('timer-start-btn').addEventListener('click', () => {
+  timerStartTime = performance.now();
+  timerElapsed = 0;
+  timerPaused = false;
+  timerRecorded = {};
+  showTimerPhase('running');
+  buildTimerList();
+  timerInterval = setInterval(() => {
+    if (!timerPaused) {
+      timerElapsed = performance.now() - timerStartTime;
+      document.getElementById('timer-val-running').textContent = fmtTimer(timerElapsed);
+    }
+  }, 30);
+});
+
+function buildTimerList() {
+  const list = document.getElementById('timer-list');
+  // Show unfilled first, then filled
+  const unrecorded = RAW.filter(p=>!timerRecorded[p.id]);
+  const recorded = RAW.filter(p=>!!timerRecorded[p.id]);
+  list.innerHTML = [...unrecorded,...recorded].map(p => {
+    const isRec = timerRecorded[p.id];
+    return `<div class="timer-row${isRec?' recorded':''}" data-pid="${p.id}">
+      <span class="timer-row-id">#${p.id}</span>
+      <span class="timer-row-name">${p.name}</span>
+      ${isRec
+        ? `<span class="timer-row-val">${fmtTimer(timerRecorded[p.id])} ✓</span>`
+        : `<span class="timer-tap-hint">TAP</span>`
+      }
+    </div>`;
+  }).join('');
+  list.querySelectorAll('.timer-row').forEach(row => {
+    row.addEventListener('click', () => {
+      const pid = row.dataset.pid;
+      if (timerRecorded[pid]) { delete timerRecorded[pid]; }
+      else { timerRecorded[pid] = timerElapsed; }
+      buildTimerList();
+    });
+  });
+}
+
+document.getElementById('timer-pause-btn').addEventListener('click', () => {
+  timerPaused = !timerPaused;
+  document.getElementById('timer-pause-btn').textContent = timerPaused ? '▶ WEITER' : '⏸ PAUSE';
+});
+
+document.getElementById('timer-stop-btn').addEventListener('click', () => {
+  stopTimerInterval();
+  showTimerPhase('done');
+  const finalTime = fmtTimer(timerElapsed);
+  document.getElementById('timer-display-done').textContent = finalTime;
+  buildTimerListDone();
+});
+
+function stopTimerInterval() { clearInterval(timerInterval); timerInterval = null; }
+
+function buildTimerListDone() {
+  const list = document.getElementById('timer-list-done');
+  list.innerHTML = RAW.map(p => {
+    const ms = timerRecorded[p.id];
+    const isMissed = !ms;
+    return `<div class="trd-row${isMissed?' missed':''}">
+      <span class="timer-row-id">#${p.id}</span>
+      <span class="trd-row-name" style="color:${isMissed?'#ff3b30':'#fff'}">${p.name}</span>
+      ${isMissed
+        ? `<span class="trd-miss">VERPASST</span>`
+        : `<span class="trd-ok">${fmtTimer(ms)}</span>`
+      }
+    </div>`;
+  }).join('');
+}
+
+document.getElementById('timer-save-btn').addEventListener('click', () => {
+  Object.entries(timerRecorded).forEach(([pid, ms]) => {
+    const secs = (ms/1000).toFixed(2);
+    CD[pid][currentDisc] = [{ value:secs, status:'saved' }];
+  });
+  pendingSync += Object.keys(timerRecorded).length;
+  updateSyncBtn();
+  document.getElementById('timer-overlay').classList.remove('open');
+  renderCards();
+});
+
+document.getElementById('timer-exit-btn').addEventListener('click', () => {
+  document.getElementById('timer-overlay').classList.remove('open');
+});
+
+// ═══════════════════════════════════════════════
+//  CONFIG (long-press status bar)
+// ═══════════════════════════════════════════════
+let sbHoldTimer = null;
+const sb = document.getElementById('statusbar');
+sb.addEventListener('touchstart', () => { sbHoldTimer = setTimeout(openConfig, 900); }, {passive:true});
+sb.addEventListener('touchend',   () => clearTimeout(sbHoldTimer));
+sb.addEventListener('mousedown',  () => { sbHoldTimer = setTimeout(openConfig, 900); });
+sb.addEventListener('mouseup',    () => clearTimeout(sbHoldTimer));
+
+function openConfig() {
+  document.getElementById('config-overlay').classList.add('open');
+  document.querySelectorAll('#disc-opts .cfg-opt').forEach(o => {
+    o.classList.toggle('selected', o.dataset.disc === currentDisc);
+  });
+  document.querySelectorAll('#class-opts .cfg-opt').forEach(o => {
+    o.classList.toggle('selected', o.dataset.cls === currentClass);
+  });
+}
+
+document.getElementById('config-close').addEventListener('click', () => {
+  document.getElementById('config-overlay').classList.remove('open');
+});
+
+document.querySelectorAll('#disc-opts .cfg-opt').forEach(o => {
+  o.addEventListener('click', () => {
+    document.querySelectorAll('#disc-opts .cfg-opt').forEach(x=>x.classList.remove('selected'));
+    o.classList.add('selected');
+  });
+});
+document.querySelectorAll('#class-opts .cfg-opt').forEach(o => {
+  o.addEventListener('click', () => {
+    document.querySelectorAll('#class-opts .cfg-opt').forEach(x=>x.classList.remove('selected'));
+    o.classList.add('selected');
+  });
+});
+
+document.getElementById('config-apply').addEventListener('click', () => {
+  const sd = document.querySelector('#disc-opts .cfg-opt.selected');
+  const sc = document.querySelector('#class-opts .cfg-opt.selected');
+  if (sd) currentDisc = sd.dataset.disc;
+  if (sc) currentClass = sc.dataset.cls;
+  document.getElementById('sb-disc').textContent = DISCS[currentDisc].label;
+  document.getElementById('sb-class').textContent = `Klasse ${currentClass}`;
+  document.getElementById('config-overlay').classList.remove('open');
+  renderCards();
+});
+
+// ═══════════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════════
+renderCards();
+updateSyncBtn();
+</script>
+</body>
+</html>
