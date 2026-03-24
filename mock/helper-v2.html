@@ -1,0 +1,1074 @@
+<!DOCTYPE html>
+<html lang="de">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Data-Grid — Helper v2</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0
+        }
+
+        html,
+        body {
+            height: 100%;
+            overflow: hidden;
+            font-family: 'Consolas', 'Menlo', 'Monaco', monospace;
+            font-size: 13px;
+            background: #fff;
+            color: #111
+        }
+
+        /* ─── TOPBAR ─── */
+        #topbar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 32px;
+            background: #0f1729;
+            color: #c9d1d9;
+            display: flex;
+            align-items: center;
+            border-bottom: 1px solid #30363d;
+            z-index: 100;
+            user-select: none;
+            gap: 0
+        }
+
+        .tb-zone {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 0 12px;
+            height: 100%;
+            flex-shrink: 0
+        }
+
+        .tb-divider {
+            width: 1px;
+            height: 20px;
+            background: #30363d;
+            flex-shrink: 0
+        }
+
+        .tb-spacer {
+            flex: 1
+        }
+
+        .tb-selector {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            padding: 3px 7px;
+            border-radius: 3px;
+            cursor: pointer;
+            transition: background .12s
+        }
+
+        .tb-selector:hover {
+            background: #1c2333
+        }
+
+        .kb {
+            display: inline-block;
+            background: #21262d;
+            border: 1px solid #444;
+            color: #8b949e;
+            padding: 0 4px;
+            border-radius: 2px;
+            font-size: 10px;
+            line-height: 16px;
+            font-weight: 600
+        }
+
+        #disc-label,
+        #class-label {
+            color: #e6edf3;
+            font-size: 12px
+        }
+
+        .tb-caret {
+            color: #6e7681;
+            font-size: 10px
+        }
+
+        .sync-pending {
+            color: #f97316
+        }
+
+        .sync-synced {
+            color: #3fb950
+        }
+
+        .sync-offline {
+            color: #f85149;
+            font-weight: bold
+        }
+
+        #clock {
+            color: #6e7681;
+            font-size: 11px
+        }
+
+        #live-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: #3fb950;
+            display: inline-block;
+            animation: pulse 2s infinite
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: 1
+            }
+
+            50% {
+                opacity: .4
+            }
+        }
+
+        /* ─── SEARCH ROW ─── */
+        #search-row {
+            position: fixed;
+            top: 32px;
+            left: 0;
+            right: 0;
+            height: 28px;
+            background: #161b22;
+            border-bottom: 1px solid #30363d;
+            z-index: 90;
+            display: none;
+            align-items: center;
+            gap: 8px;
+            padding: 0 12px
+        }
+
+        #search-row.open {
+            display: flex
+        }
+
+        #search-row .lbl {
+            color: #6e7681;
+            font-size: 11px;
+            white-space: nowrap
+        }
+
+        #search-input {
+            background: transparent;
+            border: none;
+            outline: none;
+            color: #e6edf3;
+            font-family: inherit;
+            font-size: 13px;
+            flex: 1
+        }
+
+        #search-hint {
+            color: #3fb950;
+            font-size: 11px;
+            margin-left: auto;
+            white-space: nowrap
+        }
+
+        /* ─── GRID ─── */
+        #grid-wrap {
+            position: fixed;
+            top: 32px;
+            left: 0;
+            right: 0;
+            bottom: 28px;
+            overflow: auto
+        }
+
+        #grid-wrap.search-open {
+            top: 60px
+        }
+
+        #grid {
+            border-collapse: collapse;
+            width: 100%;
+            min-width: 420px
+        }
+
+        #grid thead th {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            background: #0f1729;
+            color: #8b949e;
+            padding: 3px 8px;
+            text-align: left;
+            border-bottom: 1px solid #30363d;
+            border-right: 1px solid #21262d;
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: .06em;
+            white-space: nowrap;
+            font-weight: 600
+        }
+
+        #grid tbody tr {
+            border-bottom: 1px solid #f0f0f0
+        }
+
+        #grid tbody tr:hover {
+            background: #f6f8ff
+        }
+
+        #grid tbody tr.row-filled {
+            opacity: .45
+        }
+
+        #grid tbody tr.flash-row {
+            animation: flashOrange .5s
+        }
+
+        @keyframes flashOrange {
+
+            0%,
+            100% {
+                box-shadow: none
+            }
+
+            40% {
+                box-shadow: inset 3px 0 0 #f97316
+            }
+        }
+
+        .col-id {
+            width: 38px;
+            color: #888;
+            font-size: 11px;
+            user-select: none
+        }
+
+        .col-name {
+            min-width: 150px;
+            max-width: 220px
+        }
+
+        .col-status {
+            width: 26px;
+            text-align: center;
+            padding: 0 !important
+        }
+
+        /* data cells */
+        td.dc {
+            position: relative;
+            padding: 2px 6px;
+            height: 24px;
+            vertical-align: middle;
+            cursor: pointer;
+            border-right: 1px solid #eee;
+            min-width: 90px;
+            width: 110px;
+            user-select: none
+        }
+
+        td.dc.saved {
+            background: #dbeafe
+        }
+
+        td.dc.synced {
+            background: #fff
+        }
+
+        td.dc.error {
+            border-left: 3px solid #ef4444;
+            background: #fff1f1
+        }
+
+        td.dc.conflict {
+            background: #fef9c3
+        }
+
+        td.dc.active {
+            outline: 2px solid #3b82f6;
+            outline-offset: -2px;
+            z-index: 1
+        }
+
+        td.dc.editing {
+            outline: 2px solid #2563eb;
+            outline-offset: -2px;
+            background: #eff6ff;
+            z-index: 2
+        }
+
+        .sdot {
+            position: absolute;
+            top: 3px;
+            right: 3px;
+            width: 5px;
+            height: 5px;
+            border-radius: 50%;
+            pointer-events: none
+        }
+
+        td.dc.synced .sdot {
+            background: #22c55e
+        }
+
+        td.dc.saved .sdot {
+            background: #3b82f6
+        }
+
+        td.dc.conflict .sdot {
+            background: #ca8a04
+        }
+
+        .best-mark {
+            color: #2563eb;
+            font-size: 9px;
+            margin-left: 2px;
+            vertical-align: super
+        }
+
+        mark.hl {
+            background: #fef08a;
+            padding: 0 1px
+        }
+
+        .ci {
+            width: 100%;
+            background: transparent;
+            border: none;
+            outline: none;
+            font-family: inherit;
+            font-size: 13px;
+            color: #111;
+            padding: 0;
+            height: 100%
+        }
+
+        .st-synced {
+            color: #22c55e
+        }
+
+        .st-pending {
+            color: #f97316
+        }
+
+        .st-error {
+            color: #ef4444
+        }
+
+        .st-conflict {
+            color: #ca8a04
+        }
+
+        /* ─── DROPDOWN ─── */
+        #ddpopup {
+            position: fixed;
+            top: 32px;
+            background: #161b22;
+            border: 1px solid #30363d;
+            z-index: 300;
+            min-width: 190px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, .5);
+            display: none
+        }
+
+        #ddfilter {
+            width: 100%;
+            padding: 6px 10px;
+            background: #0d1117;
+            color: #e6edf3;
+            border: none;
+            border-bottom: 1px solid #30363d;
+            outline: none;
+            font-family: inherit;
+            font-size: 13px
+        }
+
+        .dd-opt {
+            padding: 6px 12px;
+            cursor: pointer;
+            color: #c9d1d9;
+            font-size: 12px;
+            white-space: nowrap
+        }
+
+        .dd-opt:hover,
+        .dd-opt.sel {
+            background: #1c2333;
+            color: #fff
+        }
+
+        .dd-opt .dd-check {
+            color: #3fb950;
+            margin-right: 4px;
+            display: inline-block;
+            width: 12px
+        }
+
+        /* ─── COMMAND BAR ─── */
+        #cmdbar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 28px;
+            background: #0f1729;
+            color: #8b949e;
+            display: flex;
+            align-items: center;
+            border-top: 1px solid #30363d;
+            z-index: 100;
+            overflow: hidden;
+            user-select: none
+        }
+
+        .cbi {
+            padding: 0 10px;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            border-right: 1px solid #21262d;
+            cursor: pointer;
+            transition: background .1s;
+            white-space: nowrap;
+            flex-shrink: 0
+        }
+
+        .cbi:hover {
+            background: #161b22
+        }
+
+        .cbi.cbi-active {
+            color: #e6edf3
+        }
+
+        .ck {
+            background: #21262d;
+            border: 1px solid #444;
+            color: #8b949e;
+            padding: 0 4px;
+            border-radius: 2px;
+            font-size: 10px;
+            line-height: 16px
+        }
+
+        #timer-val {
+            transition: color .2s
+        }
+
+        .timer-running #timer-val {
+            color: #f97316;
+            animation: timerBlink 1s step-end infinite
+        }
+
+        @keyframes timerBlink {
+            50% {
+                opacity: .6
+            }
+        }
+
+        .timer-stopped #timer-val {
+            color: #facc15
+        }
+
+        .cb-spacer {
+            flex: 1
+        }
+
+        .cb-hints {
+            padding: 0 10px;
+            font-size: 10px;
+            color: #3d444d;
+            white-space: nowrap
+        }
+
+        /* ─── NARROW WARNING ─── */
+        #narrow {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: #fff;
+            z-index: 999;
+            place-items: center;
+            font-size: 15px;
+            color: #555;
+            text-align: center;
+            padding: 20px;
+            line-height: 1.6
+        }
+
+        @media(max-width:900px) {
+            #narrow {
+                display: grid
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="narrow">
+        <div>
+            <div style="font-size:32px">⚠</div><strong>Dieses Interface ist für Desktop optimiert.</strong><br>Bitte
+            nutze die Touch-Version auf Mobilgeräten.
+        </div>
+    </div>
+
+    <!-- TOPBAR -->
+    <div id="topbar">
+        <div class="tb-zone">
+            <div class="tb-selector" id="disc-btn" title="D: Disziplin wechseln">
+                <span class="kb">D</span><span id="disc-label">3-Jump</span><span class="tb-caret">▾</span>
+            </div>
+            <div class="tb-selector" id="class-btn" title="C: Klasse wechseln">
+                <span class="kb">C</span><span id="class-label">5a</span><span class="tb-caret">▾</span>
+            </div>
+        </div>
+        <div class="tb-divider"></div>
+        <div class="tb-zone" id="sync-zone" style="gap:12px;cursor:pointer" title="F5: Pending markieren">
+            <span id="spn-pending" class="sync-pending">● <span id="cnt-pending">3</span> pending</span>
+            <span id="spn-synced" class="sync-synced">✓ <span id="cnt-synced">47</span> synced</span>
+            <span id="spn-offline" class="sync-offline" style="display:none">⊘ OFFLINE</span>
+        </div>
+        <div class="tb-divider"></div>
+        <div class="tb-spacer"></div>
+        <div class="tb-zone"><span id="live-dot"></span></div>
+        <div class="tb-zone"><span id="clock">--:--</span></div>
+    </div>
+
+    <!-- SEARCH ROW -->
+    <div id="search-row">
+        <span class="lbl">/ search:</span>
+        <input id="search-input" type="text" placeholder="Name oder ID…" autocomplete="off" spellcheck="false">
+        <span id="search-hint"></span>
+        <span class="lbl" style="margin-left:8px">Esc: beenden</span>
+    </div>
+
+    <!-- GRID -->
+    <div id="grid-wrap">
+        <table id="grid">
+            <thead id="gh"></thead>
+            <tbody id="gb"></tbody>
+        </table>
+    </div>
+
+    <!-- DROPDOWN -->
+    <div id="ddpopup">
+        <input id="ddfilter" type="text" placeholder="Filter…" autocomplete="off">
+        <div id="ddopts"></div>
+    </div>
+
+    <!-- COMMAND BAR -->
+    <div id="cmdbar">
+        <div class="cbi" id="cb-search" title="/ aktiviert Suche"><span class="ck">/</span> search</div>
+        <div class="cbi" id="cb-timer" title="F2: Start/Stop  Shift+F2: Reset">
+            <span class="ck">F2</span><span id="timer-val">Timer 00:00.0</span>
+        </div>
+        <div class="cbi" id="cb-fill" title="F3: Filled nach unten"><span class="ck">F3</span><span
+                id="fill-lbl">filled</span></div>
+        <div class="cbi" id="cb-sync" title="F4: Sync erzwingen"><span class="ck">F4</span><span
+                id="sync-lbl">sync</span></div>
+        <div class="cbi" id="cb-tabmode" title="Ctrl+↓: vertikal  Ctrl+→: horizontal"><span id="tabmode-lbl">[→
+                horiz]</span></div>
+        <div class="cb-spacer"></div>
+        <div class="cb-hints">↑↓←→ navigate │ Tab: nächste Zelle │ Enter: bestätigen │ Esc: abbrechen │ Del: leeren
+        </div>
+    </div>
+
+    <script>
+        // ═══════════════════════════════════════════════
+        //  DATA
+        // ═══════════════════════════════════════════════
+        const DISC = {
+            '800m': { label: '800m Run', unit: 's', fields: ['Zeit'], timer: true },
+            '50m': { label: '50m Sprint', unit: 's', fields: ['Zeit'], timer: true },
+            '3jump': { label: '3-Jump', unit: 'm', fields: ['Versuch 1', 'Versuch 2'], timer: false },
+            'throw': { label: 'Distanzwurf', unit: 'm', fields: ['Versuch 1', 'Versuch 2'], timer: false }
+        };
+        const DISC_KEYS = Object.keys(DISC);
+        const CLASSES = ['5a', '5b', '6a', '6b'];
+
+        const RAW_NAMES = [
+            ['Müller', 'Anna'], ['Schmidt', 'Ben'], ['Weber', 'Clara'], ['Fischer', 'David'],
+            ['Klein', 'Eva'], ['Koch', 'Max'], ['Lang', 'Mia'], ['Braun', 'Felix'],
+            ['Richter', 'Lena'], ['Bauer', 'Tim'], ['Engel', 'Sara'], ['Berger', 'Paul'],
+            ['Zimmermann', 'Lisa'], ['Schulz', 'Noah'], ['Hoffmann', 'Emma'], ['Wagner', 'Leon'],
+            ['Becker', 'Sophie'], ['Schäfer', 'Elias'], ['Köhler', 'Laura'], ['Maier', 'Julian'],
+            ['Huber', 'Hannah'], ['Wolf', 'Tobias'], ['Krause', 'Leonie'], ['Schwarz', 'Finn'],
+            ['Lehmann', 'Lena'], ['Frank', 'Moritz'], ['Fuchs', 'Maja'], ['Roth', 'Lukas']
+        ];
+
+        const PARTICIPANTS = {};
+        CLASSES.forEach(cls => {
+            PARTICIPANTS[cls] = RAW_NAMES.map((n, i) => ({ id: String(i + 1).padStart(2, '0'), last: n[0], first: n[1] }));
+        });
+
+        // cellData[cls][disc][pid][fieldIdx] = { value:'', status:'saved'|'synced'|'error'|'conflict' }
+        const CD = {};
+        CLASSES.forEach(c => { CD[c] = {}; DISC_KEYS.forEach(d => { CD[c][d] = {}; }); });
+
+        function setCD(c, d, pid, fi, v, s) { if (!CD[c][d][pid]) CD[c][d][pid] = {}; CD[c][d][pid][fi] = { value: v, status: s }; }
+
+        // Seed some demo data for 3-Jump / 5a
+        setCD('5a', '3jump', '01', 0, '5.42', 'synced'); setCD('5a', '3jump', '01', 1, '5.10', 'synced');
+        setCD('5a', '3jump', '02', 0, '4.88', 'saved');
+        setCD('5a', '3jump', '03', 0, '5.20', 'saved'); setCD('5a', '3jump', '03', 1, '5.35', 'synced');
+        setCD('5a', '3jump', '05', 0, '6.01', 'conflict');
+        setCD('5a', '3jump', '07', 0, '-1', 'error');
+        setCD('5a', '3jump', '08', 0, '4.70', 'synced'); setCD('5a', '3jump', '08', 1, '4.95', 'synced');
+        setCD('5a', '3jump', '10', 0, '5.55', 'synced'); setCD('5a', '3jump', '10', 1, '5.44', 'synced');
+        setCD('5a', '3jump', '11', 0, '4.30', 'saved');
+        setCD('5a', '3jump', '12', 0, '5.80', 'synced'); setCD('5a', '3jump', '12', 1, '5.72', 'synced');
+
+        // ═══════════════════════════════════════════════
+        //  STATE
+        // ═══════════════════════════════════════════════
+        let curDisc = '3jump';
+        let curClass = '5a';
+        let activeRow = 0, activeCol = 0;
+        let editingCell = null; // {ri,fi}
+        let tabMode = 'horiz';
+        let fillToggle = false;
+        let searchOpen = false;
+        let searchQ = '';
+        let pendCnt = 0, syncCnt = 0;
+
+        // ═══════════════════════════════════════════════
+        //  TIMER
+        // ═══════════════════════════════════════════════
+        let timerRunning = false, timerMs = 0, timerStart = 0, timerIntervalId = null, stoppedMs = null;
+
+        function fmtTimer(ms) {
+            const t = Math.floor(ms / 100), s = Math.floor(t / 10), d = t % 10, m = Math.floor(s / 60);
+            return `${String(m).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}.${d}`;
+        }
+        function updateTimerUI() {
+            const v = timerRunning ? timerMs : (stoppedMs !== null ? stoppedMs : 0);
+            document.getElementById('timer-val').textContent = `Timer ${fmtTimer(v)}`;
+            const el = document.getElementById('cb-timer');
+            el.classList.toggle('timer-running', timerRunning);
+            el.classList.toggle('timer-stopped', !timerRunning && stoppedMs !== null);
+        }
+        function startTimer() {
+            if (timerRunning) return;
+            timerRunning = true; timerStart = performance.now() - timerMs;
+            timerIntervalId = setInterval(() => { timerMs = Math.floor(performance.now() - timerStart); updateTimerUI(); }, 100);
+        }
+        function stopTimer() {
+            if (!timerRunning) return;
+            clearInterval(timerIntervalId); timerRunning = false; stoppedMs = timerMs; updateTimerUI();
+        }
+        function resetTimer() { clearInterval(timerIntervalId); timerRunning = false; timerMs = 0; stoppedMs = null; updateTimerUI(); }
+
+        // clock
+        function tickClock() { const n = new Date(); document.getElementById('clock').textContent = String(n.getHours()).padStart(2, '0') + ':' + String(n.getMinutes()).padStart(2, '0'); }
+        tickClock(); setInterval(tickClock, 15000);
+
+        // ═══════════════════════════════════════════════
+        //  HELPERS
+        // ═══════════════════════════════════════════════
+        const d = () => DISC[curDisc];
+        const pts = () => PARTICIPANTS[curClass];
+
+        function getCell(pid, fi) { const r = CD[curClass][curDisc][pid]; return r && r[fi] != null ? r[fi] : null; }
+
+        function rowStatus(pid) {
+            const fields = d().fields;
+            const ss = fields.map((_, fi) => { const c = getCell(pid, fi); return c ? c.status : 'empty'; });
+            if (ss.some(s => s === 'error')) return 'error';
+            if (ss.some(s => s === 'conflict')) return 'conflict';
+            if (ss.every(s => s === 'synced')) return 'synced';
+            if (ss.some(s => s === 'saved')) return 'pending';
+            return '';
+        }
+        function isRowFilled(pid) { return d().fields.every((_, fi) => { const c = getCell(pid, fi); return c && c.value !== ''; }); }
+
+        function bestField(pid) {
+            if (d().fields.length < 2) return -1;
+            const isTime = curDisc === '800m' || curDisc === '50m';
+            const vals = d().fields.map((_, fi) => { const c = getCell(pid, fi); return c ? parseFloat(c.value) : NaN; });
+            if (vals.filter(v => !isNaN(v) && v > 0).length < 2) return -1;
+            let best = isTime ? Infinity : -Infinity, bestFi = -1;
+            vals.forEach((v, fi) => { if (!isNaN(v) && v > 0) { if (isTime ? v < best : v > best) { best = v; bestFi = fi; } } });
+            return bestFi;
+        }
+
+        function visibleRows() {
+            let ps = pts().slice();
+            if (searchQ) ps = ps.filter(p => (p.last + ' ' + p.first + ' ' + p.id).toLowerCase().includes(searchQ.toLowerCase()));
+            if (fillToggle) {
+                const u = ps.filter(p => !isRowFilled(p.id)), f = ps.filter(p => isRowFilled(p.id));
+                ps = [...u, ...f];
+            }
+            return ps;
+        }
+
+        function recount() {
+            let p = 0, s = 0;
+            const dc = CD[curClass][curDisc];
+            Object.values(dc).forEach(fields => Object.values(fields).forEach(c => { if (c.status === 'saved' || c.status === 'conflict') p++; if (c.status === 'synced') s++; }));
+            pendCnt = p; syncCnt = s;
+            document.getElementById('cnt-pending').textContent = p;
+            document.getElementById('cnt-synced').textContent = s;
+            document.getElementById('spn-pending').style.display = p > 0 ? '' : 'none';
+        }
+
+        // ═══════════════════════════════════════════════
+        //  RENDER
+        // ═══════════════════════════════════════════════
+        function render() {
+            const disc = d();
+            // HEAD
+            let hh = '<tr>';
+            hh += '<th class="col-id">#</th>';
+            hh += '<th class="col-name">Name, Vorname</th>';
+            disc.fields.forEach(f => hh += `<th>${f} (${disc.unit})</th>`);
+            hh += '<th class="col-status">◉</th></tr>';
+            document.getElementById('gh').innerHTML = hh;
+
+            // BODY
+            const rows = visibleRows();
+            const frag = document.createDocumentFragment();
+
+            rows.forEach((p, ri) => {
+                const tr = document.createElement('tr');
+                tr.dataset.pid = p.id; tr.dataset.ri = ri;
+                if (fillToggle && isRowFilled(p.id)) tr.classList.add('row-filled');
+
+                const bf = bestField(p.id);
+                let html = `<td class="col-id">${p.id}</td>`;
+
+                const nm = `${p.last}, ${p.first}`;
+                const nmHL = searchQ && nm.toLowerCase().includes(searchQ.toLowerCase())
+                    ? nm.replace(new RegExp(`(${searchQ})`, 'i'), '<mark class="hl">$1</mark>') : nm;
+                html += `<td class="col-name" style="padding:3px 8px">${nmHL}</td>`;
+
+                disc.fields.forEach((_, fi) => {
+                    const cell = getCell(p.id, fi);
+                    const st = cell ? cell.status : 'empty';
+                    const val = cell ? cell.value : '';
+                    const isAct = activeRow === ri && activeCol === fi;
+                    const isEd = editingCell && editingCell.ri === ri && editingCell.fi === fi;
+
+                    let cls = `dc ${st}${isAct ? ' active' : ''}${isEd ? ' editing' : ''}`;
+                    let dot = (st === 'saved' || st === 'synced' || st === 'conflict') ? '<span class="sdot"></span>' : '';
+                    let disp = val;
+                    if (val && bf === fi) disp += '<span class="best-mark">★</span>';
+
+                    if (isEd) {
+                        html += `<td class="${cls}" data-ri="${ri}" data-fi="${fi}">${dot}<input class="ci" id="active-inp" type="text" value="${val}" autocomplete="off"></td>`;
+                    } else {
+                        html += `<td class="${cls}" data-ri="${ri}" data-fi="${fi}">${dot}${disp}</td>`;
+                    }
+                });
+
+                const rs = rowStatus(p.id);
+                let stIcon = '';
+                if (rs === 'synced') stIcon = '<span class="st-synced">✓</span>';
+                else if (rs === 'pending') stIcon = '<span class="st-pending">●</span>';
+                else if (rs === 'error') stIcon = '<span class="st-error">⚠</span>';
+                else if (rs === 'conflict') stIcon = '<span class="st-conflict">⚡</span>';
+                html += `<td class="col-status" style="user-select:none">${stIcon}</td>`;
+
+                tr.innerHTML = html;
+                frag.appendChild(tr);
+            });
+
+            const gb = document.getElementById('gb');
+            gb.innerHTML = '';
+            gb.appendChild(frag);
+
+            // bind cell clicks
+            gb.querySelectorAll('td.dc').forEach(td => {
+                td.addEventListener('mousedown', e => {
+                    const ri = parseInt(td.dataset.ri), fi = parseInt(td.dataset.fi);
+                    if (editingCell && editingCell.ri === ri && editingCell.fi === fi) { e.preventDefault(); return; }
+                    setActive(ri, fi); enterEdit(ri, fi); e.preventDefault();
+                });
+            });
+
+            // focus editing input
+            if (editingCell) {
+                const inp = document.getElementById('active-inp');
+                if (inp) { inp.focus(); inp.select(); }
+            }
+
+            // ensure active cell is visible
+            if (!editingCell) {
+                const rows2 = gb.querySelectorAll('tr');
+                if (rows2[activeRow]) {
+                    const cells = rows2[activeRow].querySelectorAll('td.dc');
+                    if (cells[activeCol]) cells[activeCol].scrollIntoView({ block: 'nearest', inline: 'nearest' });
+                }
+            }
+        }
+
+        // ═══════════════════════════════════════════════
+        //  NAVIGATION
+        // ═══════════════════════════════════════════════
+        function nf() { return d().fields.length; }
+
+        function setActive(ri, fi) {
+            const rows = visibleRows();
+            ri = Math.max(0, Math.min(ri, rows.length - 1));
+            fi = Math.max(0, Math.min(fi, nf() - 1));
+            activeRow = ri; activeCol = fi;
+        }
+
+        function enterEdit(ri, fi) { editingCell = { ri, fi }; render(); requestAnimationFrame(() => { const inp = document.getElementById('active-inp'); if (inp) { inp.focus(); inp.select(); } }); }
+        function cancelEdit() { editingCell = null; render(); }
+
+        function confirmEdit(rawVal) {
+            if (!editingCell) return;
+            const rows = visibleRows(); const p = rows[editingCell.ri]; if (!p) { editingCell = null; render(); return; }
+            const fi = editingCell.fi, ri = editingCell.ri;
+            const v = rawVal.trim();
+            const pid = p.id;
+
+            if (!CD[curClass][curDisc][pid]) CD[curClass][curDisc][pid] = {};
+
+            if (v === '') {
+                delete CD[curClass][curDisc][pid][fi];
+            } else {
+                const num = parseFloat(v);
+                const st = (isNaN(num) || num <= 0) ? 'error' : 'saved';
+                CD[curClass][curDisc][pid][fi] = { value: v, status: st };
+                if (st === 'saved') {
+                    const snap = { cls: curClass, disc: curDisc, pid, fi };
+                    setTimeout(() => {
+                        if (CD[snap.cls][snap.disc][snap.pid]?.[snap.fi]?.status === 'saved') {
+                            CD[snap.cls][snap.disc][snap.pid][snap.fi].status = 'synced';
+                            recount(); render();
+                        }
+                    }, 1200 + Math.random() * 800);
+                }
+            }
+            editingCell = null;
+            recount();
+            autoAdvance(ri, fi);
+        }
+
+        function autoAdvance(ri, fi) {
+            const rows = visibleRows();
+            if (tabMode === 'horiz') {
+                if (fi + 1 < nf()) setActive(ri, fi + 1);
+                else if (ri + 1 < rows.length) setActive(ri + 1, 0);
+                else setActive(ri, fi);
+            } else {
+                if (ri + 1 < rows.length) setActive(ri + 1, fi);
+                else setActive(ri, fi);
+            }
+            render();
+        }
+
+        // ═══════════════════════════════════════════════
+        //  DROPDOWN
+        // ═══════════════════════════════════════════════
+        let ddMode = null, ddFilter = '', ddSel = 0;
+
+        function openDD(mode, anchorEl) {
+            ddMode = mode; ddFilter = ''; ddSel = 0;
+            const pop = document.getElementById('ddpopup');
+            const r = anchorEl.getBoundingClientRect();
+            pop.style.left = r.left + 'px'; pop.style.top = '32px'; pop.style.display = 'block';
+            renderDD(); document.getElementById('ddfilter').value = ''; document.getElementById('ddfilter').focus();
+        }
+        function closeDD() { document.getElementById('ddpopup').style.display = 'none'; ddMode = null; }
+
+        function ddItems() {
+            const raw = ddMode === 'disc'
+                ? DISC_KEYS.map(k => ({ key: k, label: DISC[k].label }))
+                : CLASSES.map(c => ({ key: c, label: 'Klasse ' + c }));
+            return raw.filter(i => i.label.toLowerCase().includes(ddFilter.toLowerCase()));
+        }
+
+        function renderDD() {
+            const items = ddItems();
+            document.getElementById('ddopts').innerHTML = items.map((item, i) => {
+                const active = ddMode === 'disc' ? item.key === curDisc : item.key === curClass;
+                return `<div class="dd-opt${i === ddSel ? ' sel' : ''}" data-k="${item.key}"><span class="dd-check">${active ? '●' : ' '}</span>${item.label}</div>`;
+            }).join('');
+            document.getElementById('ddopts').querySelectorAll('.dd-opt').forEach(el => {
+                el.addEventListener('click', () => selectDD(el.dataset.k));
+            });
+        }
+
+        function selectDD(key) {
+            if (ddMode === 'disc') {
+                curDisc = key; document.getElementById('disc-label').textContent = DISC[key].label;
+            } else {
+                curClass = key; document.getElementById('class-label').textContent = key;
+            }
+            editingCell = null; activeRow = 0; activeCol = 0;
+            recount(); render(); closeDD();
+        }
+
+        document.getElementById('disc-btn').addEventListener('click', () => openDD('disc', document.getElementById('disc-btn')));
+        document.getElementById('class-btn').addEventListener('click', () => openDD('class', document.getElementById('class-btn')));
+        document.getElementById('ddfilter').addEventListener('input', e => { ddFilter = e.target.value; ddSel = 0; renderDD(); });
+        document.getElementById('ddfilter').addEventListener('keydown', e => {
+            const items = ddItems();
+            if (e.key === 'ArrowDown') { ddSel = Math.min(ddSel + 1, items.length - 1); renderDD(); e.preventDefault(); }
+            if (e.key === 'ArrowUp') { ddSel = Math.max(ddSel - 1, 0); renderDD(); e.preventDefault(); }
+            if (e.key === 'Enter') { if (items[ddSel]) selectDD(items[ddSel].key); e.preventDefault(); }
+            if (e.key === 'Escape') { closeDD(); e.preventDefault(); }
+        });
+        document.addEventListener('click', e => {
+            if (!e.target.closest('#ddpopup') && !e.target.closest('#disc-btn') && !e.target.closest('#class-btn')) closeDD();
+        });
+
+        // ═══════════════════════════════════════════════
+        //  SEARCH
+        // ═══════════════════════════════════════════════
+        function openSearch() {
+            searchOpen = true;
+            document.getElementById('search-row').classList.add('open');
+            document.getElementById('grid-wrap').classList.add('search-open');
+            document.getElementById('search-input').focus();
+        }
+        function closeSearch() {
+            searchOpen = false; searchQ = '';
+            document.getElementById('search-row').classList.remove('open');
+            document.getElementById('grid-wrap').classList.remove('search-open');
+            document.getElementById('search-input').value = '';
+            document.getElementById('search-hint').textContent = '';
+            activeRow = 0; render();
+        }
+        document.getElementById('search-input').addEventListener('input', e => {
+            searchQ = e.target.value; activeRow = 0;
+            const c = visibleRows().length;
+            document.getElementById('search-hint').textContent = searchQ ? `${c} Treffer` : '';
+            render();
+        });
+        document.getElementById('search-input').addEventListener('keydown', e => {
+            if (e.key === 'Escape') { closeSearch(); e.preventDefault(); }
+            if (e.key === 'Enter') { if (visibleRows().length > 0) { setActive(0, 0); enterEdit(0, 0); } e.preventDefault(); }
+        });
+        document.getElementById('cb-search').addEventListener('click', openSearch);
+
+        // ═══════════════════════════════════════════════
+        //  CMD BAR BUTTONS
+        // ═══════════════════════════════════════════════
+        document.getElementById('cb-timer').addEventListener('click', () => { if (timerRunning) stopTimer(); else startTimer(); });
+        document.getElementById('cb-fill').addEventListener('click', toggleFill);
+        document.getElementById('cb-sync').addEventListener('click', forceSync);
+        document.getElementById('sync-zone').addEventListener('click', flashPending);
+
+        function toggleFill() {
+            fillToggle = !fillToggle;
+            document.getElementById('fill-lbl').textContent = fillToggle ? 'filled↓' : 'filled';
+            document.getElementById('cb-fill').classList.toggle('cbi-active', fillToggle);
+            render();
+        }
+
+        function forceSync() {
+            let changed = false;
+            const dc = CD[curClass][curDisc];
+            Object.keys(dc).forEach(pid => Object.keys(dc[pid]).forEach(fi => {
+                if (dc[pid][fi].status === 'saved') { dc[pid][fi].status = 'synced'; changed = true; }
+            }));
+            if (changed) { recount(); render(); }
+            const lbl = document.getElementById('sync-lbl');
+            lbl.textContent = '✓ synced!'; lbl.style.color = '#3fb950';
+            setTimeout(() => { lbl.textContent = 'sync'; lbl.style.color = ''; }, 1800);
+        }
+
+        function flashPending() {
+            document.querySelectorAll('#gb tr').forEach(tr => {
+                if (rowStatus(tr.dataset.pid) === 'pending') { tr.classList.add('flash-row'); setTimeout(() => tr.classList.remove('flash-row'), 600); }
+            });
+        }
+
+        // ═══════════════════════════════════════════════
+        //  GLOBAL KEYBOARD
+        // ═══════════════════════════════════════════════
+        document.addEventListener('keydown', e => {
+            // Block if dropdown open
+            if (document.getElementById('ddpopup').style.display !== 'none') return;
+
+            // Editing cell input
+            if (editingCell) {
+                const inp = document.getElementById('active-inp');
+                if (inp && document.activeElement === inp) {
+                    if (e.key === 'Enter' || e.key === 'Tab') { confirmEdit(inp.value); e.preventDefault(); }
+                    else if (e.key === 'Escape') { cancelEdit(); e.preventDefault(); }
+                    return;
+                }
+            }
+
+            // Search input handled by its own listener
+            if (searchOpen && document.activeElement === document.getElementById('search-input')) return;
+
+            // Global shortcuts
+            if (e.key === '/' && !searchOpen) { openSearch(); e.preventDefault(); return; }
+            if (e.key === 'F2') { e.preventDefault(); if (e.shiftKey) resetTimer(); else { timerRunning ? stopTimer() : startTimer(); } return; }
+            if (e.key === 'F3') { e.preventDefault(); toggleFill(); return; }
+            if (e.key === 'F4') { e.preventDefault(); forceSync(); return; }
+            if (e.key === 'F5') { e.preventDefault(); flashPending(); return; }
+
+            if (!searchOpen) {
+                if ((e.key === 'd' || e.key === 'D') && !editingCell) { openDD('disc', document.getElementById('disc-btn')); e.preventDefault(); return; }
+                if ((e.key === 'c' || e.key === 'C') && !editingCell) { openDD('class', document.getElementById('class-btn')); e.preventDefault(); return; }
+            }
+            if (e.ctrlKey && e.key === 'ArrowDown') { tabMode = 'vert'; document.getElementById('tabmode-lbl').textContent = '[↓ vert]'; e.preventDefault(); return; }
+            if (e.ctrlKey && e.key === 'ArrowRight') { tabMode = 'horiz'; document.getElementById('tabmode-lbl').textContent = '[→ horiz]'; e.preventDefault(); return; }
+
+            // Navigation
+            const rows = visibleRows();
+            if (e.key === 'ArrowDown' && !e.ctrlKey) { setActive(activeRow + 1, activeCol); render(); e.preventDefault(); return; }
+            if (e.key === 'ArrowUp' && !e.ctrlKey) { setActive(activeRow - 1, activeCol); render(); e.preventDefault(); return; }
+            if (e.key === 'ArrowRight' && !e.ctrlKey) { setActive(activeRow, activeCol + 1); render(); e.preventDefault(); return; }
+            if (e.key === 'ArrowLeft' && !e.ctrlKey) { setActive(activeRow, activeCol - 1); render(); e.preventDefault(); return; }
+
+            if (e.key === 'Tab') {
+                e.preventDefault();
+                if (e.shiftKey) { if (activeCol > 0) setActive(activeRow, activeCol - 1); else setActive(activeRow - 1, nf() - 1); }
+                else { if (activeCol < nf() - 1) setActive(activeRow, activeCol + 1); else setActive(activeRow + 1, 0); }
+                render(); return;
+            }
+
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                const p = rows[activeRow]; if (!p) return;
+                const cell = getCell(p.id, activeCol);
+                // Paste stopped timer for time disciplines
+                if (stoppedMs !== null && DISC[curDisc].timer && (!cell || !cell.value)) {
+                    const secs = (stoppedMs / 1000).toFixed(2);
+                    if (!CD[curClass][curDisc][p.id]) CD[curClass][curDisc][p.id] = {};
+                    CD[curClass][curDisc][p.id][activeCol] = { value: secs, status: 'saved' };
+                    const snap = { cls: curClass, disc: curDisc, pid: p.id, fi: activeCol };
+                    setTimeout(() => { if (CD[snap.cls][snap.disc][snap.pid]?.[snap.fi]?.status === 'saved') { CD[snap.cls][snap.disc][snap.pid][snap.fi].status = 'synced'; recount(); render(); } }, 1200);
+                    recount(); autoAdvance(activeRow, activeCol);
+                } else {
+                    enterEdit(activeRow, activeCol);
+                }
+                return;
+            }
+            if (e.key === 'Backspace' && !editingCell) { const p = rows[activeRow]; if (!p) return; const c = getCell(p.id, activeCol); if (c && c.value !== '') enterEdit(activeRow, activeCol); e.preventDefault(); return; }
+            if (e.key === 'Delete' && !editingCell) { const p = rows[activeRow]; if (!p) return; if (CD[curClass][curDisc][p.id]) delete CD[curClass][curDisc][p.id][activeCol]; recount(); render(); e.preventDefault(); return; }
+
+            // Any printable char starts edit
+            if (!editingCell && e.key.length === 1 && !e.ctrlKey && !e.altKey && !e.metaKey) {
+                const p = rows[activeRow]; if (!p) return;
+                enterEdit(activeRow, activeCol);
+                const ch = e.key;
+                requestAnimationFrame(() => { const inp = document.getElementById('active-inp'); if (inp) { inp.value = ch; inp.setSelectionRange(1, 1); } });
+                e.preventDefault();
+            }
+        });
+
+        // ═══════════════════════════════════════════════
+        //  INIT
+        // ═══════════════════════════════════════════════
+        recount(); render(); updateTimerUI();
+    </script>
+</body>
+
+</html>

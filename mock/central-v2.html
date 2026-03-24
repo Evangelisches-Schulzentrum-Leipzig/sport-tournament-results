@@ -1,0 +1,815 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mission Control — Central v2</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:13px;background:#0d1117;color:#c9d1d9}
+
+/* ─── HEADER ─── */
+#header{position:fixed;top:0;left:0;right:0;height:48px;background:#161b22;border-bottom:1px solid #30363d;display:flex;align-items:center;padding:0 16px;gap:0;z-index:200}
+#header .title{font-weight:700;font-size:15px;color:#e6edf3;margin-right:12px}
+#header .meta{color:#6e7681;font-size:12px;margin-right:auto}
+.h-btn{display:flex;align-items:center;gap:5px;padding:5px 12px;background:#21262d;border:1px solid #30363d;border-radius:6px;color:#c9d1d9;cursor:pointer;font-size:12px;transition:background .15s;margin-left:8px;user-select:none}
+.h-btn:hover{background:#2d333b;color:#e6edf3}
+#live-indicator{display:flex;align-items:center;gap:6px;margin-left:16px;font-size:12px;color:#3fb950}
+#live-dot{width:8px;height:8px;border-radius:50%;background:#3fb950;animation:blink 2s ease infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+#last-update{font-size:11px;color:#6e7681;margin-left:6px}
+#progress-pct{margin-left:12px;font-size:12px;color:#58a6ff;font-weight:600}
+
+/* ─── GRID ─── */
+#panels{position:fixed;top:48px;left:0;right:0;bottom:0;display:grid;grid-template-columns:1fr 1fr 1fr;grid-template-rows:1fr 1fr;gap:1px;background:#30363d;overflow:hidden}
+.panel{background:#0d1117;display:flex;flex-direction:column;overflow:hidden;transition:filter .2s}
+.panel.dimmed{filter:brightness(.35)}
+.panel-hd{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;border-bottom:1px solid #21262d;flex-shrink:0}
+.panel-title{font-weight:600;font-size:12px;color:#8b949e;text-transform:uppercase;letter-spacing:.08em}
+.panel-badge{font-size:11px;padding:1px 7px;border-radius:10px;font-weight:600}
+.badge-open{background:#f097001a;color:#f97316}
+.badge-live{background:#3fb9501a;color:#3fb950;display:flex;align-items:center;gap:4px}
+.panel-body{flex:1;overflow-y:auto;padding:0}
+.panel-body::-webkit-scrollbar{width:4px}
+.panel-body::-webkit-scrollbar-track{background:transparent}
+.panel-body::-webkit-scrollbar-thumb{background:#30363d;border-radius:2px}
+
+/* ─── PANEL A: Station Map ─── */
+.station-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:12px}
+.station{border:1px solid #30363d;border-radius:8px;padding:10px 12px;cursor:pointer;transition:background .15s,border-color .15s}
+.station:hover{background:#161b22;border-color:#58a6ff}
+.station.active{border-color:#3fb950}
+.station.offline{border-color:#f85149;opacity:.8}
+.station.idle{border-color:#30363d;opacity:.7}
+.st-name{font-weight:700;font-size:13px;color:#e6edf3;margin-bottom:4px}
+.st-count{display:flex;align-items:center;gap:5px;font-size:11px;margin-bottom:3px}
+.st-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.dot-active{background:#3fb950;animation:blink 1.5s infinite}
+.dot-idle{background:#8b949e}
+.dot-offline{background:#f85149;animation:blink .8s infinite}
+.st-helper{font-size:10px;color:#6e7681}
+.st-class{font-size:10px;color:#58a6ff}
+
+/* ─── PANEL B: Live Feed ─── */
+.feed-entry{padding:7px 12px;border-bottom:1px solid #161b22;cursor:pointer;transition:background .12s}
+.feed-entry:hover{background:#161b22}
+.feed-entry.conflict{border-left:3px solid #ca8a04}
+.feed-entry.error{border-left:3px solid #f85149}
+.fe-top{display:flex;align-items:baseline;gap:6px;margin-bottom:2px}
+.fe-time{font-size:10px;color:#6e7681;font-family:monospace;flex-shrink:0}
+.fe-disc{font-size:10px;color:#58a6ff;font-weight:600;flex-shrink:0}
+.fe-name{font-size:12px;color:#e6edf3;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fe-val{font-size:12px;color:#3fb950;font-family:monospace;white-space:nowrap;flex-shrink:0}
+.fe-st{font-size:10px;padding:0 5px;border-radius:3px}
+.st-saved{background:#1d3a6e;color:#58a6ff}
+.st-synced{background:#0e3a1e;color:#3fb950}
+.st-conflict{background:#3a2a00;color:#f97316}
+
+/* ─── PANEL C: Leaderboard ─── */
+.lb-filters{display:flex;gap:6px;padding:8px 12px;border-bottom:1px solid #21262d;flex-shrink:0}
+.lb-sel{background:#21262d;border:1px solid #30363d;color:#c9d1d9;padding:3px 6px;border-radius:4px;font-size:11px;cursor:pointer;outline:none}
+.lb-sel:hover{background:#2d333b}
+.lb-row{display:grid;grid-template-columns:28px 1fr 65px;align-items:center;padding:5px 12px;border-bottom:1px solid #0d1117;cursor:pointer;transition:background .1s}
+.lb-row:hover{background:#161b22}
+.lb-row.flash-up{animation:flashUp .5s}
+.lb-row.flash-dn{animation:flashDn .5s}
+@keyframes flashUp{0%,100%{background:transparent}50%{background:#0e3a1e}}
+@keyframes flashDn{0%,100%{background:transparent}50%{background:#3a1010}}
+.lb-pos{font-size:11px;color:#6e7681;text-align:center;font-weight:600}
+.lb-pos.top3{color:#f97316}
+.lb-name{font-size:12px;color:#e6edf3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lb-pts{font-size:13px;color:#3fb950;text-align:right;font-weight:700;font-family:monospace}
+.lb-delta{font-size:9px;padding:0 3px;border-radius:2px;margin-left:3px}
+.delta-up{background:#0e3a1e;color:#3fb950}
+.delta-dn{background:#3a1010;color:#f85149}
+.lb-footer{padding:6px 12px;font-size:10px;color:#6e7681;border-top:1px solid #21262d;flex-shrink:0}
+
+/* ─── PANEL D: Progress Matrix ─── */
+.matrix-wrap{padding:12px;overflow-x:auto}
+.matrix-table{width:100%;border-collapse:collapse;font-size:11px}
+.matrix-table th{padding:4px 6px;color:#6e7681;text-align:center;font-weight:600;border-bottom:1px solid #21262d}
+.matrix-table th.row-hd{text-align:left;color:#8b949e}
+.matrix-table td{padding:4px 6px;border:1px solid #21262d;text-align:center;vertical-align:middle}
+.mbar-wrap{background:#21262d;border-radius:3px;height:14px;min-width:50px;overflow:hidden;position:relative;cursor:pointer}
+.mbar-fill{height:100%;border-radius:3px;transition:width .6s ease;min-width:0}
+.mbar-0{background:#30363d}
+.mbar-low{background:#1d3a6e}
+.mbar-mid{background:#1a4a6e}
+.mbar-high{background:#1a6e3a}
+.mbar-full{background:#3fb950}
+.mbar-pct{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:9px;color:#c9d1d9;font-weight:600;pointer-events:none}
+
+/* ─── PANEL E: Sync Health ─── */
+.helper-card{padding:10px 12px;border-bottom:1px solid #21262d;cursor:pointer;transition:background .12s}
+.helper-card:hover{background:#161b22}
+.hc-top{display:flex;align-items:center;gap:8px;margin-bottom:4px}
+.hc-name{font-weight:600;font-size:12px;color:#e6edf3;flex:1}
+.hc-disc{font-size:10px;color:#6e7681;background:#21262d;padding:1px 5px;border-radius:3px}
+.hc-status{font-size:11px;font-weight:600}
+.hc-online{color:#3fb950}
+.hc-offline{color:#f85149}
+.hc-meta{font-size:10px;color:#6e7681;margin-bottom:5px}
+.sbar-wrap{background:#21262d;border-radius:3px;height:8px;overflow:hidden}
+.sbar-fill{height:100%;border-radius:3px;transition:width .6s ease;background:#3fb950}
+.sbar-fill.offline{background:#f85149;opacity:.4}
+.hc-pct{font-size:10px;color:#6e7681;margin-top:2px}
+.sync-queue{padding:10px 12px;border-top:1px solid #30363d;font-size:12px;color:#f97316;display:flex;align-items:center;gap:6px;flex-shrink:0}
+
+/* ─── PANEL F: Alerts ─── */
+.alert-item{padding:9px 12px;border-bottom:1px solid #21262d}
+.ai-offline{border-left:3px solid #f85149}
+.ai-conflict{border-left:3px solid #ca8a04}
+.ai-warning{border-left:3px solid #f97316}
+.ai-info{border-left:3px solid #58a6ff}
+.ai-resolved{border-left:3px solid #3fb950;opacity:.5}
+.ai-top{display:flex;align-items:flex-start;gap:6px;margin-bottom:3px}
+.ai-icon{font-size:13px;flex-shrink:0;line-height:1.3}
+.ai-msg{font-size:12px;color:#e6edf3;line-height:1.4;flex:1}
+.ai-sub{font-size:10px;color:#8b949e;line-height:1.4;margin-bottom:5px;padding-left:19px}
+.ai-actions{display:flex;gap:6px;padding-left:19px}
+.ai-btn{font-size:10px;padding:2px 8px;border:1px solid #30363d;border-radius:3px;cursor:pointer;background:#21262d;color:#c9d1d9;transition:background .1s}
+.ai-btn:hover{background:#2d333b;color:#e6edf3}
+.ai-btn.resolve{border-color:#ca8a04;color:#ca8a04}
+.ai-btn.resolve:hover{background:#3a2a001a}
+.ai-sep{padding:6px 12px;font-size:10px;color:#30363d;text-transform:uppercase;letter-spacing:.1em;border-bottom:1px solid #21262d}
+
+/* ─── DRAWER ─── */
+#drawer-overlay{position:fixed;inset:0;z-index:300;display:none}
+#drawer-overlay.open{display:block}
+#drawer-bg{position:absolute;inset:0;background:rgba(0,0,0,.5)}
+#drawer{position:absolute;top:48px;right:0;bottom:0;width:420px;background:#0d1117;border-left:1px solid #30363d;display:flex;flex-direction:column;transform:translateX(100%);transition:transform .25s cubic-bezier(.4,0,.2,1)}
+#drawer-overlay.open #drawer{transform:translateX(0)}
+#drawer-hd{display:flex;align-items:center;padding:12px 16px;border-bottom:1px solid #21262d;gap:8px}
+#drawer-title{font-weight:700;font-size:14px;color:#e6edf3;flex:1}
+#drawer-close{background:none;border:none;color:#6e7681;cursor:pointer;font-size:18px;padding:0;line-height:1;display:flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:4px}
+#drawer-close:hover{background:#21262d;color:#c9d1d9}
+#drawer-body{flex:1;overflow-y:auto;padding:16px}
+.dr-section{margin-bottom:16px}
+.dr-label{font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:#6e7681;margin-bottom:6px;font-weight:600}
+.dr-row{display:grid;grid-template-columns:100px 1fr 60px 80px;gap:8px;align-items:center;padding:5px 0;border-bottom:1px solid #21262d;font-size:12px}
+.dr-row .disc-name{color:#8b949e}
+.dr-row .val{font-family:monospace;color:#e6edf3}
+.dr-row .pts{text-align:right;color:#3fb950;font-weight:700;font-family:monospace}
+.dr-row .st{font-size:10px}
+.dr-total{display:flex;justify-content:space-between;padding:8px 0;border-top:1px solid #30363d;margin-top:4px;font-weight:700}
+.dr-total .pts{color:#3fb950;font-size:15px;font-family:monospace}
+.dr-mark{display:flex;justify-content:space-between;padding:6px 8px;background:#161b22;border-radius:6px;font-size:13px;margin-top:8px}
+.conflict-pair{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
+.cf-box{background:#161b22;border:1px solid #30363d;border-radius:6px;padding:10px;text-align:center}
+.cf-label{font-size:10px;color:#6e7681;margin-bottom:4px;text-transform:uppercase}
+.cf-val{font-size:20px;font-family:monospace;color:#e6edf3;font-weight:700;margin-bottom:8px}
+.cf-btn{width:100%;padding:6px;border-radius:4px;border:none;cursor:pointer;font-size:12px;font-weight:600;transition:background .15s}
+.cf-keep{background:#1a4a6e;color:#58a6ff}
+.cf-keep:hover{background:#1d3a6e}
+.cf-accept{background:#3a2a00;color:#f97316}
+.cf-accept:hover{background:#4a3a00}
+
+/* ─── SCROLLBAR ─── */
+::-webkit-scrollbar{width:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:#30363d;border-radius:2px}
+
+/* ─── NARROW ─── */
+#narrow{display:none;position:fixed;inset:0;background:#0d1117;z-index:999;place-items:center;text-align:center;padding:20px;color:#8b949e}
+@media(max-width:900px){#narrow{display:grid}}
+</style>
+</head>
+<body>
+
+<div id="narrow"><div><div style="font-size:32px;margin-bottom:12px">⚠</div><strong style="color:#e6edf3">Mission Control erfordert mindestens 1024px Breite.</strong></div></div>
+
+<!-- HEADER -->
+<div id="header">
+  <div class="title">🏆 Bundesjugendspiele 2026</div>
+  <div class="meta">4 Disziplinen &nbsp;·&nbsp; 4 Klassen &nbsp;·&nbsp; 120 Teilnehmer</div>
+  <div id="live-indicator"><span id="live-dot"></span> LIVE <span id="last-update">0s ago</span></div>
+  <span id="progress-pct">72.3%</span>
+  <div class="h-btn" id="btn-export">📤 Export</div>
+  <div class="h-btn" id="btn-settings">⚙ Settings</div>
+</div>
+
+<!-- PANEL GRID -->
+<div id="panels">
+
+  <!-- A: STATION MAP -->
+  <div class="panel" id="panel-a">
+    <div class="panel-hd"><span class="panel-title">Station Map</span></div>
+    <div class="panel-body" style="padding:0">
+      <div class="station-grid">
+        <div class="station active" data-disc="800m" onclick="openStationDrawer('800m')">
+          <div class="st-name">800m Run</div>
+          <div class="st-count"><span class="st-dot dot-active"></span><span id="sc-800m">12 heute</span></div>
+          <div class="st-helper">Helper-1</div>
+          <div class="st-class">Klasse 5a</div>
+        </div>
+        <div class="station idle" data-disc="50m" onclick="openStationDrawer('50m')">
+          <div class="st-name">50m Sprint</div>
+          <div class="st-count"><span class="st-dot dot-idle"></span><span id="sc-50m">0 — idle</span></div>
+          <div class="st-helper">Helper-2</div>
+          <div class="st-class" style="color:#6e7681">—</div>
+        </div>
+        <div class="station offline" data-disc="3jump" onclick="openStationDrawer('3jump')">
+          <div class="st-name">3-Jump</div>
+          <div class="st-count"><span class="st-dot dot-offline"></span><span id="sc-3jump" style="color:#f85149">OFFLINE</span></div>
+          <div class="st-helper" style="color:#f85149">Helper-3</div>
+          <div class="st-class" style="color:#6e7681">—</div>
+        </div>
+        <div class="station active" data-disc="throw" onclick="openStationDrawer('throw')">
+          <div class="st-name">Distanzwurf</div>
+          <div class="st-count"><span class="st-dot dot-active"></span><span id="sc-throw">8 heute</span></div>
+          <div class="st-helper">Helper-4</div>
+          <div class="st-class">Klasse 5b</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- B: LIVE FEED -->
+  <div class="panel" id="panel-b">
+    <div class="panel-hd">
+      <span class="panel-title">Live Feed</span>
+      <span class="panel-badge badge-live"><span style="width:6px;height:6px;border-radius:50%;background:#3fb950;display:inline-block;animation:blink 1.5s infinite"></span><span id="feed-toggle-lbl">ON</span></span>
+    </div>
+    <div class="panel-body" id="feed-list"></div>
+  </div>
+
+  <!-- C: LEADERBOARD -->
+  <div class="panel" id="panel-c">
+    <div class="panel-hd"><span class="panel-title">Leaderboard</span></div>
+    <div class="lb-filters">
+      <select class="lb-sel" id="lb-scope" onchange="renderLeaderboard()">
+        <option value="all">Alle</option>
+        <option value="5a">Klasse 5a</option>
+        <option value="5b">Klasse 5b</option>
+        <option value="6a">Klasse 6a</option>
+        <option value="6b">Klasse 6b</option>
+        <option value="m">Männlich</option>
+        <option value="f">Weiblich</option>
+      </select>
+      <select class="lb-sel" id="lb-disc" onchange="renderLeaderboard()">
+        <option value="total">Gesamt</option>
+        <option value="800m">800m Run</option>
+        <option value="50m">50m Sprint</option>
+        <option value="3jump">3-Jump</option>
+        <option value="throw">Distanzwurf</option>
+      </select>
+    </div>
+    <div class="panel-body" id="lb-body"></div>
+    <div class="lb-footer" id="lb-footer">Zeige 10 von 120</div>
+  </div>
+
+  <!-- D: PROGRESS MATRIX -->
+  <div class="panel" id="panel-d">
+    <div class="panel-hd"><span class="panel-title">Progress Matrix</span></div>
+    <div class="panel-body">
+      <div class="matrix-wrap">
+        <table class="matrix-table" id="matrix"></table>
+      </div>
+    </div>
+  </div>
+
+  <!-- E: SYNC HEALTH -->
+  <div class="panel" id="panel-e">
+    <div class="panel-hd"><span class="panel-title">Sync Health</span></div>
+    <div class="panel-body" id="helpers-list"></div>
+    <div class="sync-queue">⏳ <span id="queue-count">7</span> Einträge ausstehend</div>
+  </div>
+
+  <!-- F: ALERTS -->
+  <div class="panel" id="panel-f">
+    <div class="panel-hd">
+      <span class="panel-title">Alerts</span>
+      <span class="panel-badge badge-open" id="alert-badge">2 offen</span>
+    </div>
+    <div class="panel-body" id="alerts-list"></div>
+  </div>
+
+</div>
+
+<!-- DRAWER -->
+<div id="drawer-overlay">
+  <div id="drawer-bg" onclick="closeDrawer()"></div>
+  <div id="drawer">
+    <div id="drawer-hd">
+      <div id="drawer-title">Detail</div>
+      <button id="drawer-close" onclick="closeDrawer()">✕</button>
+    </div>
+    <div id="drawer-body"></div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════
+//  MOCK DATA
+// ═══════════════════════════════════════════════
+const DISC_CFG = {
+  '800m':  { label:'800m Run',    unit:'s',  higher_better:false },
+  '50m':   { label:'50m Sprint',  unit:'s',  higher_better:false },
+  '3jump': { label:'3-Jump',      unit:'m',  higher_better:true  },
+  'throw': { label:'Distanzwurf', unit:'m',  higher_better:true  }
+};
+
+const NAMES_F = ['Müller, Anna','Weber, Clara','Klein, Eva','Lang, Mia','Richter, Lena','Engel, Sara','Zimmermann, Lisa','Hoffmann, Emma','Becker, Sophie','Köhler, Laura','Huber, Hannah','Krause, Leonie','Lehmann, Lena','Fuchs, Maja'];
+const NAMES_M = ['Schmidt, Ben','Fischer, David','Koch, Max','Braun, Felix','Bauer, Tim','Berger, Paul','Schulz, Noah','Wagner, Leon','Schäfer, Elias','Maier, Julian','Wolf, Tobias','Schwarz, Finn','Frank, Moritz','Roth, Lukas'];
+
+const CLASSES = ['5a','5b','6a','6b'];
+
+// Generate 30 participants (mix of classes and genders)
+const PARTICIPANTS = [];
+let pid = 1;
+CLASSES.forEach((cls,ci) => {
+  for(let i=0;i<7;i++,pid++){
+    const female = (i%2===0);
+    const namePool = female ? NAMES_F : NAMES_M;
+    const name = namePool[(ci*7+i)%namePool.length];
+    PARTICIPANTS.push({ id:String(pid).padStart(2,'0'), name, cls, gender: female?'f':'m' });
+  }
+  for(let i=0;i<1;i++,pid++){
+    PARTICIPANTS.push({ id:String(pid).padStart(2,'0'), name:NAMES_M[(ci*3+i)%NAMES_M.length], cls, gender:'m' });
+  }
+});
+
+// Generate semi-random scores
+function rnd(min,max){ return +(min + Math.random()*(max-min)).toFixed(2); }
+
+const SCORES = {}; // pid -> {disc -> {v1, v2, pts, status}}
+const PTS_TABLES = {
+  '800m':  p => Math.max(0, Math.round(300 - (p-150)*0.8)),
+  '50m':   p => Math.max(0, Math.round(300 - (p-6)*25)),
+  '3jump': p => Math.round(p*36),
+  'throw': p => Math.round(p*8.5)
+};
+
+PARTICIPANTS.forEach(p => {
+  SCORES[p.id] = {};
+  // Not all participants have all disciplines (simulate partial data)
+  const completeness = p.cls === '6a' ? 0 : (p.cls === '5a' ? 0.9 : 0.65);
+  Object.keys(DISC_CFG).forEach(disc => {
+    if(Math.random() > completeness) return;
+    let v1, v2;
+    if(disc==='800m') v1 = rnd(160,220);
+    else if(disc==='50m') v1 = rnd(7.2,10.5);
+    else if(disc==='3jump') { v1=rnd(3.8,6.5); v2=rnd(3.8,6.5); }
+    else { v1=rnd(15,32); v2=rnd(15,32); }
+    const best = v2 !== undefined ? (DISC_CFG[disc].higher_better ? Math.max(v1,v2) : Math.min(v1,v2)) : v1;
+    SCORES[p.id][disc] = { v1, v2, best, pts: PTS_TABLES[disc](best), status: Math.random()>.15?'synced':'saved' };
+  });
+});
+
+function totalPts(pid){ return Object.values(SCORES[pid]||{}).reduce((a,s)=>a+s.pts,0); }
+function completedDiscs(pid){ return Object.keys(SCORES[pid]||{}).length; }
+
+// ═══════════════════════════════════════════════
+//  LEADERBOARD
+// ═══════════════════════════════════════════════
+let prevLbOrder = [];
+
+function renderLeaderboard(){
+  const scope = document.getElementById('lb-scope').value;
+  const disc  = document.getElementById('lb-disc').value;
+
+  let ps = PARTICIPANTS.filter(p => {
+    if(scope==='5a'||scope==='5b'||scope==='6a'||scope==='6b') return p.cls===scope;
+    if(scope==='m') return p.gender==='m';
+    if(scope==='f') return p.gender==='f';
+    return true;
+  }).filter(p => disc==='total' ? completedDiscs(p.id)>0 : SCORES[p.id]?.[disc]);
+
+  ps.sort((a,b)=>{
+    if(disc==='total') return totalPts(b.id)-totalPts(a.id);
+    const sa=SCORES[a.id][disc], sb=SCORES[b.id][disc];
+    return DISC_CFG[disc].higher_better ? sb.best-sa.best : sa.best-sb.best;
+  });
+  ps = ps.slice(0,20);
+
+  const body = document.getElementById('lb-body');
+  body.innerHTML = '';
+  ps.forEach((p,i) => {
+    const row = document.createElement('div');
+    row.className = 'lb-row';
+    row.dataset.pid = p.id;
+    const pts  = disc==='total' ? totalPts(p.id) : SCORES[p.id][disc]?.pts || 0;
+    const val  = disc!=='total'&&SCORES[p.id][disc] ? ` <span style="color:#6e7681;font-size:10px">${SCORES[p.id][disc].best}${DISC_CFG[disc].unit}</span>` : '';
+
+    const prevPos = prevLbOrder.indexOf(p.id);
+    let deltaHtml = '';
+    if(prevPos!==-1 && prevPos!==i){
+      const diff = prevPos - i; // positive = moved up
+      const cls = diff>0?'delta-up':'delta-dn';
+      const arrow = diff>0?'↑':'↓';
+      deltaHtml = `<span class="lb-delta ${cls}">${arrow}${Math.abs(diff)}</span>`;
+    }
+
+    row.innerHTML = `<span class="lb-pos${i<3?' top3':''}">${i+1}</span><span class="lb-name">${p.name}${val}</span><span class="lb-pts">${pts}${deltaHtml}</span>`;
+    row.onclick = () => openParticipantDrawer(p.id);
+    body.appendChild(row);
+  });
+
+  prevLbOrder = ps.map(p=>p.id);
+  document.getElementById('lb-footer').textContent = `Zeige ${ps.length} von ${PARTICIPANTS.filter(p=>disc==='total'?completedDiscs(p.id)>0:SCORES[p.id]?.[disc]).length}`;
+}
+
+// ═══════════════════════════════════════════════
+//  PROGRESS MATRIX
+// ═══════════════════════════════════════════════
+function renderMatrix(){
+  const discs = Object.keys(DISC_CFG);
+  let html = '<tr><th class="row-hd">Klasse</th>';
+  discs.forEach(d=>{ html += `<th>${DISC_CFG[d].label.split(' ')[0]}</th>`; });
+  html += '</tr>';
+
+  CLASSES.forEach(cls => {
+    html += `<tr><td style="font-weight:600;color:#8b949e;padding:4px 6px">${cls}</td>`;
+    discs.forEach(d => {
+      const total = PARTICIPANTS.filter(p=>p.cls===cls).length;
+      const done  = PARTICIPANTS.filter(p=>p.cls===cls && SCORES[p.id]?.[d]).length;
+      const pct   = total>0 ? Math.round(done/total*100) : 0;
+      const colorCls = pct===0?'mbar-0':pct<30?'mbar-low':pct<70?'mbar-mid':pct<100?'mbar-high':'mbar-full';
+      html += `<td onclick="openMatrixDrawer('${cls}','${d}')">
+        <div class="mbar-wrap" title="${pct}% (${done}/${total})">
+          <div class="mbar-fill ${colorCls}" style="width:${pct}%"></div>
+          <div class="mbar-pct">${pct}%</div>
+        </div></td>`;
+    });
+    html += '</tr>';
+  });
+
+  document.getElementById('matrix').innerHTML = html;
+}
+
+// ═══════════════════════════════════════════════
+//  SYNC HEALTH
+// ═══════════════════════════════════════════════
+const HELPERS = [
+  { id:'h1', name:'Helper-1', disc:'800m',  online:true,  lastSec:0,  syncPct:100 },
+  { id:'h2', name:'Helper-2', disc:'50m',   online:true,  lastSec:3,  syncPct:87  },
+  { id:'h3', name:'Helper-3', disc:'3jump', online:false, lastSec:47, syncPct:42  },
+  { id:'h4', name:'Helper-4', disc:'throw', online:true,  lastSec:1,  syncPct:94  },
+];
+
+function renderHelpers(){
+  const list = document.getElementById('helpers-list');
+  list.innerHTML = '';
+  HELPERS.forEach(h => {
+    const div = document.createElement('div');
+    div.className = 'helper-card';
+    div.onclick = () => openHelperDrawer(h.id);
+    const stClass = h.online ? 'hc-online' : 'hc-offline';
+    const stText = h.online ? '☁✓ online' : '⊘ OFFLINE';
+    const barCls = !h.online ? 'offline' : '';
+    div.innerHTML = `
+      <div class="hc-top">
+        <span class="hc-name">${h.name}</span>
+        <span class="hc-disc">${DISC_CFG[h.disc].label}</span>
+        <span class="hc-status ${stClass}">${stText}</span>
+      </div>
+      <div class="hc-meta">Letzter Sync: ${h.lastSec}s ago</div>
+      <div class="sbar-wrap"><div class="sbar-fill ${barCls}" style="width:${h.syncPct}%"></div></div>
+      <div class="hc-pct">${h.syncPct}% synchronisiert</div>`;
+    list.appendChild(div);
+  });
+}
+
+// ═══════════════════════════════════════════════
+//  ALERTS
+// ═══════════════════════════════════════════════
+const ALERTS = [
+  { id:'a1', type:'offline',   icon:'🔴', msg:'Helper-3 offline (47s)', sub:'3-Jump Station synchronisiert nicht', open:true, dismissible:false, resolveable:false },
+  { id:'a2', type:'conflict',  icon:'⚡', msg:'2 Sync-Konflikte', sub:'#14 Versuch 1: lokal 5.42m · server 5.38m\n#28 Versuch 1: lokal 6.01m · server 5.98m', open:true, dismissible:false, resolveable:true },
+  { id:'a3', type:'warning',   icon:'⚠', msg:'#14 fehlt noch: 50m Sprint', sub:'Alle anderen Disziplinen vorhanden', open:true, dismissible:true, resolveable:false },
+  { id:'a4', type:'resolved',  icon:'✓', msg:'Helper-2 wieder verbunden (2m)', open:false },
+  { id:'a5', type:'resolved',  icon:'✓', msg:'Konflikt #09 gelöst', open:false },
+];
+
+function renderAlerts(){
+  const list = document.getElementById('alerts-list');
+  list.innerHTML = '';
+  const openAlerts = ALERTS.filter(a=>a.open);
+  document.getElementById('alert-badge').textContent = `${openAlerts.length} offen`;
+
+  openAlerts.forEach(a => {
+    const typeMap = { offline:'ai-offline', conflict:'ai-conflict', warning:'ai-warning', info:'ai-info' };
+    const div = document.createElement('div');
+    div.className = `alert-item ${typeMap[a.type]||''}`;
+    let actions = '';
+    if(a.dismissible) actions += `<button class="ai-btn" onclick="dismissAlert('${a.id}')">Schließen</button>`;
+    if(a.resolveable) actions += `<button class="ai-btn resolve" onclick="openConflictDrawer()">Alle lösen</button>`;
+    div.innerHTML = `
+      <div class="ai-top"><span class="ai-icon">${a.icon}</span><span class="ai-msg">${a.msg}</span></div>
+      ${a.sub?`<div class="ai-sub">${a.sub.replace(/\n/g,'<br>')}</div>`:''}
+      ${actions?`<div class="ai-actions">${actions}</div>`:''}`;
+    list.appendChild(div);
+  });
+
+  const resolved = ALERTS.filter(a=>!a.open);
+  if(resolved.length){
+    const sep = document.createElement('div'); sep.className='ai-sep'; sep.textContent='Gelöst'; list.appendChild(sep);
+    resolved.forEach(a=>{
+      const div=document.createElement('div'); div.className='alert-item ai-resolved';
+      div.innerHTML=`<div class="ai-top"><span class="ai-icon">✓</span><span class="ai-msg" style="color:#6e7681">${a.msg}</span></div>`;
+      list.appendChild(div);
+    });
+  }
+}
+
+function dismissAlert(id){ const a=ALERTS.find(x=>x.id===id); if(a){ a.open=false; renderAlerts(); } }
+
+// ═══════════════════════════════════════════════
+//  LIVE FEED
+// ═══════════════════════════════════════════════
+const FEED_EVENTS = [];
+let feedPaused = false;
+let lastUpdateSec = 0;
+
+const DISC_LABELS = { '800m':'800m Run','50m':'50m Sprint','3jump':'3-Jump','throw':'Distanzwurf' };
+
+function fmtVal(disc, v){ return v + DISC_CFG[disc].unit; }
+
+function addFeedEntry(entry){
+  FEED_EVENTS.unshift(entry);
+  if(FEED_EVENTS.length > 80) FEED_EVENTS.pop();
+  if(!feedPaused) renderFeed();
+  lastUpdateSec = 0;
+  updateProgressPct();
+}
+
+function renderFeed(){
+  const list = document.getElementById('feed-list');
+  list.innerHTML = '';
+  FEED_EVENTS.slice(0,30).forEach(e => {
+    const row = document.createElement('div');
+    const typeClass = e.status==='conflict'?'conflict':e.status==='error'?'error':'';
+    row.className = `feed-entry${typeClass?' '+typeClass:''}`;
+    const stBadge = e.status==='synced'?`<span class="fe-st st-synced">☁✓</span>`:
+                    e.status==='saved'?`<span class="fe-st st-saved">💾</span>`:
+                    `<span class="fe-st st-conflict">⚡</span>`;
+    row.innerHTML = `
+      <div class="fe-top">
+        <span class="fe-time">${e.time}</span>
+        <span class="fe-disc">${e.disc_label}</span>
+        <span style="flex:1"></span>
+        ${stBadge}
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <span class="fe-name" style="flex:1">#${e.pid} ${e.name}</span>
+        <span class="fe-val">→ ${e.val}</span>
+      </div>`;
+    row.onclick = () => openParticipantDrawer(e.pid);
+    list.appendChild(row);
+  });
+}
+
+// Seed initial feed
+function seedFeed(){
+  const items = [
+    { pid:'14', name:'Fischer, David', disc:'3jump',  val:'5.42m', status:'conflict', time:nowTime(-60) },
+    { pid:'03', name:'Schmidt, Ben',   disc:'throw',  val:'24.3m', status:'synced',   time:nowTime(-90) },
+    { pid:'12', name:'Müller, Anna',   disc:'50m',    val:'8.21s', status:'synced',   time:nowTime(-120)},
+    { pid:'07', name:'Weber, Clara',   disc:'3jump',  val:'5.10m', status:'saved',    time:nowTime(-180)},
+    { pid:'19', name:'Fischer, D.',    disc:'800m',   val:'187.4s',status:'synced',   time:nowTime(-210)},
+    { pid:'01', name:'Müller, Anna',   disc:'800m',   val:'192.1s',status:'synced',   time:nowTime(-270)},
+    { pid:'05', name:'Koch, Max',      disc:'throw',  val:'22.8m', status:'synced',   time:nowTime(-330)},
+  ];
+  items.forEach(i=>{ i.disc_label=DISC_LABELS[i.disc]; FEED_EVENTS.push(i); });
+  renderFeed();
+}
+
+function nowTime(offsetSec=0){
+  const d=new Date(Date.now()+offsetSec*1000);
+  return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')+':'+String(d.getSeconds()).padStart(2,'0');
+}
+
+// ─── simulated live data ───
+const LIVE_PARTICIPANTS = [...PARTICIPANTS];
+let liveIdx = 0;
+function simulateLiveEntry(){
+  if(Math.random()>.6) return; // not always
+  const p = LIVE_PARTICIPANTS[liveIdx % LIVE_PARTICIPANTS.length]; liveIdx++;
+  const discList = Object.keys(DISC_CFG);
+  const disc = discList[Math.floor(Math.random()*discList.length)];
+  let v;
+  if(disc==='800m') v=rnd(160,220)+'s';
+  else if(disc==='50m') v=rnd(7.2,10.5)+'s';
+  else if(disc==='3jump') v=rnd(3.8,6.5)+'m';
+  else v=rnd(15,32)+'m';
+
+  const status = Math.random()>.2?'synced':'saved';
+  addFeedEntry({ pid:p.id, name:p.name, disc, disc_label:DISC_LABELS[disc], val:v, status, time:nowTime() });
+
+  // Occasionally add a conflict
+  if(Math.random()>.92){
+    setTimeout(()=>{
+      addFeedEntry({ pid:p.id, name:p.name, disc, disc_label:DISC_LABELS[disc], val:v, status:'conflict', time:nowTime() });
+    }, 500);
+  }
+
+  // Update leaderboard slightly
+  const pd = PARTICIPANTS.find(x=>x.id===p.id);
+  if(pd && disc && !SCORES[pd.id][disc]){
+    const numV=parseFloat(v);
+    if(!isNaN(numV)){ SCORES[pd.id][disc]={v1:numV,best:numV,pts:PTS_TABLES[disc](numV),status}; }
+    renderLeaderboard(); renderMatrix();
+  }
+
+  // Update sync health
+  simulateSyncTick();
+}
+
+function simulateSyncTick(){
+  HELPERS.forEach(h=>{
+    if(h.online){ h.syncPct=Math.min(100,h.syncPct+Math.round(Math.random()*3)); h.lastSec=Math.max(0,h.lastSec-1+Math.round(Math.random()*2)); }
+    else { h.lastSec++; }
+  });
+  const queueEl = document.getElementById('queue-count');
+  const curQ = parseInt(queueEl.textContent);
+  if(curQ>0) queueEl.textContent = Math.max(0,curQ-Math.round(Math.random()*2));
+  renderHelpers();
+}
+
+function updateProgressPct(){
+  const total = PARTICIPANTS.length * 4;
+  const done = PARTICIPANTS.reduce((a,p)=>a+completedDiscs(p.id),0);
+  const pct = Math.round(done/total*100);
+  document.getElementById('progress-pct').textContent = pct+'%';
+}
+
+// ─── last-update ticker ───
+setInterval(()=>{
+  lastUpdateSec++;
+  document.getElementById('last-update').textContent = lastUpdateSec+'s ago';
+  if(lastUpdateSec % 4 === 0) simulateLiveEntry();
+  if(lastUpdateSec % 6 === 0) { renderLeaderboard(); }
+}, 1000);
+
+// ═══════════════════════════════════════════════
+//  DRAWER
+// ═══════════════════════════════════════════════
+function openDrawer(title, bodyHtml){
+  document.getElementById('drawer-title').textContent = title;
+  document.getElementById('drawer-body').innerHTML = bodyHtml;
+  document.getElementById('drawer-overlay').classList.add('open');
+  document.querySelectorAll('.panel').forEach(p=>p.classList.add('dimmed'));
+}
+function closeDrawer(){
+  document.getElementById('drawer-overlay').classList.remove('open');
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('dimmed'));
+}
+
+function openParticipantDrawer(pid){
+  const p = PARTICIPANTS.find(x=>x.id===pid);
+  if(!p) return;
+  const scores = SCORES[pid]||{};
+  let rows='', total=0;
+  Object.entries(DISC_CFG).forEach(([disc,cfg])=>{
+    const s=scores[disc];
+    const stBadge = s ? (s.status==='synced'?'<span class="fe-st st-synced">☁✓</span>':'<span class="fe-st st-saved">💾</span>') : '<span style="color:#3d444d">—</span>';
+    const valStr = s ? `${s.best}${cfg.unit}${s.v2!==undefined?` / ${s.v2}${cfg.unit}`:''}` : '—';
+    const ptsStr = s ? s.pts : '—';
+    if(s) total+=s.pts;
+    rows+=`<div class="dr-row"><span class="disc-name">${cfg.label}</span><span class="val">${valStr}</span><span class="pts">${ptsStr}</span>${stBadge}</div>`;
+  });
+  const mark = total>700?'1 (sehr gut)':total>600?'2 (gut)':total>500?'3 (befriedigend)':'4 (ausreichend)';
+  const html=`
+    <div class="dr-section">
+      <div class="dr-label">#${p.id} · ${p.cls} · ${p.gender==='f'?'weiblich':'männlich'}</div>
+      <div style="font-size:18px;font-weight:700;color:#e6edf3;margin-bottom:12px">${p.name}</div>
+      ${rows}
+      <div class="dr-total"><span>Gesamt</span><span class="pts">${total} Punkte</span></div>
+      <div class="dr-mark"><span>Note</span><span style="color:#f97316;font-weight:700">${mark}</span></div>
+    </div>`;
+  openDrawer(`Teilnehmer: ${p.name}`, html);
+}
+
+function openStationDrawer(disc){
+  const cfg = DISC_CFG[disc];
+  const ps = PARTICIPANTS.filter(p=>SCORES[p.id]?.[disc]);
+  let rows='';
+  ps.sort((a,b)=>{
+    const sa=SCORES[a.id][disc],sb=SCORES[b.id][disc];
+    return cfg.higher_better?sb.best-sa.best:sa.best-sb.best;
+  });
+  ps.forEach((p,i)=>{
+    const s=SCORES[p.id][disc];
+    const stBadge = s.status==='synced'?'<span class="fe-st st-synced">☁✓</span>':'<span class="fe-st st-saved">💾</span>';
+    rows+=`<div class="dr-row"><span class="disc-name">#${p.id}</span><span class="val">${p.name.split(',')[0]}</span><span class="pts">${s.best}${cfg.unit}</span>${stBadge}</div>`;
+  });
+  const empty = PARTICIPANTS.filter(p=>!SCORES[p.id]?.[disc]);
+  let emptyRows='';
+  empty.forEach(p=>{ emptyRows+=`<div style="padding:4px 0;color:#6e7681;font-size:12px">#${p.id} ${p.name}</div>`; });
+  const html=`
+    <div class="dr-section">
+      <div class="dr-label">${ps.length} Einträge</div>
+      ${rows||'<div style="color:#6e7681">Keine Daten</div>'}
+    </div>
+    <div class="dr-section">
+      <div class="dr-label">Fehlend (${empty.length})</div>
+      ${emptyRows||'<div style="color:#3fb950;font-size:12px">✓ Alle vollständig</div>'}
+    </div>`;
+  openDrawer(`Station: ${cfg.label}`, html);
+}
+
+function openMatrixDrawer(cls, disc){
+  openStationDrawer(disc);
+  document.getElementById('drawer-title').textContent = `${DISC_CFG[disc].label} · Klasse ${cls}`;
+}
+
+function openHelperDrawer(hid){
+  const h = HELPERS.find(x=>x.id===hid);
+  if(!h) return;
+  const pending = Math.round((100-h.syncPct)/100*15);
+  const stHtml = h.online
+    ? '<span style="color:#3fb950;font-weight:700">☁✓ online</span>'
+    : '<span style="color:#f85149;font-weight:700">⊘ OFFLINE</span>';
+  const html=`
+    <div class="dr-section">
+      <div class="dr-label">Status</div>
+      <div style="font-size:15px;margin-bottom:8px">${stHtml} &nbsp;·&nbsp; Letzter Sync: ${h.lastSec}s ago</div>
+      <div class="sbar-wrap" style="height:12px"><div class="sbar-fill${h.online?'':' offline'}" style="width:${h.syncPct}%;height:100%"></div></div>
+      <div style="font-size:11px;color:#6e7681;margin-top:4px">${h.syncPct}% synchronisiert</div>
+    </div>
+    <div class="dr-section">
+      <div class="dr-label">${pending} ausstehende Einträge</div>
+      ${pending===0?'<div style="color:#3fb950;font-size:12px">✓ Alles synchronisiert</div>':
+        Array.from({length:pending},(_,i)=>`<div style="padding:4px 0;font-size:12px;border-bottom:1px solid #21262d;color:#c9d1d9">Eintrag ${i+1} · wartend…</div>`).join('')}
+    </div>`;
+  openDrawer(`${h.name} (${DISC_CFG[h.disc].label})`, html);
+}
+
+function openConflictDrawer(){
+  const html=`
+    <div class="dr-section">
+      <div class="dr-label">Konflikt 1 von 2 · #14 Fischer, David — 3-Jump Versuch 1</div>
+      <div class="conflict-pair">
+        <div class="cf-box">
+          <div class="cf-label">Dein Wert</div>
+          <div class="cf-val">5.42m</div>
+          <button class="cf-btn cf-keep" onclick="resolveConflict('keep')">Behalten ✓</button>
+        </div>
+        <div class="cf-box">
+          <div class="cf-label">Server-Wert</div>
+          <div class="cf-val">5.38m</div>
+          <button class="cf-btn cf-accept" onclick="resolveConflict('accept')">Übernehmen</button>
+        </div>
+      </div>
+    </div>`;
+  openDrawer('⚡ Konflikte lösen', html);
+}
+
+function resolveConflict(action){
+  const a=ALERTS.find(x=>x.id==='a2');
+  if(a){ a.open=false; ALERTS.push({id:'a6',icon:'✓',msg:'Konflikte gelöst ('+action+')',open:false}); renderAlerts(); }
+  closeDrawer();
+}
+
+// ─── Export / Settings drawers ───
+document.getElementById('btn-export').onclick=()=>{
+  openDrawer('📤 Export',`
+    <div class="dr-section">
+      <div class="dr-label">Format</div>
+      <div style="display:flex;gap:8px;margin-bottom:12px">
+        <button class="h-btn" style="justify-content:center">CSV</button>
+        <button class="h-btn" style="justify-content:center">PDF</button>
+        <button class="h-btn" style="justify-content:center">Urkunden PDF</button>
+      </div>
+      <div class="dr-label">Umfang</div>
+      <div style="display:flex;flex-direction:column;gap:6px;font-size:12px;color:#c9d1d9">
+        <label style="display:flex;gap:8px;align-items:center;cursor:pointer"><input type="radio" name="scope" checked> Alle Teilnehmer</label>
+        <label style="display:flex;gap:8px;align-items:center;cursor:pointer"><input type="radio" name="scope"> Bestimmte Klasse</label>
+        <label style="display:flex;gap:8px;align-items:center;cursor:pointer"><input type="radio" name="scope"> Bestimmte Disziplin</label>
+      </div>
+      <div style="margin-top:16px">
+        <button class="h-btn" style="width:100%;justify-content:center;padding:8px;background:#238636;border-color:#2ea043;color:#fff" onclick="alert('Download gestartet!')">⬇ Generieren &amp; Herunterladen</button>
+      </div>
+    </div>`);
+};
+
+document.getElementById('btn-settings').onclick=()=>{
+  openDrawer('⚙ Einstellungen',`
+    <div class="dr-section">
+      <div class="dr-label">Disziplinen</div>
+      ${Object.entries(DISC_CFG).map(([k,v])=>`<div style="padding:5px 0;border-bottom:1px solid #21262d;font-size:12px;display:flex;justify-content:space-between"><span style="color:#e6edf3">${v.label}</span><span style="color:#6e7681">${v.unit}</span></div>`).join('')}
+      <div style="margin-top:8px"><button class="h-btn">+ Disziplin hinzufügen</button></div>
+    </div>
+    <div class="dr-section">
+      <div class="dr-label">Klassen</div>
+      ${CLASSES.map(c=>`<div style="padding:5px 0;border-bottom:1px solid #21262d;font-size:12px;display:flex;justify-content:space-between"><span style="color:#e6edf3">Klasse ${c}</span><span style="color:#6e7681">${PARTICIPANTS.filter(p=>p.cls===c).length} TN</span></div>`).join('')}
+      <div style="margin-top:8px"><button class="h-btn">+ Klasse hinzufügen</button></div>
+    </div>
+    <div class="dr-section">
+      <div class="dr-label">Bewertungstabellen</div>
+      <button class="h-btn" style="width:100%">📋 Tabellen verwalten</button>
+    </div>`);
+};
+
+// ═══════════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════════
+seedFeed();
+renderLeaderboard();
+renderMatrix();
+renderHelpers();
+renderAlerts();
+updateProgressPct();
+</script>
+</body>
+</html>
