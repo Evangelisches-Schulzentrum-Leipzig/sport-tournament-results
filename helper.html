@@ -1,72 +1,99 @@
 <!DOCTYPE html>
-<html lang="de">
+<html class="dark" lang="de">
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+        <link rel="stylesheet" href="css/css.css">
+
         <title>Document</title>
     </head>
     <body>
-        <div id="discipline-selector-con"></div>
-        <div id="discipline-con" style="display: none;">
-            <button id="back-to-disciplines-btn" style="margin-bottom: 10px;">← Zurück</button>
-            <div id="discipline-header"></div>
-            <div id="class-selector-con"></div>
-            <div id="global-timer-con" style="display: none;">
-                <span id="global-timer-display">00:00:00.000</span>
-                <button id="global-start-btn">Global starten</button>
-                <button id="global-stop-btn" style="display: none;">Alle stoppen</button>
+        <div id="top-bar">
+            <div class="input-con">
+                <span class="keybind">A</span>
+                <select name="" id="discipline-select">
+                    <option value="" selected disabled>Sportart auswählen</option>
+                    <option value="800m-run">800m Lauf</option>
+                    <option value="100m-sprint">100m Sprint</option>
+                    <option value="three-jump">Dreiersprung</option>
+                    <option value="200g-throw">200g Weitwurf</option>
+                </select>
             </div>
-            <table id="class-con" style="display: none;">
-                <thead>
-                    <tr>
-                        <th colspan="5">
-                            <button id="back-to-classes-btn" style="margin-bottom: 10px;">← Zurück zur Klassenauswahl</button>
-                        </th>
-                    </tr>
+            <div class="input-con">
+                <span class="keybind">K</span>
+                <select name="" id="class-select">
+                    <option value="" selected disabled>Klasse auswählen</option>
+                    <optgroup label="Klasse 5">
+                        <option value="5a">5a</option>
+                        <option value="5b">5b</option>
+                        <option value="5c">5c</option>
+                        <option value="5d">5d</option>
+                    </optgroup>
+                    <optgroup label="Klasse 6">
+                        <option value="6a">6a</option>
+                        <option value="6b">6b</option>
+                        <option value="6c">6c</option>
+                        <option value="6d">6d</option>
+                    </optgroup>
+                    <optgroup label="Klasse 7">
+                        <option value="7a">7a</option>
+                        <option value="7b">7b</option>
+                        <option value="7c">7c</option>
+                        <option value="7d">7d</option>
+                    </optgroup>
+                </select>
+            </div>
+            <div class="time-display">
+                <span>10:00:00</span>
+            </div>
+            <div id="sync-state-con">
+                <span id="open-upload-state">6 Versuche <span class="material-icons-round">upload</span></span>
+                <span>vor 10min</span>
+                <button class="material-icons-round">sync</button>
+            </div>
+            <div id="settings-con">
+                <button class="material-icons-round">settings</button>
+            </div>
+        </div>
+        <div id="data-input-con">
+            <table>
+                <thead class="data-header">
                     <tr>
                         <th>ID</th>
-                        <th>Name</th>
                         <th>Vorname</th>
-                        <th>Notizen</th>
-                        <th>Messungen</th>
+                        <th>Nachname</th>
+                        <th>Versuch 1 (MM:SS)</th>
+                        <th>Versuch 2 (m)</th>
+                        <th><button><span class="material-icons-round">timer</span> Timer</button></th>
                     </tr>
                 </thead>
-                <tbody id="class-body">
-                    <tr>
+                <tbody class="data-body">
+                    <tr class="data-row">
                         <td>1</td>
-                        <td>Mustermann</td>
                         <td>Max</td>
-                        <td>Lorem ipsum </td>
-                        <td class="measurement-actions" data-id="1">
-                            <table id="measurements-table-1" style="margin-bottom: 10px;">
-                                <tr>
-                                    <td>Invalid run/false start</td>
-                                    <td><button class="delete-measurement">Löschen</button></td>
-                                </tr>
-                            </table>
-                            <!-- Manual Input Section -->
-                            <div id="manual-input-section-1" style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px;">
-                                <button class="false-start-btn">Invalid run/false start</button>
-                                <div style="display: flex; gap: 5px;">
-                                    <input type="number" class="measurement-input" placeholder="Messung" step="0.01" min="0">
-                                    <span class="measurement-unit">s</span>
-                                    <button class="add-measurement-btn">Hinzufügen</button>
-                                </div>
-                            </div>
-                            <!-- Timer Section -->
-                            <div id="timer-section-1" style="display: none; flex-direction: column; gap: 8px; margin-bottom: 10px;">
-                                <button class="false-start-btn">Invalid run/false start</button>
-                                <div style="display: flex; gap: 5px; align-items: center;">
-                                    <span class="timer-display">00:00:00.000</span>
-                                </div>
-                                <button class="start-timer-btn">Messung starten</button>
-                                <button class="stop-timer-btn" style="display: none;">Messung stoppen</button>
-                            </div>
-                        </td>
+                        <td>Mustermann</td>
+                        <td><input type="text" data-unit="minutes"></td>
+                        <td><input type="text" data-unit="meters"></td>
+                        <td><button class="stop-timer"><span class="material-icons-round">stop</span></button><button class="individual-timer"><span class="material-icons-round">timer</span></button></td>
+                    </tr>
+                    <tr class="data-row">
+                        <td>1</td>
+                        <td>Max</td>
+                        <td>Mustermann</td>
+                        <td><input type="text" data-unit="minutes"></td>
+                        <td><input type="text" data-unit="meters"></td>
+                    </tr>
+                    <tr class="data-row">
+                        <td>1</td>
+                        <td>Max</td>
+                        <td>Mustermann</td>
+                        <td><input type="text" data-unit="minutes"></td>
+                        <td><input type="text" data-unit="meters"></td>
                     </tr>
                 </tbody>
             </table>
         </div>
-        <script src="js/js.js"></script>
+        <script type="module" src="js/helper.js"></script>
     </body>
 </html>

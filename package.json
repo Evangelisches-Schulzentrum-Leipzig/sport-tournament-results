@@ -15,10 +15,13 @@
     "start": "node ./dist/server.js"
   },
   "dependencies": {
+    "@tailwindcss/cli": "^4.3.0",
+    "@tailwindcss/forms": "^0.5.11",
     "cors": "^2.8.5",
     "dotenv": "^17.2.3",
     "express": "^5.2.1",
-    "mariadb": "^3.2.0"
+    "mariadb": "^3.2.0",
+    "tailwindcss": "^4.3.0"
   },
   "devDependencies": {
     "@types/cors": "^2.8.19",

@@ -1,0 +1,162 @@
+@import "tailwindcss";
+@plugin "@tailwindcss/forms";
+
+@import "./fonts.css";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+    --font-sans: 'Montserrat', system-ui, -apple-system, sans-serif;
+    --radius-xs: 3px;
+    --radius-sm: 5px;
+    --radius: 8px;
+    --shadow-sm: 0 1px 3px rgba(26, 26, 46, 0.06);
+    --shadow-md: 0 4px 16px rgba(26, 26, 46, 0.08);
+    --shadow-lg: 0 12px 40px rgba(26, 26, 46, 0.12);
+    --color-thumb: #e0d8cf;
+    --color-border: oklch(0.872 0.01 258.338);
+    --color-background: oklch(0.985 0.002 247.839);
+    --color-text-background: oklch(0.21 0.034 264.665);
+    --color-surface-background: #fff;
+    --color-navigation-hover-background: oklch(0.967 0.003 264.542);
+    --color-navigation-active-background: oklch(0.546 0.245 262.881);
+    --color-text-navigation-active: #fff;
+    --color-surface: oklch(0.9651 0.0165 259.42);
+    --color-surface-border: oklch(0.872 0.01 258.338);
+    --color-primary: oklch(0.546 0.245 262.881);
+    --color-primary-hover: oklch(0.488 0.243 264.376);
+    --color-text-primary: #fff;
+}
+
+@layer theme {
+    :root,
+    :host {
+        @variant dark {
+            --color-thumb: #2e2c4a;
+            --color-border: oklch(0.274 0.006 286.033);
+            --color-background: oklch(14.1% 0.005 285.823);
+            --color-text-background: oklch(0.967 0.001 286.375);
+            --color-surface-background: oklch(21% 0.006 285.885);
+            --color-navigation-hover-background: oklch(0.274 0.006 286.033);
+            --color-navigation-active-background: oklch(0.378 0.077 168.94);
+            --color-text-navigation-active: oklch(0.845 0.143 164.978);
+            --color-surface: oklch(0.274 0.006 286.033);
+            --color-surface-border: oklch(0.37 0.013 285.805);
+            --color-primary: oklch(0.596 0.145 163.225);
+            --color-primary-hover: oklch(0.696 0.17 162.48);
+            --color-text-primary: #fff;
+        }
+    }
+}
+
+body {
+    @apply min-h-screen bg-background text-text-background font-sans;
+}
+.material-icons-round {
+    @apply text-[24px] leading-snug;
+}
+
+::-webkit-scrollbar {
+    @apply w-1.25 h-1.25;
+}
+
+::-webkit-scrollbar-track {
+    @apply bg-transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    @apply rounded-xs bg-thumb;
+}
+
+.input-con {
+    @apply flex items-center gap-2 w-full;
+}
+.input-con .keybind {
+    @apply text-sm text-text-primary bg-primary/70 rounded-sm px-2 py-1;
+}
+.input-con .keybind:hover {
+
+}
+.input-con select {
+    @apply bg-surface-background border border-border rounded px-2 py-1 pr-8 w-full;
+}
+
+div#top-bar {
+    @apply grid grid-cols-[auto_auto_auto_max-content_min-content] items-center gap-4 px-4 py-2 bg-surface border-b border-border;
+}
+div#top-bar .time-display {
+    @apply flex justify-center items-center;
+}
+div#top-bar .time-display span {
+    @apply text-xl w-20;
+}
+div#top-bar div#sync-state-con {
+    @apply flex items-center gap-2 bg-surface-background border border-border rounded ps-2 px-1 py-0.5 cursor-pointer;
+}
+div#top-bar div#sync-state-con span#open-upload-state {
+    @apply flex items-center;
+}
+div#top-bar div#sync-state-con span#open-upload-state span.material-icons-round {
+    @apply text-red-500 px-1;
+}
+div#top-bar div#sync-state-con button {
+    @apply bg-primary text-text-primary rounded-sm px-1 py-0.5 text-lg cursor-pointer;
+}
+div#top-bar div#sync-state-con button:hover {
+    @apply bg-primary-hover;
+}
+div#top-bar div#settings-con {
+    @apply flex items-center gap-2;
+}
+div#top-bar div#settings-con button {
+    @apply bg-primary text-text-primary rounded-sm px-2 py-1 cursor-pointer;
+}
+div#top-bar div#settings-con button:hover {
+    @apply bg-primary-hover;
+}
+
+div#data-input-con {
+    @apply m-4 bg-surface-background border border-border rounded;
+}
+div#data-input-con table {
+    @apply border-collapse w-full;
+}
+div#data-input-con thead {
+    @apply bg-surface text-text-background border-b border-border;
+}
+div#data-input-con tr:not(:last-child) {
+    @apply border-b border-border;
+}
+div#data-input-con th {
+    @apply text-gray-500 text-left text-sm font-normal px-4 py-3 text-nowrap;
+}
+div#data-input-con th:first-child,
+div#data-input-con th:nth-child(2),
+div#data-input-con th:nth-child(3) {
+    @apply w-px whitespace-nowrap;
+}
+div#data-input-con tr.has-timer th:nth-child(n+4):not(:last-child),
+div#data-input-con tr:not(.has-timer) th:nth-child(n+4) {
+    @apply w-[9999px];
+}
+div#data-input-con th button {
+    @apply flex gap-x-1 items-center bg-primary text-text-primary rounded-sm px-2 py-1 text-base cursor-pointer;
+}
+div#data-input-con tbody tr:hover {
+    @apply bg-navigation-hover-background cursor-text;
+}
+div#data-input-con td {
+    @apply px-4 py-2 text-nowrap;
+}
+div#data-input-con td:not(:last-child) {
+    @apply  border-r border-border;
+}
+div#data-input-con td input {
+    @apply bg-surface-background border border-border rounded px-2 py-1 w-full tracking-wide font-mono;
+}
+div#data-input-con td button.stop-timer {
+    @apply bg-red-500 hover:bg-red-600 text-text-primary rounded-sm px-1.5 py-0.75 text-sm cursor-pointer;
+}
+div#data-input-con td button.individual-timer {
+    @apply bg-primary hover:bg-primary-hover text-text-primary rounded-sm px-1.5 py-0.75 text-sm cursor-pointer;
+}
