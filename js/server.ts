@@ -20,6 +20,10 @@ const port = process.env['API_PORT'] || 80;
 app.use(cors())
 app.use(express.json())
 
+app.get('/status', (req, res) => {
+    res.json({ status: 'ok' });
+});
+
 app.get('/data', async (req, res) => {
     try {
         const conn = await pool.getConnection();
@@ -27,11 +31,11 @@ app.get('/data', async (req, res) => {
             const classRows = await conn.query("SELECT name, level FROM classes;");
             var classes = (Array.isArray(classRows) ? (classRows as {name: string, level: number}[]) : []);
 
-            const disciplineRows = await conn.query("SELECT id, name, unit, timer FROM disciplines;");
-            var disciplines = (Array.isArray(disciplineRows) ? (disciplineRows as {id: number, name: string, unit: string, timer: boolean}[]) : []);
+            const disciplineRows = await conn.query("SELECT id, name, unit, attempts, timer FROM disciplines;");
+            var disciplines = (Array.isArray(disciplineRows) ? (disciplineRows as {id: number, name: string, unit: string, attempts: number, timer: boolean}[]) : []);
 
-            const participantRows = await conn.query("SELECT id, name, forename, class_name AS class, remarks FROM participants;");
-            var participants = (Array.isArray(participantRows) ? (participantRows as {id: number, name: string, forename: string, class: string, remarks: string}[]) : []);
+            const participantRows = await conn.query("SELECT id, name, forename, class_name AS class FROM participants;");
+            var participants = (Array.isArray(participantRows) ? (participantRows as {id: number, name: string, forename: string, class: string}[]) : []);
 
             res.json({
                 classes: classes,
@@ -105,8 +109,8 @@ app.get('/participants', async (req, res) => {
     try {
         const conn = await pool.getConnection();
         try {
-            const participantRows = await conn.query("SELECT id, name, forename, class_name AS class, remarks FROM participants;");
-            var participants = (Array.isArray(participantRows) ? (participantRows as {id: number, name: string, forename: string, class: string, remarks: string}[]) : []);
+            const participantRows = await conn.query("SELECT id, name, forename, class_name AS class FROM participants;");
+            var participants = (Array.isArray(participantRows) ? (participantRows as {id: number, name: string, forename: string, class: string}[]) : []);
             res.json(participants);
         } finally {
             conn.release();
@@ -121,11 +125,11 @@ app.post('/participants', async (req, res) => {
     try {
         const conn = await pool.getConnection();
         try {
-            const { name, forename, class: className, remarks } = req.body;
-            await conn.query("INSERT INTO participants (name, forename, class_name, remarks) VALUES (?, ?, ?, ?);", [name, forename, className, remarks]);
+            const { name, forename, class: className } = req.body;
+            await conn.query("INSERT INTO participants (name, forename, class_name) VALUES (?, ?, ?);", [name, forename, className]);
 
-            const participantRows = await conn.query("SELECT id, name, forename, class_name AS class, remarks FROM participants;");
-            var participants = (Array.isArray(participantRows) ? (participantRows as {id: number, name: string, forename: string, class: string, remarks: string}[]) : []);
+            const participantRows = await conn.query("SELECT id, name, forename, class_name AS class FROM participants;");
+            var participants = (Array.isArray(participantRows) ? (participantRows as {id: number, name: string, forename: string, class: string}[]) : []);
             res.json(participants);
         } finally {
             conn.release();
@@ -143,8 +147,8 @@ app.delete('/participants/:id', async (req, res) => {
             const { id } = req.params;
             await conn.query("DELETE FROM participants WHERE id = ?;", [id]);
 
-            const participantRows = await conn.query("SELECT id, name, forename, class_name AS class, remarks FROM participants;");
-            var participants = (Array.isArray(participantRows) ? (participantRows as {id: number, name: string, forename: string, class: string, remarks: string}[]) : []);
+            const participantRows = await conn.query("SELECT id, name, forename, class_name AS class FROM participants;");
+            var participants = (Array.isArray(participantRows) ? (participantRows as {id: number, name: string, forename: string, class: string}[]) : []);
             res.json(participants);
         } finally {
             conn.release();
@@ -159,8 +163,8 @@ app.get('/disciplines', async (req, res) => {
     try {
         const conn = await pool.getConnection();
         try {
-            const disciplineRows = await conn.query("SELECT id, name, unit, timer FROM disciplines;");
-            var disciplines = (Array.isArray(disciplineRows) ? (disciplineRows as {id: number, name: string, unit: string, timer: boolean}[]) : []);
+            const disciplineRows = await conn.query("SELECT id, name, unit, attempts, timer FROM disciplines;");
+            var disciplines = (Array.isArray(disciplineRows) ? (disciplineRows as {id: number, name: string, unit: string, attempts: number, timer: boolean}[]) : []);
             res.json(disciplines);
         } finally {
             conn.release();
@@ -175,11 +179,11 @@ app.post('/disciplines', async (req, res) => {
     try {
         const conn = await pool.getConnection();
         try {
-            const { name, unit, timer } = req.body;
-            await conn.query("INSERT INTO disciplines (name, unit, timer) VALUES (?, ?, ?);", [name, unit, timer]);
+            const { name, unit, attempts, timer } = req.body;
+            await conn.query("INSERT INTO disciplines (name, unit, attempts, timer) VALUES (?, ?, ?, ?);", [name, unit, attempts, timer]);
 
-            const disciplineRows = await conn.query("SELECT id, name, unit, timer FROM disciplines;");
-            var disciplines = (Array.isArray(disciplineRows) ? (disciplineRows as {id: number, name: string, unit: string, timer: boolean}[]) : []);
+            const disciplineRows = await conn.query("SELECT id, name, unit, attempts, timer FROM disciplines;");
+            var disciplines = (Array.isArray(disciplineRows) ? (disciplineRows as {id: number, name: string, unit: string, attempts: number, timer: boolean}[]) : []);
             res.json(disciplines);
         } finally {
             conn.release();
@@ -197,8 +201,8 @@ app.delete('/disciplines/:id', async (req, res) => {
             const { id } = req.params;
             await conn.query("DELETE FROM disciplines WHERE id = ?;", [id]);
 
-            const disciplineRows = await conn.query("SELECT id, name, unit, timer FROM disciplines;");
-            var disciplines = (Array.isArray(disciplineRows) ? (disciplineRows as {id: number, name: string, unit: string, timer: boolean}[]) : []);
+            const disciplineRows = await conn.query("SELECT id, name, unit, attempts, timer FROM disciplines;");
+            var disciplines = (Array.isArray(disciplineRows) ? (disciplineRows as {id: number, name: string, unit: string, attempts: number, timer: boolean}[]) : []);
             res.json(disciplines);
         } finally {
             conn.release();
@@ -215,12 +219,12 @@ app.post('/meassurements', async (req, res) => {
         try {
             if (Array.isArray(req.body)) {
                 for (const item of req.body) {
-                    const { participantId, disciplineId, value } = item;
-                    await conn.query("INSERT INTO meassurements (participant_id, discipline_id, value) VALUES (?, ?, ?);", [participantId, disciplineId, value]);
+                    const { participantId, disciplineId, attemptNumber, value, created_at } = item;
+                    await conn.query("INSERT INTO measurements (participant_id, discipline_id, attempt_number, value, created_at) VALUES (?, ?, ?, ?, ?);", [participantId, disciplineId, attemptNumber, value, created_at]);
                 }
             } else {
-                const { participantId, disciplineId, value } = req.body;
-                await conn.query("INSERT INTO meassurements (participant_id, discipline_id, value) VALUES (?, ?, ?);", [participantId, disciplineId, value]);
+                const { participantId, disciplineId, attemptNumber, value, created_at } = req.body;
+                await conn.query("INSERT INTO measurements (participant_id, discipline_id, attempt_number, value, created_at) VALUES (?, ?, ?, ?, ?);", [participantId, disciplineId, attemptNumber, value, created_at]);
             }
             res.status(200).send();
         } finally {
@@ -238,21 +242,21 @@ app.post('/sync', async (req, res) => {
         try {
             if (Array.isArray(req.body)) {
                 for (const item of req.body) {
-                    const { participantId, disciplineId, value } = item;
-                    await conn.query("INSERT INTO meassurements (participant_id, discipline_id, value) VALUES (?, ?, ?);", [participantId, disciplineId, value]);
+                    const { participantId, disciplineId, attemptNumber, value, created_at } = item;
+                    await conn.query("INSERT INTO measurements (participant_id, discipline_id, attempt_number, value, created_at) VALUES (?, ?, ?, ?, ?);", [participantId, disciplineId, attemptNumber, value, created_at]);
                 }
             } else {
-                const { participantId, disciplineId, value } = req.body;
-                await conn.query("INSERT INTO meassurements (participant_id, discipline_id, value) VALUES (?, ?, ?);", [participantId, disciplineId, value]);
+                const { participantId, disciplineId, attemptNumber, value, created_at } = req.body;
+                await conn.query("INSERT INTO measurements (participant_id, discipline_id, attempt_number, value, created_at) VALUES (?, ?, ?, ?, ?);", [participantId, disciplineId, attemptNumber, value, created_at]);
             }
 
             // Give current data
             const classRows = await conn.query("SELECT name, level FROM classes;");
             var classes = (Array.isArray(classRows) ? (classRows as {name: string, level: number}[]) : []);
-            const disciplineRows = await conn.query("SELECT id, name, unit, timer FROM disciplines;");
-            var disciplines = (Array.isArray(disciplineRows) ? (disciplineRows as {id: number, name: string, unit: string, timer: boolean}[]) : []);
-            const participantRows = await conn.query("SELECT id, name, forename, class_name AS class, remarks FROM participants;");
-            var participants = (Array.isArray(participantRows) ? (participantRows as {id: number, name: string, forename: string, class: string, remarks: string}[]) : []);
+            const disciplineRows = await conn.query("SELECT id, name, unit, attempts, timer FROM disciplines;");
+            var disciplines = (Array.isArray(disciplineRows) ? (disciplineRows as {id: number, name: string, unit: string, attempts: number, timer: boolean}[]) : []);
+            const participantRows = await conn.query("SELECT id, name, forename, class_name AS class FROM participants;");
+            var participants = (Array.isArray(participantRows) ? (participantRows as {id: number, name: string, forename: string, class: string}[]) : []);
 
             res.json({
                 classes: classes,
