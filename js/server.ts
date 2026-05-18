@@ -213,18 +213,18 @@ app.delete('/disciplines/:id', async (req, res) => {
     }
 });
 
-app.post('/meassurements', async (req, res) => {
+app.post('/measurements', async (req, res) => {
     try {
         const conn = await pool.getConnection();
         try {
             if (Array.isArray(req.body)) {
                 for (const item of req.body) {
-                    const { participantId, disciplineId, attemptNumber, value, created_at } = item;
-                    await conn.query("INSERT INTO measurements (participant_id, discipline_id, attempt_number, value, created_at) VALUES (?, ?, ?, ?, ?);", [participantId, disciplineId, attemptNumber, value, created_at]);
+                    const { participant_id, discipline_id, attempt_number, value, created_at } = item;
+                    await conn.query("INSERT INTO measurements (participant_id, discipline_id, attempt_number, value, created_at) VALUES (?, ?, ?, ?, ?);", [participant_id, discipline_id, attempt_number, value, created_at]);
                 }
             } else {
-                const { participantId, disciplineId, attemptNumber, value, created_at } = req.body;
-                await conn.query("INSERT INTO measurements (participant_id, discipline_id, attempt_number, value, created_at) VALUES (?, ?, ?, ?, ?);", [participantId, disciplineId, attemptNumber, value, created_at]);
+                const { participant_id, discipline_id, attempt_number, value, created_at } = req.body;
+                await conn.query("INSERT INTO measurements (participant_id, discipline_id, attempt_number, value, created_at) VALUES (?, ?, ?, ?, ?);", [participant_id, discipline_id, attempt_number, value, created_at]);
             }
             res.status(200).send();
         } finally {
@@ -242,12 +242,12 @@ app.post('/sync', async (req, res) => {
         try {
             if (Array.isArray(req.body)) {
                 for (const item of req.body) {
-                    const { participantId, disciplineId, attemptNumber, value, created_at } = item;
-                    await conn.query("INSERT INTO measurements (participant_id, discipline_id, attempt_number, value, created_at) VALUES (?, ?, ?, ?, ?);", [participantId, disciplineId, attemptNumber, value, created_at]);
+                    const { participant_id, discipline_id, attempt_number, value, created_at } = item;
+                    await conn.query("INSERT INTO measurements (participant_id, discipline_id, attempt_number, value, created_at) VALUES (?, ?, ?, ?, ?);", [participant_id, discipline_id, attempt_number, value, created_at]);
                 }
             } else {
-                const { participantId, disciplineId, attemptNumber, value, created_at } = req.body;
-                await conn.query("INSERT INTO measurements (participant_id, discipline_id, attempt_number, value, created_at) VALUES (?, ?, ?, ?, ?);", [participantId, disciplineId, attemptNumber, value, created_at]);
+                const { participant_id, discipline_id, attempt_number, value, created_at } = req.body;
+                await conn.query("INSERT INTO measurements (participant_id, discipline_id, attempt_number, value, created_at) VALUES (?, ?, ?, ?, ?);", [participant_id, discipline_id, attempt_number, value, created_at]);
             }
 
             // Give current data

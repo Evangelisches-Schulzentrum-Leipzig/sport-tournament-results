@@ -1,26 +1,16 @@
+import { getData, sync } from "./helper-api.js";
 import { addClassOrUpdate, addDisciplineOrUpdate, addParticipantOrUpdate, addMeasurementOrUpdate, openDatabase, getDisciplines, getClasses, getDisciplineById, getParticipants, getClassMeasurements, getSyncMeasurements, getSyncedMeasurements, setSyncTime } from "./helper-db.js"
 
-openDatabase().then(request => {
-    addClassOrUpdate("5a", 5).then(() => {
-        console.log("Class added or updated successfully");
-    }).catch(error => {
-        console.error("Error adding or updating class:", error);
-    });
-    addDisciplineOrUpdate("800m Lauf", "meters", 2, false).then(() => {
-        console.log("Discipline added or updated successfully");
-    }).catch(error => {
-        console.error("Error adding or updating discipline:", error);
-    });
-    addParticipantOrUpdate("Bernd", "Max", "5a").then(() => {
-        console.log("Participant added or updated successfully");
-    }).catch(error => {
-        console.error("Error adding or updating participant:", error);
-    });
-    addMeasurementOrUpdate(1, 1, 2, "0:4").then(() => {
-        console.log("Measurement added or updated successfully");
-    }).catch(error => {
-        console.error("Error adding or updating measurement:", error);
-    });
+openDatabase().then(async request => {
+    const data = await getData();
+    if (data) {
+        const { classes, disciplines, participants } = data;
+        await Promise.all([
+            ...classes.map(cls => addClassOrUpdate(cls.name, cls.level)),
+            ...disciplines.map(discipline => addDisciplineOrUpdate(discipline.name, discipline.unit, discipline.attempts, discipline.timer)),
+            ...participants.map(participant => addParticipantOrUpdate(participant.name, participant.forename, participant.class))
+        ])
+    }
     updateSelectOptions();
     updateDataInputTable();
     displaySyncState();
@@ -90,6 +80,19 @@ async function updateDataInputTable() {
     console.log("Selected discipline:", discipline);
     const participants = (await getParticipants(className)).sort((a, b) => a.name.localeCompare(b.name) || a.forename.localeCompare(b.forename));
     console.log("Participants in class:", participants);
+
+    if (discipline === null) {
+        thead.innerHTML = '<tr></tr>';
+        tbody.innerHTML = '<tr><td style="text-align: center;">Keine Daten für die ausgewählte Sportart verfügbar.</td></tr>';
+        return;
+    }
+    console.log("Participants:", participants.length);
+    if (participants.length === 0) {
+        thead.innerHTML = '<tr></tr>';
+        tbody.innerHTML = '<tr><td style="text-align: center;">Keine Teilnehmende in der ausgewählten Klasse verfügbar.</td></tr>';
+        return;
+    }
+
     const measurements = await getClassMeasurements(className, disciplineId);
     console.log("Measurements for class and discipline:", measurements);
 
@@ -129,7 +132,7 @@ async function updateDataInputTable() {
             <td>${participant.name}</td>
             ${inputHtml.map((html, index) => {
                 const measurement = participantMeasurements.find(m => m.attempt_number === index + 1);
-                return html.replace('$measurement$', measurement ? measurement.value : '').replace('$participant$', participant.id);
+                return html.replace('$measurement$', measurement ? convertFloatToUnit(measurement.value, discipline.unit) : '').replace('$participant$', participant.id);
             }).join('')}
             ${discipline.timer ? `<td><button class="stop-timer"><span class="material-icons-round">stop</span></button><button class="individual-timer"><span class="material-icons-round">timer</span></button></td>` : ''}
         `;
@@ -201,8 +204,9 @@ async function updateDataInputTable() {
             const attempt = parseInt(event.target.dataset.attempt);
             const discipline = parseInt(event.target.dataset.discipline);
             const participant = parseInt(event.target.dataset.participant);
+            const unit = event.target.dataset.unit;
 
-            addMeasurementOrUpdate(participant, discipline, attempt, value).then(() => {
+            addMeasurementOrUpdate(participant, discipline, attempt, convertUnitToFloat(value, unit)).then(() => {
                 console.log("Measurement added or updated successfully");
                 displaySyncState();
             }).catch(error => {
@@ -238,6 +242,86 @@ async function displaySyncState() {
     lastSyncElement.textContent = `${lastSyncText}`;
 }
 
+function convertUnitToFloat(value, unit) {
+    if (unit === 'minutes') {
+        const parts = value.split(':');
+        if (parts.length === 2) {
+            const minutes = parseInt(parts[0]) || 0;
+            const seconds = parseInt(parts[1]) || 0;
+            return minutes * 60 + seconds;
+        }
+        return parseFloat(value) || 0; // fallback to raw number if format is incorrect
+    } else if (unit === 'meters') {
+        return parseFloat(value.replace(',', '.')) || 0; // convert comma to dot for decimal and parse
+    } else {
+        return parseFloat(value) || 0; // default parsing for other units
+    }
+}
+
+function convertFloatToUnit(value, unit) {
+    if (unit === 'minutes') {
+        const minutes = Math.floor(value / 60);
+        const seconds = Math.round(value % 60);
+        return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+    } else if (unit === 'meters') {
+        return value.toString().replace('.', ','); // convert dot to comma for decimal
+    } else {
+        return value.toString(); // default string conversion for other units
+    }
+}
+
+async function syncWithServer() {
+    let {classes, disciplines, participants} = await getSyncMeasurements().then(measurements => {
+        if (measurements.length === 0) {
+            return {classes: null, disciplines: null, participants: null};
+        }
+        var modifiedMeasurements = measurements.map(m => ({
+            id: m.id,
+            participant_id: m.participant_id,
+            discipline_id: m.discipline_id,
+            attempt_number: m.attempt_number,
+            value: m.value,
+            created_at: m.created_at.split('T').join(' ').split('.')[0], // format from "YYYY-MM-DDTHH:MM:SSZ" to "YYYY-MM-DD HH:MM:SS" for server
+            sync_time: m.sync_time
+        }));
+        return (sync(modifiedMeasurements).then((response) => {
+            if (response === null) {
+                return;
+            }
+            measurements.forEach(m => setSyncTime(m.id, new Date()));
+            displaySyncState();
+
+            return response;
+        }).catch(error => {
+            console.error("Error syncing measurements:", error);
+            return {classes: null, disciplines: null, participants: null};
+        }));
+    }).catch(error => {
+        console.error("Error getting measurements to sync:", error);
+    });
+    if (!classes || !disciplines || !participants) {
+        ({classes, disciplines, participants} = await getData().catch(error => {
+            console.error("Error fetching data after sync failure:", error);
+            return {classes: null, disciplines: null, participants: null};
+        }));
+    }
+    if (!classes || !disciplines || !participants) {
+        console.warn("No data available for sync. Aborting update.");
+        return;
+    }
+
+    Promise.all([
+        ...classes.map(cls => addClassOrUpdate(cls.name, cls.level)),
+        ...disciplines.map(discipline => addDisciplineOrUpdate(discipline.name, discipline.unit, discipline.attempts, discipline.timer)),
+        ...participants.map(participant => addParticipantOrUpdate(participant.name, participant.forename, participant.class))
+    ]).then(() => {
+        updateSelectOptions();
+        updateDataInputTable();
+    }).catch(error => {
+        console.error("Error updating local data after sync:", error);
+    });
+}
+
 document.addEventListener('keydown', event => {
     if (event.target.tagName === 'INPUT') return;
     const key = event.key.toLowerCase();
@@ -246,6 +330,10 @@ document.addEventListener('keydown', event => {
     } else if (key === 'k') {
         document.querySelector('#class-select').focus();
     }
+});
+
+document.querySelector("#sync-state-con button").addEventListener('click', () => {
+    syncWithServer();
 });
 
 setInterval(() => {

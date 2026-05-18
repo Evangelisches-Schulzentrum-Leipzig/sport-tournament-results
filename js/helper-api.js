@@ -1,4 +1,4 @@
-let host = "";
+let host = "http://localhost:8081";
 
 /**
  * 
@@ -112,8 +112,7 @@ export async function sync(measurements) {
             return response.json();
         })
         .catch(error => {
-            console.error('Error syncing data:', error);
-            return null;
+            throw new Error('Error syncing data:', error);
         });
     } else {
         console.warn('Server is not reachable. Sync failed.');
