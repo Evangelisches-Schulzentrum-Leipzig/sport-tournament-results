@@ -220,11 +220,18 @@ app.post('/measurements', async (req, res) => {
             if (Array.isArray(req.body)) {
                 for (const item of req.body) {
                     const { participant_id, discipline_id, attempt_number, value, created_at } = item;
-                    await conn.query("INSERT INTO measurements (participant_id, discipline_id, attempt_number, value, created_at) VALUES (?, ?, ?, ?, ?);", [participant_id, discipline_id, attempt_number, value, created_at]);
+                    var result = await conn.query("SELECT * FROM measurements WHERE participant_id = ? AND discipline_id = ? AND attempt_number = ? AND value = ? LIMIT 1;", [participant_id, discipline_id, attempt_number, value]);
+                    if (!Array.isArray(result) || result.length === 0) {
+                        await conn.query("INSERT INTO measurements (participant_id, discipline_id, attempt_number, value, created_at) VALUES (?, ?, ?, ?, ?);", [participant_id, discipline_id, attempt_number, value, created_at]);
+                    }
+                    // TODO: handle element with same participant_id, discipline_id and attempt_number but different value and maybe diffrent created_at
                 }
             } else {
                 const { participant_id, discipline_id, attempt_number, value, created_at } = req.body;
-                await conn.query("INSERT INTO measurements (participant_id, discipline_id, attempt_number, value, created_at) VALUES (?, ?, ?, ?, ?);", [participant_id, discipline_id, attempt_number, value, created_at]);
+                var result = await conn.query("SELECT * FROM measurements WHERE participant_id = ? AND discipline_id = ? AND attempt_number = ? AND value = ? LIMIT 1;", [participant_id, discipline_id, attempt_number, value]);
+                if (!Array.isArray(result) || result.length === 0) {
+                    await conn.query("INSERT INTO measurements (participant_id, discipline_id, attempt_number, value, created_at) VALUES (?, ?, ?, ?, ?);", [participant_id, discipline_id, attempt_number, value, created_at]);
+                }            
             }
             res.status(200).send();
         } finally {
@@ -243,11 +250,17 @@ app.post('/sync', async (req, res) => {
             if (Array.isArray(req.body)) {
                 for (const item of req.body) {
                     const { participant_id, discipline_id, attempt_number, value, created_at } = item;
-                    await conn.query("INSERT INTO measurements (participant_id, discipline_id, attempt_number, value, created_at) VALUES (?, ?, ?, ?, ?);", [participant_id, discipline_id, attempt_number, value, created_at]);
+                    var result = await conn.query("SELECT * FROM measurements WHERE participant_id = ? AND discipline_id = ? AND attempt_number = ? AND value = ? LIMIT 1;", [participant_id, discipline_id, attempt_number, value]);
+                    if (!Array.isArray(result) || result.length === 0) {
+                        await conn.query("INSERT INTO measurements (participant_id, discipline_id, attempt_number, value, created_at) VALUES (?, ?, ?, ?, ?);", [participant_id, discipline_id, attempt_number, value, created_at]);
+                    }                
                 }
             } else {
                 const { participant_id, discipline_id, attempt_number, value, created_at } = req.body;
-                await conn.query("INSERT INTO measurements (participant_id, discipline_id, attempt_number, value, created_at) VALUES (?, ?, ?, ?, ?);", [participant_id, discipline_id, attempt_number, value, created_at]);
+                var result = await conn.query("SELECT * FROM measurements WHERE participant_id = ? AND discipline_id = ? AND attempt_number = ? AND value = ? LIMIT 1;", [participant_id, discipline_id, attempt_number, value]);
+                if (!Array.isArray(result) || result.length === 0) {
+                    await conn.query("INSERT INTO measurements (participant_id, discipline_id, attempt_number, value, created_at) VALUES (?, ?, ?, ?, ?);", [participant_id, discipline_id, attempt_number, value, created_at]);
+                }            
             }
 
             // Give current data
