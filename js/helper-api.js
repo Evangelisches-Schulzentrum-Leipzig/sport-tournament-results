@@ -1,4 +1,4 @@
-let host = "http://localhost:8081";
+let host = "http://localhost:8083";
 
 /**
  * 
@@ -21,7 +21,7 @@ export async function checkConnectivity() {
 
 /**
  * 
- * @returns {Promise<{classes: {name: string, level: number}[], disciplines: {id: number, name: string, unit: string, attempts: number, timer: boolean}[], participants: {id: number, name: string, forename: string, class: string}[]} | null>}
+ * @returns {Promise<{classes: {name: string, level: number}[], disciplines: {id: number, name: string, unit: string, attempts: number, timer: boolean}[], participants: {id: number, name: string, forename: string, class: string}[], measurements: {id: number, participant_id: number, discipline_id: number, attempt_number: number, value: number, created_at: string}[]} | null>}
  */
 export async function getData() {
     if (await checkConnectivity()) {
@@ -93,8 +93,26 @@ export async function getParticipants() {
 
 /**
  * 
+ * @returns {Promise<{id: number, participant_id: number, discipline_id: number, attempt_number: number, value: number, created_at: string}[] | null>}
+ */
+export async function getMeasurements() {
+    if (await checkConnectivity()) {
+        return fetch(`${host}/measurements`)
+            .then(response => response.json())
+            .catch(error => {
+                console.error('Error fetching measurements:', error);
+                return null;
+            });
+    } else {
+        console.warn('Server is not reachable. Returning null.');
+        return null;
+    }
+}
+
+/**
+ * 
  * @param {{id: number, participantId: number, disciplineId: number, attemptNumber: number, value: number, created_at: string, sync_time: string}} measurements 
- * @returns {Promise<{classes: {name: string, level: number}[], disciplines: {id: number, name: string, unit: string, attempts: number, timer: boolean}[], participants: {id: number, name: string, forename: string, class: string}[]} | null>}
+ * @returns {Promise<{classes: {name: string, level: number}[], disciplines: {id: number, name: string, unit: string, attempts: number, timer: boolean}[], participants: {id: number, name: string, forename: string, class: string}[], measurements: {id: number, participant_id: number, discipline_id: number, attempt_number: number, value: number, created_at: string}[]} | null>}
  */
 export async function sync(measurements) {
     if (await checkConnectivity()) {
