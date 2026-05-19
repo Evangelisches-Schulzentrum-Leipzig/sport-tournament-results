@@ -37,10 +37,14 @@ app.get('/data', async (req, res) => {
             const participantRows = await conn.query("SELECT id, name, forename, class_name AS class FROM participants;");
             var participants = (Array.isArray(participantRows) ? (participantRows as {id: number, name: string, forename: string, class: string}[]) : []);
 
+            const measurementRows = await conn.query("SELECT id, participant_id, discipline_id, attempt_number, value, created_at FROM measurements GROUP BY participant_id, discipline_id, attempt_number, value;");
+            var measurements = (Array.isArray(measurementRows) ? (measurementRows as {id: number, participant_id: number, discipline_id: number, attempt_number: number, value: number, created_at: string}[]) : []);
+
             res.json({
                 classes: classes,
                 disciplines: disciplines,
-                participants: participants
+                participants: participants,
+                measurements: measurements
             });
         } finally {
             conn.release();
@@ -213,6 +217,22 @@ app.delete('/disciplines/:id', async (req, res) => {
     }
 });
 
+app.get('/measurements', async (req, res) => {
+    try {
+        const conn = await pool.getConnection();
+        try {
+            const measurementRows = await conn.query("SELECT id, participant_id, discipline_id, attempt_number, value, created_at FROM measurements GROUP BY participant_id, discipline_id, attempt_number, value;");
+            var measurements = (Array.isArray(measurementRows) ? (measurementRows as {id: number, participant_id: number, discipline_id: number, attempt_number: number, value: number, created_at: string}[]) : []);
+            res.json(measurements);
+        } finally {
+            conn.release();
+        }
+    } catch (error) {
+        console.error((error as Error).message);
+        res.status(500).json({ error: 'Internal Server Error' });
+    }
+});
+
 app.post('/measurements', async (req, res) => {
     try {
         const conn = await pool.getConnection();
@@ -243,6 +263,22 @@ app.post('/measurements', async (req, res) => {
     }
 })
 
+app.delete('/measurements/:id', async (req, res) => {
+    try {
+        const conn = await pool.getConnection();
+        try {
+            const { id } = req.params;
+            await conn.query("DELETE FROM measurements WHERE id = ?;", [id]);
+            res.status(200).send();
+        } finally {
+            conn.release();
+        }
+    } catch (error) {
+        console.error((error as Error).message);
+        res.status(500).json({ error: 'Internal Server Error' });
+    }
+});
+
 app.post('/sync', async (req, res) => {
     try {
         const conn = await pool.getConnection();
@@ -270,11 +306,14 @@ app.post('/sync', async (req, res) => {
             var disciplines = (Array.isArray(disciplineRows) ? (disciplineRows as {id: number, name: string, unit: string, attempts: number, timer: boolean}[]) : []);
             const participantRows = await conn.query("SELECT id, name, forename, class_name AS class FROM participants;");
             var participants = (Array.isArray(participantRows) ? (participantRows as {id: number, name: string, forename: string, class: string}[]) : []);
+            const measurementRows = await conn.query("SELECT id, participant_id, discipline_id, attempt_number, value, created_at FROM measurements GROUP BY participant_id, discipline_id, attempt_number, value;");
+            var measurements = (Array.isArray(measurementRows) ? (measurementRows as {id: number, participant_id: number, discipline_id: number, attempt_number: number, value: number, created_at: string}[]) : []);
 
             res.json({
                 classes: classes,
                 disciplines: disciplines,
-                participants: participants
+                participants: participants,
+                measurements: measurements
             });
         } finally {
             conn.release();
