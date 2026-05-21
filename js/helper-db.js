@@ -151,9 +151,11 @@ export function addDisciplineOrUpdate(name, unit, attempts = 2, timer = false) {
  * @param {number} discipline_id 
  * @param {number} attempt_number 
  * @param {number} value 
+ * @param {Date} created_at
+ * @param {Date|null} sync_time
  * @returns {Promise<void>}
  */
-export function addMeasurementOrUpdate(participant_id, discipline_id, attempt_number, value) {
+export function addMeasurementOrUpdate(participant_id, discipline_id, attempt_number, value, created_at = new Date().toISOString(), sync_time = null) {
     return new Promise((resolve, reject) => {
         const transaction = db.transaction('measurements', 'readwrite');
         const store = transaction.objectStore('measurements');
@@ -164,10 +166,10 @@ export function addMeasurementOrUpdate(participant_id, discipline_id, attempt_nu
             const existingMeasurements = event.target.result;
             const existingMeasurement = existingMeasurements.find(m => m.discipline_id === discipline_id && m.attempt_number === attempt_number);
             let requestUpdate;
-            if (existingMeasurement) {
-                requestUpdate = store.put({ id: existingMeasurement.id, participant_id, discipline_id, attempt_number, value, created_at: new Date().toISOString(), sync_time: null });
+            if (existingMeasurement && new Date(existingMeasurement.created_at) < new Date(created_at)) {
+                requestUpdate = store.put({ id: existingMeasurement.id, participant_id, discipline_id, attempt_number, value, created_at, sync_time });
             } else {
-                requestUpdate = store.put({ participant_id, discipline_id, attempt_number, value, created_at: new Date().toISOString(), sync_time: null });
+                requestUpdate = store.put({ participant_id, discipline_id, attempt_number, value, created_at, sync_time });
             }
 
             requestUpdate.addEventListener('success', () => resolve());
