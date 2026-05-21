@@ -82,16 +82,19 @@ body {
 }
 
 div#top-bar {
-    @apply grid grid-cols-[auto_auto_auto_max-content_min-content] items-center gap-4 px-4 py-2 bg-surface border-b border-border;
+    @apply grid grid-cols-[min-content_auto_auto_min-content] md:grid-cols-[auto_auto_auto_max-content_min-content] items-center gap-4 px-4 py-2 bg-surface border-b border-border;
+}
+div#top-bar .input-con {
+    @apply md:col-span-1 col-span-2;
 }
 div#top-bar .time-display {
-    @apply flex justify-center items-center;
+    @apply flex justify-center items-center col-span-1;
 }
 div#top-bar .time-display span {
     @apply text-xl w-20;
 }
 div#top-bar div#sync-state-con {
-    @apply flex items-center gap-2 bg-surface-background border border-border rounded ps-2 px-1 py-0.5 cursor-pointer;
+    @apply flex items-center gap-2 bg-surface-background border border-border rounded ps-2 px-1 py-0.5 cursor-pointer col-span-2 md:col-span-1 w-fit mx-auto;
 }
 div#top-bar div#sync-state-con span#open-upload-state {
     @apply flex items-center;
@@ -116,7 +119,7 @@ div#top-bar div#settings-con button:hover {
 }
 
 div#data-input-con {
-    @apply m-4 bg-surface-background border border-border rounded;
+    @apply m-4 bg-surface-background border border-border rounded overflow-x-auto overflow-y-auto;
 }
 div#data-input-con table {
     @apply border-collapse w-full;

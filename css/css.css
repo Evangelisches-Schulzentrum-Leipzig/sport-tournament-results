@@ -684,7 +684,7 @@ body {
 }
 div#top-bar {
   display: grid;
-  grid-template-columns: auto auto auto max-content min-content;
+  grid-template-columns: min-content auto auto min-content;
   align-items: center;
   gap: calc(var(--spacing) * 4);
   border-bottom-style: var(--tw-border-style);
@@ -693,8 +693,18 @@ div#top-bar {
   background-color: var(--color-surface);
   padding-inline: calc(var(--spacing) * 4);
   padding-block: calc(var(--spacing) * 2);
+  @media (width >= 48rem) {
+    grid-template-columns: auto auto auto max-content min-content;
+  }
+}
+div#top-bar .input-con {
+  grid-column: span 2 / span 2;
+  @media (width >= 48rem) {
+    grid-column: span 1 / span 1;
+  }
 }
 div#top-bar .time-display {
+  grid-column: span 1 / span 1;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -705,7 +715,10 @@ div#top-bar .time-display span {
   line-height: var(--tw-leading, var(--text-xl--line-height));
 }
 div#top-bar div#sync-state-con {
+  grid-column: span 2 / span 2;
+  margin-inline: auto;
   display: flex;
+  width: fit-content;
   cursor: pointer;
   align-items: center;
   gap: calc(var(--spacing) * 2);
@@ -717,6 +730,9 @@ div#top-bar div#sync-state-con {
   padding-inline: calc(var(--spacing) * 1);
   padding-block: calc(var(--spacing) * 0.5);
   padding-inline-start: calc(var(--spacing) * 2);
+  @media (width >= 48rem) {
+    grid-column: span 1 / span 1;
+  }
 }
 div#top-bar div#sync-state-con span#open-upload-state {
   display: flex;
@@ -757,6 +773,8 @@ div#top-bar div#settings-con button:hover {
 }
 div#data-input-con {
   margin: calc(var(--spacing) * 4);
+  overflow-x: auto;
+  overflow-y: auto;
   border-radius: var(--radius);
   border-style: var(--tw-border-style);
   border-width: 1px;

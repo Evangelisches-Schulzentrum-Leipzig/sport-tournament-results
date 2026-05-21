@@ -10,6 +10,7 @@
     "doc": "docs"
   },
   "scripts": {
+    "build:css": "tailwindcss -i ./css/main.css -o ./css/css.css --watch",
     "build": "tsc",
     "dev": "npm run build && npm run start",
     "start": "node ./dist/server.js"
