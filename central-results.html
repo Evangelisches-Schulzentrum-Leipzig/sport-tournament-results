@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html class="dark" lang="de">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+        <link rel="stylesheet" href="css/css.css">
+
+        <title>Document</title>
+    </head>
+    <body>
+        <div id="nav-bar">
+            <div id="nav-links">
+                <a href="central.html">Dashboard</a>
+                <a href="central-participants.html">Teilnehmer & Klassen</a>
+                <a href="central-results.html" class="active">Ergebnisse</a>
+                <a href="central-disciplines.html">Disziplinen & Wertungen</a>
+                <a href="central-sync.html">Synchronisation & Konflikte</a>
+                <a href="central-import-export.html">Import & Export</a>
+            </div>
+            <div class="time-display">
+                <span>10:00:00</span>
+            </div>
+            <div id="sync-state-con">
+                <span id="sync-state"><span class="material-icons-round">cloud_circle</span> Live</span>
+                <span id="last-sync-event">vor 10min</span>
+            </div>
+        </div>
+            <div id="result-export-con">
+                <button>Export PDF</button>
+                <button>Export CSV</button>
+                <button>Export JSON</button>
+                <button>Print</button>
+            </div>
+            <div class="sub-con">
+                <div class="sub-con-header">
+                    <div class="filter-row">
+                        <select name="discipline" id="discipline-filter">
+                            <option value="">Alle Disziplinen</option>
+                            <option value="100m">100m</option>
+                            <option value="200m">200m</option>
+                            <option value="weitsprung">Weitsprung</option>
+                        </select>
+                        <select name="class" id="class-filter">
+                            <option value="">Alle Klassen</option>
+                            <option value="u12">U12</option>
+                            <option value="u14">U14</option>
+                            <option value="u16">U16</option>
+                        </select>
+                        <select name="class-level" id="class-level-filter">
+                            <option value="">Alle Klassenstufen</option>
+                            <option value="1">1. Klasse</option>
+                            <option value="2">2. Klasse</option>
+                            <option value="3">3. Klasse</option>
+                        </select>
+                    </div>
+                    <button id="refresh-results-btn" class="material-icons-round">refresh</button>
+                </div>
+                <div id="results-table-con">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th></th>
+                                <th></th>
+                                <th></th>
+                                <th></th>
+                                <th colspan="2">800m Lauf</th>
+                                <th colspan="2">Weitsprung</th>
+                                <th colspan="2">100m Lauf</th>
+                                <th colspan="2">Diskuswurf</th>
+                                <th></th>
+                            </tr>
+                            <tr>
+                                <th>Platz</th>
+                                <th>Name</th>
+                                <th>Vorname</th>
+                                <th>Klasse (Stufe)</th>
+                                <th>Wert</th>
+                                <th>Punkte</th>
+                                <th>Wert</th>
+                                <th>Punkte</th>
+                                <th>Wert</th>
+                                <th>Punkte</th>
+                                <th>Wert</th>
+                                <th>Punkte</th>
+                                <th>Punkte gesamt</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>1</td>
+                                <td>Mustermann</td>
+                                <td>Max</td>
+                                <td>1a (1. Klasse)</td>
+                                <td>2:30.00</td>
+                                <td>800</td>
+                                <td>5.50m</td>
+                                <td>600</td>
+                                <td>12.00s</td>
+                                <td>900</td>
+                                <td>20.00m</td>
+                                <td>700</td>
+                                <td><strong>3000</strong></td>
+                            </tr>
+                            <tr>
+                                <td>2</td>
+                                <td>Musterfrau</td>
+                                <td>Maria</td>
+                                <td>2b (2. Klasse)</td>
+                                <td>2:45.00</td>
+                                <td>700</td>
+                                <td>5.00m</td>
+                                <td>500</td>
+                                <td>13.50s</td>
+                                <td>800</td>
+                                <td>18.00m</td>
+                                <td>600</td>
+                                <td><strong>2600</strong></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <script type="module" src="js/central.js"></script>
+    </body>
+</html>

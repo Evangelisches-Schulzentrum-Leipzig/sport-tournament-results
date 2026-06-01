@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html class="dark" lang="de">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+        <link rel="stylesheet" href="css/css.css">
+
+        <title>Document</title>
+    </head>
+    <body>
+        <div id="nav-bar">
+            <div id="nav-links">
+                <a href="central.html">Dashboard</a>
+                <a href="central-participants.html">Teilnehmer & Klassen</a>
+                <a href="central-results.html">Ergebnisse</a>
+                <a href="central-disciplines.html">Disziplinen & Wertungen</a>
+                <a href="central-sync.html" class="active">Synchronisation & Konflikte</a>
+                <a href="central-import-export.html">Import & Export</a>
+            </div>
+            <div class="time-display">
+                <span>10:00:00</span>
+            </div>
+            <div id="sync-state-con">
+                <span id="sync-state"><span class="material-icons-round">cloud_circle</span> Live</span>
+                <span id="last-sync-event">vor 10min</span>
+            </div>
+        </div>
+        <div id="sync-con">
+            <div class="sub-con">
+                <div class="sub-con-header">
+                    <h2>Aktuelle Konflikte</h2>
+                </div>
+                <div id="conflicts-con">
+                    <div class="conflict-con">
+                        <h3>Doppelte Werte</h3>
+                        <div class="conflict-item">
+                            <span class="conflict-item-class">1. Klasse</span>
+                            <span class="conflict-item-discipline">100m</span>
+                            <span class="conflict-item-try">Versuch 2</span>
+                            <span class="conflict-item-participant">Max Mustermann</span>
+                            <div class="conflict-item-values">
+                                <span>10.5s</span>
+                                <span>10.7s</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="conflict-con">
+                        <h3>Doppelte Werte</h3>
+                        <div class="conflict-item">
+                            <span class="conflict-item-class">1. Klasse</span>
+                            <span class="conflict-item-discipline">Weitwurf</span>
+                            <span class="conflict-item-try">Versuch 1</span>
+                            <span class="conflict-item-participant">Max Mustermann</span>
+                            <div class="conflict-item-values">
+                                <span>10.5s</span>
+                                <span>10.7s</span>
+                                <span>10.7s</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="sub-con">
+                <div class="sub-con-header">
+                    <h2>Helfer Status</h2>
+                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Letzte Disziplin</th>
+                            <th>Status</th>
+                            <th>Letzte Synchronisation</th>
+                            <th>Anzahl Messungen</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Max Mustermann</td>
+                            <td>100m</td>
+                            <td class="sync-state-con"><span class="material-icons-round">cloud_circle</span> Live</td>
+                            <td>vor 5min</td>
+                            <td>10</td>
+                        </tr>
+                        <tr>
+                            <td>Erika Musterfrau</td>
+                            <td>Weitsprung</td>
+                            <td class="sync-state-con"><span class="material-icons-round">cloud_circle</span> Live</td>
+                            <td>vor 2min</td>
+                            <td>15</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="sub-con">
+                <div class="sub-con-header">
+                    <h2>Disziplinen Status</h2>
+                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Disziplin</th>
+                            <th>Helfer</th>
+                            <th>Aktuelle Klasse</th>
+                            <th>Letzte Messungen</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>100m</td>
+                            <td>Max Mustermann, Erika Musterfrau</td>
+                            <td>Klasse 5a</td>
+                            <td>vor 5min</td>
+                        </tr>
+                        <tr>
+                            <td>Weitsprung</td>
+                            <td>Helfer 2</td>
+                            <td>Klasse 7a</td>
+                            <td>vor 2min</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <script type="module" src="js/central.js"></script>
+    </body>
+</html>

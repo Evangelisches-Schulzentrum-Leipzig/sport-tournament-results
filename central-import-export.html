@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html class="dark" lang="de">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+        <link rel="stylesheet" href="css/css.css">
+
+        <title>Document</title>
+    </head>
+    <body>
+        <div id="nav-bar">
+            <div id="nav-links">
+                <a href="central.html">Dashboard</a>
+                <a href="central-participants.html">Teilnehmer & Klassen</a>
+                <a href="central-results.html">Ergebnisse</a>
+                <a href="central-disciplines.html">Disziplinen & Wertungen</a>
+                <a href="central-sync.html">Synchronisation & Konflikte</a>
+                <a href="central-import-export.html" class="active">Import & Export</a>
+            </div>
+            <div class="time-display">
+                <span>10:00:00</span>
+            </div>
+            <div id="sync-state-con">
+                <span id="sync-state"><span class="material-icons-round">cloud_circle</span> Live</span>
+                <span id="last-sync-event">vor 10min</span>
+            </div>
+        </div>
+        <div id="import-export-con">
+            <div class="import-con">
+                <h2>Import</h2>
+                <div class="import-participants-con">
+                    <h3>Teilnehmer mit Klassen</h3>
+                    <input type="file" id="import-participants-file-input">
+                    <button id="import-participants-btn">Teilnehmer importieren</button>
+                </div>
+                 <div class="import-disciplines-con">
+                    <h3>Disziplinen</h3>
+                    <input type="file" id="import-disciplines-file-input">
+                    <button id="import-disciplines-btn">Disziplinen importieren</button>
+                </div>
+                 <div class="import-results-con">
+                    <h3>Ergebnisse</h3>
+                    <input type="file" id="import-results-file-input">
+                    <button id="import-results-btn">Ergebnisse importieren</button>
+                </div>
+            </div>
+            <div class="export-con">
+                <h2>Export</h2>
+                <div class="export-format-con">
+                    <h3>Export Format</h3>
+                    <select name="export-format" id="export-format-select">
+                        <option value="csv">CSV</option>
+                        <option value="pdf">PDF</option>
+                        <option value="json">JSON</option>
+                    </select>
+                </div>
+                <div class="export-class-con">
+                    <h3>Klassen</h3>
+                    <select name="export-class" id="export-class-select">
+                        <option value="">Alle Klassen</option>
+                        <option value="1">1. Klasse</option>
+                        <option value="2">2. Klasse</option>
+                        <option value="3">3. Klasse</option>
+                    </select>
+                </div>
+                <div class="export-participants-con">
+                    <h3>Teilnehmer mit Klassen</h3>
+                    <button id="export-participants-btn">Teilnehmer exportieren</button>
+                </div>
+                <div class="export-participants-results-con">
+                    <h3>Teilnehmer mit Ergebnissen und Noten</h3>
+                    <button id="export-participants-results-btn">Teilnehmer mit Ergebnissen und Noten exportieren</button>
+                </div>
+                <div class="export-disciplines-con">
+                    <h3>Disziplinen</h3>
+                    <button id="export-disciplines-btn">Disziplinen exportieren</button>
+                </div>
+                <div class="export-results-con">
+                    <h3>Ergebnisse</h3>
+                    <button id="export-results-btn">Ergebnisse exportieren</button>
+                </div>
+                <div class="export-all-con">
+                    <h3>Alle Daten</h3>
+                    <button id="export-all-btn">Alle Daten exportieren</button>
+                </div>
+            </div>
+        </div>
+        <script type="module" src="js/central.js"></script>
+    </body>
+</html>

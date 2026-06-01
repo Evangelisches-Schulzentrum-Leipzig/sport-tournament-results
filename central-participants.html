@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html class="dark" lang="de">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+        <link rel="stylesheet" href="css/css.css">
+
+        <title>Document</title>
+    </head>
+    <body>
+        <div id="nav-bar">
+            <div id="nav-links">
+                <a href="central.html">Dashboard</a>
+                <a href="central-participants.html" class="active">Teilnehmer & Klassen</a>
+                <a href="central-results.html">Ergebnisse</a>
+                <a href="central-disciplines.html">Disziplinen & Wertungen</a>
+                <a href="central-sync.html">Synchronisation & Konflikte</a>
+                <a href="central-import-export.html">Import & Export</a>
+            </div>
+            <div class="time-display">
+                <span>10:00:00</span>
+            </div>
+            <div id="sync-state-con">
+                <span id="sync-state"><span class="material-icons-round">cloud_circle</span> Live</span>
+                <span id="last-sync-event">vor 10min</span>
+            </div>
+        </div>
+        <div id="classes-participants-con">
+            <div class="sub-con">
+                <div class="sub-con-header">
+                    <h2>Klassen</h2>
+                    <div class="filter-row">
+                        <select name="class-filter" id="class-filter">
+                            <option value="">Alle Klassenstufen</option>
+                            <option value="1">1. Klasse</option>
+                            <option value="2">2. Klasse</option>
+                        </select>
+                        <input type="text" placeholder="Klassen suchen...">
+                    </div>
+                    <button><span class="material-icons-round">add</span> Klasse hinzufügen</button>
+                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Klassenname</th>
+                            <th>Klassenstufe</th>
+                            <th>Aktionen</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Klasse 1a</td>
+                            <td>1. Klasse</td>
+                            <td><button class="material-icons-round">edit</button><button class="material-icons-round">delete</button></td>
+                        </tr>
+                        <tr>
+                            <td>Klasse 2b</td>
+                            <td>2. Klasse</td>
+                            <td><button class="material-icons-round">edit</button><button class="material-icons-round">delete</button></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="sub-con">
+                <div class="sub-con-header">
+                    <h2>Teilnehmer</h2>
+                    <div class="filter-row">
+                        <select name="class-filter" id="class-filter">
+                            <option value="">Alle Klassen</option>
+                            <option value="1a">Klasse 1a</option>
+                            <option value="2b">Klasse 2b</option>
+                        </select>
+                        <input type="text" placeholder="Teilnehmer suchen...">
+                    </div>
+                    <button><span class="material-icons-round">add</span> Teilnehmer hinzufügen</button>
+                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Vorname</th>
+                            <th>Klasse</th>
+                            <th>Aktionen</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Mustermann</td>
+                            <td>Max</td>
+                            <td>1a</td>
+                            <td><button class="material-icons-round">edit</button><button class="material-icons-round">delete</button></td>
+                        </tr>
+                        <tr>
+                            <td>Musterfrau</td>
+                            <td>Maria</td>
+                            <td>2b</td>
+                            <td><button class="material-icons-round">edit</button><button class="material-icons-round">delete</button></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <script type="module" src="js/central.js"></script>
+    </body>
+</html>

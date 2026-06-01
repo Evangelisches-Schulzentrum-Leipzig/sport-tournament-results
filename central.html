@@ -1,70 +1,266 @@
 <!DOCTYPE html>
-<html lang="de">
+<html class="dark" lang="de">
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+        <link rel="stylesheet" href="css/css.css">
+
         <title>Document</title>
     </head>
     <body>
-        <div id="classes-con">
-            <h1>Klassen</h1>
-            <table>
-                <thead>
-                    <tr>
-                        <td>Name</td>
-                        <td>Klassenstufe</td>
-                    </tr>
-                </thead>
-                <tbody></tbody>
-            </table>
-            <div id="add-class-con">
-                <input type="text" id="class-name-input" placeholder="Klassenname">
-                <input type="number" id="class-level-input" placeholder="Klassenstufe">
-                <button id="add-class-button">Klasse hinzufügen</button>
+        <div id="nav-bar">
+            <div id="nav-links">
+                <a href="central.html" class="active">Dashboard</a>
+                <a href="central-participants.html">Teilnehmer & Klassen</a>
+                <a href="central-results.html">Ergebnisse</a>
+                <a href="central-disciplines.html">Disziplinen & Wertungen</a>
+                <a href="central-sync.html">Synchronisation & Konflikte</a>
+                <a href="central-import-export.html">Import & Export</a>
+            </div>
+            <div class="time-display">
+                <span>10:00:00</span>
+            </div>
+            <div id="sync-state-con">
+                <span id="sync-state"><span class="material-icons-round">cloud_circle</span> Live</span>
+                <span id="last-sync-event">vor 10min</span>
             </div>
         </div>
-        <div id="participants-con">
-            <h1>Teilnehmer</h1>
-            <table>
-                <thead>
+        <div id="dashboard-con">
+            <div id="discipline-map">
+                <div class="tile-header">
+                    <h2>Disziplinen</h2>
+                </div>
+                <div id="discipline-grid">
+                    <div class="discipline-tile">
+                        <h3>800m Lauf</h3>
+                        <span class="discipline-progress">5/20</span>
+                        <span class="discipline-helper">Helper 1, Helper 2</span>
+                        <span class="discipline-current-class">Klasse 8a</span>
+                    </div>
+                    <div class="discipline-tile">
+                        <h3>Weitsprung</h3>
+                        <span class="discipline-progress">10/20</span>
+                        <span class="discipline-helper">Helper 1, Helper 2</span>
+                        <span class="discipline-current-class">Klasse 8a</span>
+                    </div>
+                    <div class="discipline-tile">
+                        <h3>Ballwurf</h3>
+                        <span class="discipline-progress">15/20</span>
+                        <span class="discipline-helper">Helper 1, Helper 2</span>
+                        <span class="discipline-current-class">Klasse 8a</span>
+                    </div>
+                </div>
+            </div>
+            <div id="live-events">
+                <div class="tile-header">
+                    <h2>Live Feed</h2>
+                </div>
+                <div id="live-event-list">
+                    <div class="live-event">
+                        <span class="live-event-time">10:00:00</span>
+                        <span class="live-event-discipline">800m Lauf</span>
+                        <span class="live-event-class">Klasse 8a</span>
+                        <span class="live-event-participant">Max Mustermann</span>
+                        <span class="live-event-result">2:30.45</span>
+                    </div>
+                    <div class="live-event">
+                        <span class="live-event-time">10:00:00</span>
+                        <span class="live-event-discipline">800m Lauf</span>
+                        <span class="live-event-class">Klasse 8a</span>
+                        <span class="live-event-participant">Max Mustermann</span>
+                        <span class="live-event-result">2:30.45</span>
+                    </div>
+                    <div class="live-event">
+                        <span class="live-event-time">10:00:00</span>
+                        <span class="live-event-discipline">800m Lauf</span>
+                        <span class="live-event-class">Klasse 8a</span>
+                        <span class="live-event-participant">Max Mustermann</span>
+                        <span class="live-event-result">2:30.45</span>
+                    </div>
+                    <div class="live-event">
+                        <span class="live-event-time">10:00:00</span>
+                        <span class="live-event-discipline">800m Lauf</span>
+                        <span class="live-event-class">Klasse 8a</span>
+                        <span class="live-event-participant">Max Mustermann</span>
+                        <span class="live-event-result">2:30.45</span>
+                    </div>
+                    <div class="live-event">
+                        <span class="live-event-time">10:00:00</span>
+                        <span class="live-event-discipline">800m Lauf</span>
+                        <span class="live-event-class">Klasse 8a</span>
+                        <span class="live-event-participant">Max Mustermann</span>
+                        <span class="live-event-result">2:30.45</span>
+                    </div>
+                    <div class="live-event">
+                        <span class="live-event-time">10:00:00</span>
+                        <span class="live-event-discipline">800m Lauf</span>
+                        <span class="live-event-class">Klasse 8a</span>
+                        <span class="live-event-participant">Max Mustermann</span>
+                        <span class="live-event-result">2:30.45</span>
+                    </div>                    
+                </div>
+            </div>
+            <div id="live-results">
+                <div class="tile-header">
+                    <h2>Aktuelle Ergebnisse</h2>
+                </div>
+                <div class="tile-filter-con">
+                    <select id="results-class-filter">
+                        <option value="">Alle Klassen</option>
+                        <option value="Klasse 8a">Klasse 8a</option>
+                        <option value="Klasse 8b">Klasse 8b</option>
+                        <option value="Klasse 9a">Klasse 9a</option>
+                    </select>
+                    <select id="results-classlevel-filter">
+                        <option value="">Alle Jahrgänge</option>
+                        <option value="1">Klassenstufe 1</option>
+                        <option value="2">Klassenstufe 2</option>
+                        <option value="3">Klassenstufe 3</option>
+                    </select>
+                    <select id="results-discipline-filter">
+                        <option value="">Alle Disziplinen</option>
+                        <option value="800m Lauf">800m Lauf</option>
+                        <option value="Weitsprung">Weitsprung</option>
+                        <option value="Ballwurf">Ballwurf</option>
+                    </select>
+                </div>
+                <table id="results-list">
                     <tr>
-                        <td>ID</td>
-                        <td>Name</td>
-                        <td>Vorname</td>
-                        <td>Klasse</td>
-                        <td>Bemerkungen</td>
+                        <td class="results-first-places">1</td>
+                        <td>Wolf, Tobias</td>
+                        <td>2:00:00</td>
                     </tr>
-                </thead>
-                <tbody></tbody>
-            </table>
-            <div id="add-participant-con">
-                <input type="text" id="participant-name-input" placeholder="Name">
-                <input type="text" id="participant-forename-input" placeholder="Vorname">
-                <select id="participant-class-select"></select>
-                <input type="text" id="participant-remarks-input" placeholder="Bemerkungen">
-                <button id="add-participant-button">Teilnehmer hinzufügen</button>
+                    <tr>
+                        <td class="results-first-places">2</td>
+                        <td>Mustermann, Max</td>
+                        <td>2:30:45</td>
+                    </tr>
+                    <tr>
+                        <td class="results-first-places">3</td>
+                        <td>Beispiel, Erika</td>
+                        <td>2:45:30</td>
+                    </tr>
+                    <tr>
+                        <td>4</td>
+                        <td>Test, Test</td>
+                        <td>3:00:00</td>
+                    </tr>
+                    <tr>
+                        <td>5</td>
+                        <td>Demo, Demo</td>
+                        <td>3:15:00</td>
+                    </tr>
+                </table>
+            </div>
+            <div id="progress-overview">
+                <div class="tile-header">
+                    <h2>Fortschritt</h2>
+                </div>
+                <table id="progress-matrix">
+                    <thead>
+                        <tr>
+                            <th>Klasse</th>
+                            <th>800m Lauf</th>
+                            <th>Weitsprung</th>
+                            <th>Ballwurf</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>8a</td>
+                            <td><div class="progress-bar-con">
+                                <div class="progress-bar">
+                                    <div class="progress-bar-fill" style="width: 25%;"></div>
+                                </div>
+                                <span class="progress-bar-percentage">25%</span>
+                            </div></td>
+                            <td><div class="progress-bar-con">
+                                <div class="progress-bar">
+                                    <div class="progress-bar-fill" style="width: 50%;"></div>
+                                </div>
+                                <span class="progress-bar-percentage">50%</span>
+                            </div></td>
+                            <td><div class="progress-bar-con">
+                                <div class="progress-bar">
+                                    <div class="progress-bar-fill" style="width: 75%;"></div>
+                                </div>
+                                <span class="progress-bar-percentage">75%</span>
+                            </div></td>
+                        </tr>
+                        <tr>
+                            <td>8b</td>
+                            <td><div class="progress-bar-con">
+                                <div class="progress-bar">
+                                    <div class="progress-bar-fill" style="width: 40%;"></div>
+                                </div>
+                                <span class="progress-bar-percentage">40%</span>
+                            </div></td>
+                            <td><div class="progress-bar-con">
+                                <div class="progress-bar">
+                                    <div class="progress-bar-fill" style="width: 60%;"></div>
+                                </div>
+                                <span class="progress-bar-percentage">60%</span>
+                            </div></td>
+                            <td><div class="progress-bar-con">
+                                <div class="progress-bar">
+                                    <div class="progress-bar-fill" style="width: 80%;"></div>
+                                </div>
+                                <span class="progress-bar-percentage">80%</span>
+                            </div></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div id="helper-status">
+                <div class="tile-header">
+                    <h2>Helper Status</h2>
+                </div>
+                <div id="helper-list">
+                    <div class="helper-item">
+                        <h3>Helper 1</h3>
+                        <span class="helper-current-discipline">800m Lauf</span>
+                        <span class="helper-last-active">Letzter Sync: vor 5min</span>
+                        <div class="helper-status-indicator online"></div>
+                    </div>
+                    <div class="helper-item">
+                        <h3>Helper 2</h3>
+                        <span class="helper-current-discipline">Weitsprung</span>
+                        <span class="helper-last-active">Letzter Sync: vor 10min</span>
+                        <div class="helper-status-indicator online"></div>
+                    </div>
+                </div>
+            </div>
+            <div id="conflicts">
+                <div class="tile-header">
+                    <h2>Konflikte</h2>
+                    <span class="conflict-count">3 Konflikte</span>
+                </div>
+                <div id="conflict-list">
+                    <div class="conflict-item">
+                        <h3 class="conflict-issue">Doppelbelegung</h3>
+                        <span class="conflict-discipline">800m Lauf</span>
+                        <span class="conflict-class">Klasse 8a</span>
+                        <span class="conflict-participant">Max Mustermann</span>
+                        <button class="resolve-conflict-btn">Konflikt lösen</button>
+                    </div>
+                    <div class="conflict-item">
+                        <h3 class="conflict-issue">Doppelbelegung</h3>
+                        <span class="conflict-discipline">800m Lauf</span>
+                        <span class="conflict-class">Klasse 8a</span>
+                        <span class="conflict-participant">Max Mustermann</span>
+                        <button class="resolve-conflict-btn">Konflikt lösen</button>
+                    </div>
+                    <div class="conflict-item">
+                        <h3 class="conflict-issue">Doppelbelegung</h3>
+                        <span class="conflict-discipline">800m Lauf</span>
+                        <span class="conflict-class">Klasse 8a</span>
+                        <span class="conflict-participant">Max Mustermann</span>
+                        <button class="resolve-conflict-btn">Konflikt lösen</button>
+                    </div>
+                </div>
             </div>
         </div>
-        <div id="disciplines-con">
-            <h1>Disziplinen</h1>
-            <table>
-                <thead>
-                    <tr>
-                        <td>ID</td>
-                        <td>Name</td>
-                        <td>Messeinheit</td>
-                        <td>Timer?</td>
-                    </tr>
-                </thead>
-                <tbody></tbody>
-            </table>
-            <div id="add-discipline-con">
-                <input type="text" id="discipline-name-input" placeholder="Name">
-                <input type="text" id="discipline-unit-input" placeholder="Messeinheit">
-                <input type="checkbox" id="discipline-timer-input"> Timer?
-                <button id="add-discipline-button">Disziplin hinzufügen</button>
-            </div>
-        </div>
-        <script src="js/central.js"></script>
+        <script type="module" src="js/central.js"></script>
     </body>
 </html>

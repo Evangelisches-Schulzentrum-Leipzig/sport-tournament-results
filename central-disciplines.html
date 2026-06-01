@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html class="dark" lang="de">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+        <link rel="stylesheet" href="css/css.css">
+
+        <title>Document</title>
+    </head>
+    <body>
+        <div id="nav-bar">
+            <div id="nav-links">
+                <a href="central.html">Dashboard</a>
+                <a href="central-participants.html">Teilnehmer & Klassen</a>
+                <a href="central-results.html">Ergebnisse</a>
+                <a href="central-disciplines.html" class="active">Disziplinen & Wertungen</a>
+                <a href="central-sync.html">Synchronisation & Konflikte</a>
+                <a href="central-import-export.html">Import & Export</a>
+            </div>
+            <div class="time-display">
+                <span>10:00:00</span>
+            </div>
+            <div id="sync-state-con">
+                <span id="sync-state"><span class="material-icons-round">cloud_circle</span> Live</span>
+                <span id="last-sync-event">vor 10min</span>
+            </div>
+        </div>
+        <div id="disciplines-con">
+            <div class="sub-con">
+                <div class="sub-con-header">
+                    <h2>Disziplinen</h2>
+                    <div class="filter-row">
+                        <select name="discipline-filter" id="discipline-filter">
+                            <option value="">Alle Disziplinen</option>
+                            <option value="100m">100m</option>
+                            <option value="200m">200m</option>
+                        </select>
+                        <input type="text" placeholder="Disziplinen suchen...">
+                    </div>
+                    <button><span class="material-icons-round">add</span> Disziplin hinzufügen</button>
+                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Disziplinname</th>
+                            <th>Einheit</th>
+                            <th>Versuche</th>
+                            <th>Timer</th>
+                            <th>Aktionen</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>1</td>
+                            <td>100m</td>
+                            <td>s</td>
+                            <td>3</td>
+                            <td><input type="checkbox" checked></td>
+                            <td><button class="material-icons-round">edit</button><button class="material-icons-round">delete</button></td>
+                        </tr>
+                        <tr>
+                            <td>2</td>
+                            <td>Weitsprung</td>
+                            <td>m</td>
+                            <td>6</td>
+                            <td><input type="checkbox"></td>
+                            <td><button class="material-icons-round">edit</button><button class="material-icons-round">delete</button></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="sub-con">
+                <div class="sub-con-header">
+                    <h2>Wertungstabellen</h2>
+                    <div class="filter-row">
+                        <select name="discipline-filter" id="discipline-filter">
+                            <option value="">Alle Disziplinen</option>
+                            <option value="100m">100m</option>
+                            <option value="200m">200m</option>
+                        </select>
+                        <select name="class-filter" id="class-filter">
+                            <option value="">Alle Klassenstufen</option>
+                            <option value="1">1. Klasse</option>
+                            <option value="2">2. Klasse</option>
+                        </select>
+                    </div>
+                    <button><span class="material-icons-round">add</span> Wertungstabelle hinzufügen</button>
+                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th colspan="8">100m</th>
+                        </tr>
+                        <tr>
+                            <th>Klassenstufe</th>
+                            <th>1</th>
+                            <th>2</th>
+                            <th>3</th>
+                            <th>4</th>
+                            <th>5</th>
+                            <th>6</th>
+                            <th>Aktionen</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>1. Klasse</td>
+                            <td>20s</td>
+                            <td>30s</td>
+                            <td>40s</td>
+                            <td>50s</td>
+                            <td>60s</td>
+                            <td>>60s</td>
+                            <td><button class="material-icons-round">edit</button><button class="material-icons-round">delete</button></td>
+                        </tr>
+                        <tr>
+                            <td>2. Klasse</td>
+                            <td>18s</td>
+                            <td>28s</td>
+                            <td>38s</td>
+                            <td>48s</td>
+                            <td>58s</td>
+                            <td>>58s</td>
+                            <td><button class="material-icons-round">edit</button><button class="material-icons-round">delete</button></td>
+                        </tr>
+                        <tr>
+                            <td>3. Klasse</td>
+                            <td>16s</td>
+                            <td>26s</td>
+                            <td>36s</td>
+                            <td>46s</td>
+                            <td>56s</td>
+                            <td>>56s</td>
+                            <td><button class="material-icons-round">edit</button><button class="material-icons-round">delete</button></td>
+                        </tr>
+                    </tbody>
+                </table>
+                <table>
+                    <thead>
+                        <tr>
+                            <th colspan="8">Weitsprung</th>
+                        </tr>
+                        <tr>
+                            <th>Klassenstufe</th>
+                            <th>1</th>
+                            <th>2</th>
+                            <th>3</th>
+                            <th>4</th>
+                            <th>5</th>
+                            <th>6</th>  
+                            <th>Aktionen</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>1. Klasse</td>
+                            <td>2m</td>
+                            <td>3m</td>
+                            <td>4m</td>
+                            <td>5m</td>
+                            <td>6m</td>
+                            <td>>6m</td>
+                            <td><button class="material-icons-round">edit</button><button class="material-icons-round">delete</button></td>
+                        </tr>
+                        <tr>
+                            <td>2. Klasse</td>
+                            <td>2.5m</td>
+                            <td>3.5m</td>
+                            <td>4.5m</td>
+                            <td>5.5m</td>
+                            <td>6.5m</td>
+                            <td>>6.5m</td>
+                            <td><button class="material-icons-round">edit</button><button class="material-icons-round">delete</button></td>
+                        </tr>
+                        <tr>
+                            <td>3. Klasse</td>
+                            <td>3m</td>
+                            <td>4m</td>
+                            <td>5m</td>
+                            <td>6m</td>
+                            <td>7m</td>
+                            <td>>7m</td>
+                            <td><button class="material-icons-round">edit</button><button class="material-icons-round">delete</button></td>
+                        </tr>
+                        <tr>
+                            <td>4. Klasse</td>
+                            <td>3.5m</td>
+                            <td>4.5m</td>
+                            <td>5.5m</td>
+                            <td>6.5m</td>
+                            <td>7.5m</td>
+                            <td>>7.5m</td>
+                            <td><button class="material-icons-round">edit</button><button class="material-icons-round">delete</button></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <script type="module" src="js/central.js"></script>
+    </body>
+</html>

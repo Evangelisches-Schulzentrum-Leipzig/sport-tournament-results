@@ -121,16 +121,16 @@ div#top-bar div#settings-con button:hover {
 div#data-input-con {
     @apply m-4 bg-surface-background border border-border rounded overflow-x-auto overflow-y-auto;
 }
-div#data-input-con table {
+table {
     @apply border-collapse w-full;
 }
-div#data-input-con thead {
+thead {
     @apply bg-surface text-text-background border-b border-border;
 }
-div#data-input-con tr:not(:last-child) {
+tr:not(:last-child) {
     @apply border-b border-border;
 }
-div#data-input-con th {
+th {
     @apply text-gray-500 text-left text-sm font-normal px-4 py-3 text-nowrap;
 }
 div#data-input-con th:first-child,
@@ -142,24 +142,325 @@ div#data-input-con tr.has-timer th:nth-child(n+4):not(:last-child),
 div#data-input-con tr:not(.has-timer) th:nth-child(n+4) {
     @apply w-[9999px];
 }
-div#data-input-con th button {
+th button {
     @apply flex gap-x-1 items-center bg-primary text-text-primary rounded-sm px-2 py-1 text-base cursor-pointer;
 }
-div#data-input-con tbody tr:hover {
+tbody tr:hover {
     @apply bg-navigation-hover-background cursor-text;
 }
-div#data-input-con td {
+td {
     @apply px-4 py-2 text-nowrap;
 }
-div#data-input-con td:not(:last-child) {
-    @apply  border-r border-border;
+td:not(:last-child) {
+    @apply border-r border-border;
 }
-div#data-input-con td input {
+td input {
     @apply bg-surface-background border border-border rounded px-2 py-1 w-full tracking-wide font-mono;
 }
-div#data-input-con td button.stop-timer {
+td button.stop-timer {
     @apply bg-red-500 hover:bg-red-600 text-text-primary rounded-sm px-1.5 py-0.75 text-sm cursor-pointer;
 }
-div#data-input-con td button.individual-timer {
+td button.individual-timer {
     @apply bg-primary hover:bg-primary-hover text-text-primary rounded-sm px-1.5 py-0.75 text-sm cursor-pointer;
+}
+
+div#nav-bar {
+    @apply grid grid-cols-[min-content_auto_auto] md:grid-cols-[auto_auto_auto] items-center justify-between gap-4 px-4 py-2 bg-surface border-b border-border;
+}
+div#nav-bar div#nav-links {
+    @apply flex items-center gap-4;
+}
+div#nav-bar div#nav-links a {
+    @apply text-text-background border-b-2 border-transparent hover:text-primary hover:border-primary transition-colors;
+}
+div#nav-bar div#nav-links a.active {
+    @apply text-primary border-primary;
+}
+div#nav-bar .time-display {
+    @apply flex justify-center items-center col-span-1;
+}
+div#nav-bar .time-display span {
+    @apply text-xl w-20;
+}
+div#nav-bar div#sync-state-con {
+    @apply flex items-center gap-2 bg-surface-background border border-border rounded ps-2 px-1 py-0.5 cursor-pointer col-span-2 md:col-span-1 w-fit mx-auto;
+}
+div#nav-bar div#sync-state-con span#sync-state {
+    @apply flex items-center;
+}
+div#nav-bar div#sync-state-con span#sync-state span.material-icons-round {
+    @apply text-green-500 px-1 animate-pulse;
+}
+div#nav-bar div#sync-state-con span#last-sync-event {
+    @apply text-sm text-gray-500;
+}
+
+.sub-con {
+    @apply m-4 px-4 py-2 bg-background border border-border rounded overflow-hidden;
+}
+.sub-con .sub-con-header {
+    @apply grid grid-cols-2 justify-between items-center gap-4 mb-2;
+}
+.sub-con .sub-con-header h2 {
+    @apply text-lg col-span-full;
+}
+.sub-con .sub-con-header div.filter-row {
+    @apply flex items-center gap-2;
+}
+.sub-con .sub-con-header div.filter-row input,
+.sub-con .sub-con-header div.filter-row select {
+    @apply w-full bg-surface-background border border-border rounded px-2 py-1;
+}
+.sub-con .sub-con-header button {
+    @apply bg-primary text-text-primary rounded-sm px-2 py-1 text-base cursor-pointer w-fit flex items-center gap-x-1;
+}
+.sub-con .sub-con-header button:hover {
+    @apply bg-primary-hover;
+}
+.sub-con table:not(:first-child) {
+    @apply mt-4;
+}
+.sub-con thead th:last-child {
+    @apply w-px;
+}
+.sub-con tr td:last-child {
+    @apply w-fit flex justify-end gap-x-1 items-center;
+}
+.sub-con tr td:last-child button {
+    @apply bg-primary text-text-primary last:bg-red-500 rounded-sm px-2 py-1 text-base cursor-pointer;
+}
+.sub-con tr td:last-child button:hover {
+    @apply bg-primary-hover;
+}
+.sub-con tr td.sync-state-con {
+    @apply flex items-center gap-2;
+}
+.sub-con tr td.sync-state-con span {
+    @apply text-green-500 animate-pulse;
+}
+#result-export-con {
+    @apply flex items-center gap-2 mb-2 mx-4 mt-4;
+}
+#result-export-con button {
+    @apply bg-primary text-text-primary rounded-sm px-4 py-2 text-base cursor-pointer;
+}
+#result-export-con button:hover {
+    @apply bg-primary-hover;
+}
+#disciplines-con table td input[type="checkbox"] {
+    @apply w-5 h-5 rounded-xs;
+}
+#conflicts-con {
+    @apply grid grid-cols-[repeat(2,min-content)] gap-2;
+}
+#conflicts-con .conflict-con {
+    @apply bg-surface-background border border-[#ca8a04] rounded p-4 w-75;
+}
+#conflicts-con .conflict-con h3 {
+    @apply w-full text-lg font-semibold mb-2 text-[#ca8a04];
+}
+#conflicts-con .conflict-con .conflict-item {
+    @apply grid grid-cols-[repeat(2,auto)] w-full gap-x-2 gap-y-1;
+}
+#conflicts-con .conflict-con .conflict-item div.conflict-item-values {
+    @apply text-lg font-mono flex gap-2 col-span-full flex-wrap w-full;
+}
+#conflicts-con .conflict-con .conflict-item div.conflict-item-values span {
+    @apply bg-primary hover:bg-primary-hover border border-border rounded px-4 py-2 cursor-pointer;
+}
+#import-export-con .import-con {
+    @apply grid grid-cols-3 gap-4 p-4;
+}
+#import-export-con .import-con h2 {
+    @apply col-span-full text-lg font-semibold;
+}
+#import-export-con .import-con div {
+    @apply bg-surface-background border border-border rounded p-4 grid grid-cols-2 gap-2;
+}
+#import-export-con .import-con div h3 {
+    @apply text-base font-semibold col-span-full mb-2;
+}
+#import-export-con .import-con div input[type="file"] {
+    @apply bg-surface-background border border-border rounded px-2 py-1 text-sm;
+    @apply file:py-1 file:px-2 file:rounded file:border-0 file:text-sm file:bg-primary file:text-text-primary hover:file:cursor-pointer hover:file:bg-primary-hover hover:file:text-text-primary;
+}
+#import-export-con .import-con div button {
+    @apply bg-primary text-text-primary rounded-sm px-2 py-1 text-base text-nowrap cursor-pointer;
+}
+#import-export-con .export-con {
+    @apply grid grid-cols-2 gap-4 p-4 mt-4;
+}
+#import-export-con .export-con h2 {
+    @apply col-span-full text-lg font-semibold;
+}
+#import-export-con .export-con div.export-format-con,
+#import-export-con .export-con div.export-class-con {
+    @apply bg-surface-background border border-border rounded p-4 flex items-center justify-center gap-2;
+}
+#import-export-con .export-con div.export-format-con h3,
+#import-export-con .export-con div.export-class-con h3 {
+    @apply text-base font-semibold w-full;
+}
+#import-export-con .export-con div.export-format-con select,
+#import-export-con .export-con div.export-class-con select {
+    @apply bg-surface-background border border-border rounded px-2 py-1 w-full;
+}
+#import-export-con .export-con div:not(.export-format-con):not(.export-class-con) {
+    @apply bg-surface border border-border rounded-sm p-4 text-base text-nowrap cursor-pointer flex flex-col items-start gap-y-3;
+}
+#import-export-con .export-con div:not(.export-format-con):not(.export-class-con) h3 {
+    @apply font-semibold;
+}
+#import-export-con .export-con div:not(.export-format-con):not(.export-class-con) button {
+    @apply bg-primary text-text-primary hover:bg-primary-hover rounded-sm px-2 py-1 text-base cursor-pointer;
+}
+#dashboard-con {
+    @apply grid grid-cols-3 grid-rows-2 h-[calc(100dvh-40px-16px-1px)] text-sm;
+}
+#dashboard-con > div {
+    @apply border border-border;
+}
+#dashboard-con > div .tile-header {
+    @apply border-b border-border px-2 py-1 font-semibold flex justify-between items-center gap-x-2 text-base;
+}
+#dashboard-con > div .tile-header span.conflict-count {
+    @apply font-normal text-sm bg-[#ca8a04] text-white rounded-full px-2 py-0.5;
+}
+
+#dashboard-con div#discipline-grid {
+    @apply grid grid-cols-2 gap-4 p-3 overflow-auto;
+}
+#dashboard-con div#discipline-grid .discipline-tile {
+    @apply border border-border rounded p-4 flex flex-col gap-y-1;
+}
+#dashboard-con div#discipline-grid .discipline-tile h3 {
+    @apply font-semibold text-base;
+}
+#dashboard-con div#discipline-grid .discipline-tile .discipline-helper {
+    @apply text-gray-500;
+}
+#dashboard-con div#discipline-grid .discipline-tile .discipline-current-class {
+    @apply text-primary;
+}
+
+#dashboard-con div#live-events div#live-event-list {
+    @apply flex flex-col gap-2 p-3 overflow-auto;
+}
+#dashboard-con div#live-events div#live-event-list .live-event {
+    @apply grid grid-cols-[max-content_max-content_auto_max-content] items-baseline gap-x-2 border-b border-border pb-2;
+}
+#dashboard-con div#live-events div#live-event-list .live-event span.live-event-time {
+    @apply text-[11px] text-gray-500 font-mono;
+}
+#dashboard-con div#live-events div#live-event-list .live-event span.live-event-discipline {
+    @apply text-primary text-xs;
+}
+#dashboard-con div#live-events div#live-event-list .live-event span.live-event-class {
+    @apply text-primary text-xs;
+}
+#dashboard-con div#live-events div#live-event-list .live-event span.live-event-participant {
+    @apply text-sm font-semibold col-span-3;
+}
+#dashboard-con div#live-events div#live-event-list .live-event span.live-event-result {
+    @apply text-sm text-primary font-semibold text-right;
+}
+
+#dashboard-con div#live-results div.tile-filter-con {
+    @apply flex items-center gap-2 p-2 border-b border-border;
+}
+#dashboard-con div#live-results div.tile-filter-con input,
+#dashboard-con div#live-results div.tile-filter-con select {
+    @apply bg-surface-background border border-border rounded px-2 py-1 text-xs;
+}
+#dashboard-con div#live-results div.tile-filter-con select {
+    @apply pr-8;
+}
+#dashboard-con div#live-results table#results-list {
+    @apply border-collapse w-full text-sm;
+}
+#dashboard-con div#live-results table#results-list tr {
+    @apply border-b-0 hover:bg-transparent cursor-default;
+}
+#dashboard-con div#live-results table#results-list td {
+    @apply border-r-0 px-3 py-1;
+}
+#dashboard-con div#live-results table#results-list td:first-child {
+    @apply w-px whitespace-nowrap text-gray-500 font-semibold;
+}
+#dashboard-con div#live-results table#results-list td.results-first-places {
+    @apply text-primary;
+}
+#dashboard-con div#live-results table#results-list td:last-child {
+    @apply text-right text-primary font-semibold;
+}
+
+#dashboard-con div#progress-overview table#progress-matrix {
+    @apply border-collapse w-full text-sm;
+}
+#dashboard-con div#progress-overview table#progress-matrix thead {
+    @apply bg-transparent border-0;
+}
+#dashboard-con div#progress-overview table#progress-matrix thead th {
+    @apply border-b-0 text-center first:text-left text-gray-500 font-semibold;
+}
+#dashboard-con div#progress-overview table#progress-matrix tbody tr {
+    @apply border-b-0 hover:bg-transparent cursor-default;
+}
+#dashboard-con div#progress-overview table#progress-matrix tbody tr td:first-child {
+    @apply border-r-0 text-gray-500 font-semibold;
+}
+#dashboard-con div#progress-overview table#progress-matrix td {
+    @apply border-r-0 border-b-0 px-4 py-2;
+}
+#dashboard-con div#progress-overview table#progress-matrix td div.progress-bar-con {
+    @apply h-4 w-full relative;
+}
+#dashboard-con div#progress-overview table#progress-matrix td div.progress-bar-con div.progress-bar {
+    @apply bg-surface border border-border rounded-sm absolute top-0 left-0 right-0;
+}
+#dashboard-con div#progress-overview table#progress-matrix td div.progress-bar-con div.progress-bar div.progress-bar-fill {
+    @apply bg-primary-hover h-4 rounded-sm;
+}
+#dashboard-con div#progress-overview table#progress-matrix td div.progress-bar-con span.progress-bar-percentage {
+    @apply text-xs text-black dark:text-white font-semibold absolute top-0 left-1/2 -translate-x-1/2;
+}
+
+#dashboard-con div#helper-status div#helper-list {
+    @apply flex flex-col gap-2 p-3 overflow-auto;
+}
+#dashboard-con div#helper-status div#helper-list .helper-item {
+    @apply grid grid-cols-[auto_max-content] items-baseline gap-x-2 border-b border-border pb-2;
+}
+#dashboard-con div#helper-status div#helper-list .helper-item h3 {
+    @apply text-sm font-semibold;
+}
+#dashboard-con div#helper-status div#helper-list .helper-item span.helper-current-discipline {
+    @apply bg-surface rounded-xs px-1 py-0.5 text-xs w-fit;
+}
+#dashboard-con div#helper-status div#helper-list .helper-item span.helper-last-active {
+    @apply text-[11px] text-gray-500 font-mono col-span-full;
+}
+#dashboard-con div#helper-status div#helper-list .helper-item div.helper-status-indicator {
+    @apply w-full h-2 rounded-full bg-green-500 animate-pulse col-span-full mt-1;
+}
+#dashboard-con div#helper-status div#helper-list .helper-item div.helper-status-indicator.online {
+    @apply bg-green-500;
+}
+
+#dashboard-con div#conflicts div#conflict-list {
+    @apply flex flex-col overflow-auto;
+}
+#dashboard-con div#conflicts div#conflict-list .conflict-item {
+    @apply border-s-2 border-s-[#ca8a04] p-2 border-b border-b-border grid grid-cols-3 gap-x-2 gap-y-1;
+}
+#dashboard-con div#conflicts div#conflict-list .conflict-item h3.conflict-issue {
+    @apply text-sm font-semibold text-[#ca8a04] col-span-full;
+}
+#dashboard-con div#conflicts div#conflict-list .conflict-item span.conflict-discipline,
+#dashboard-con div#conflicts div#conflict-list .conflict-item span.conflict-class,
+#dashboard-con div#conflicts div#conflict-list .conflict-item span.conflict-participant {
+    @apply text-sm text-gray-500;
+}
+#dashboard-con div#conflicts div#conflict-list .conflict-item button.resolve-conflict-btn {
+    @apply border border-primary hover:bg-primary-hover hover:text-text-primary rounded-sm px-1 py-0.5 cursor-pointer col-span-full;
 }
