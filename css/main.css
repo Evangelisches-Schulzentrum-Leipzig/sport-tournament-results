@@ -236,6 +236,18 @@ div#nav-bar div#sync-state-con span#last-sync-event {
 .sub-con .sub-con-input-row > div:has(input[type="checkbox"]) label {
     @apply text-nowrap;
 }
+.sub-con .sub-con-input-row > div:has(input[type="checkbox"]) label:hover {
+    @apply cursor-pointer;
+}
+.sub-con .sub-con-input-row > div:has(input.mark-input) {
+    @apply flex items-center gap-2 w-fit;
+}
+.sub-con .sub-con-input-row > div:has(input.mark-input) input.mark-input {
+    @apply w-20 font-mono;
+}
+.sub-con .sub-con-input-row > div:has(input.mark-input) label {
+    @apply text-nowrap;
+}
 .sub-con .sub-con-input-row button {
     @apply bg-primary text-text-primary rounded-sm px-4 py-1 cursor-pointer w-full max-w-75;
 }
