@@ -456,10 +456,11 @@ function setupDisciplinesEventListeners(data) {
         while (classSelect.options.length > 1) {
             classSelect.remove(1);
         }
-        data.classes.forEach(cls => {
+        const uniqueLevels = [...new Set(data.classes.map(c => c.level))].sort((a, b) => a - b);
+        uniqueLevels.forEach(level => {
             const option = document.createElement('option');
-            option.value = cls.level;
-            option.textContent = `${cls.level}. Klasse`;
+            option.value = level;
+            option.textContent = `${level}. Klasse`;
             classSelect.appendChild(option);
         });
     }
