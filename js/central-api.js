@@ -1,8 +1,8 @@
 let host = "http://localhost:8083";
 
 /**
- * 
- * @returns {Promise<boolean>}
+ * Check if the API server is reachable and responding correctly.
+ * @returns {Promise<boolean>} True if server is reachable and healthy, false otherwise
  */
 export async function checkConnectivity() {
     return fetch(`${host}/status`)
@@ -20,8 +20,10 @@ export async function checkConnectivity() {
 }
 
 /**
- * 
- * @returns {Promise<{classes: {name: string, level: number}[], disciplines: {id: number, name: string, unit: string, attempts: number, timer: boolean}[], participants: {id: number, name: string, forename: string, class: string}[], measurements: {id: number, participant_id: number, discipline_id: number, attempt_number: number, value: number, created_at: string}[]} | null>}
+ * Fetch all data from the server: classes, disciplines, participants, and measurements.
+ * Supports filtering by search parameters.
+ * @param {Object} [searchParams={}] Optional filter parameters
+ * @returns {Promise<{classes: {name: string, level: number}[], disciplines: {id: number, name: string, unit: string, attempts: number, timer: boolean}[], participants: {id: number, name: string, forename: string, class: string}[], measurements: {id: number, participant_id: number, discipline_id: number, attempt_number: number, value: number, created_at: string}[]} | null>} Combined data object or null if request fails
  */
 export async function getData(searchParams = {}) {
     if (await checkConnectivity()) {
@@ -40,8 +42,9 @@ export async function getData(searchParams = {}) {
 }
 
 /**
- * 
- * @returns {Promise<{name: string, level: number}[] | null>}
+ * Fetch all classes with optional search filter.
+ * @param {Object} [searchParams={}] Optional filter parameters (q for name search, level for filtering)
+ * @returns {Promise<{name: string, level: number}[] | null>} Array of class objects or null if request fails
  */
 export async function getClasses(searchParams = {}) {
     if (await checkConnectivity()) {
@@ -60,9 +63,9 @@ export async function getClasses(searchParams = {}) {
 }
 
 /**
- * 
- * @param {{name: string, level: number}} classData
- * @returns {Promise<{name: string, level: number}[] | null>}
+ * Create a new class in the database.
+ * @param {{name: string, level: number}} classData Class data to create
+ * @returns {Promise<{name: string, level: number}[] | null>} Updated list of all classes or null if request fails
  */
 export async function createClass(classData) {
     if (await checkConnectivity()) {
@@ -90,10 +93,10 @@ export async function createClass(classData) {
 }
 
 /**
- * 
- * @param {string} name
- * @param {{level: number}} classData
- * @returns {Promise<{name: string, level: number}[] | null>}
+ * Update an existing class by name.
+ * @param {string} name Name of the class to update
+ * @param {{level: number}} classData Updated class data
+ * @returns {Promise<{name: string, level: number}[] | null>} Updated list of all classes or null if request fails
  */
 export async function updateClass(name, classData) {
     if (await checkConnectivity()) {
@@ -121,9 +124,9 @@ export async function updateClass(name, classData) {
 }
 
 /**
- * 
- * @param {string} name
- * @returns {Promise<{name: string, level: number}[] | null>}
+ * Delete a class by name.
+ * @param {string} name Name of the class to delete
+ * @returns {Promise<{name: string, level: number}[] | null>} Updated list of all classes or null if request fails
  */
 export async function deleteClass(name) {
     if (await checkConnectivity()) {
@@ -147,8 +150,9 @@ export async function deleteClass(name) {
 }
 
 /**
- * 
- * @returns {Promise<{id: number, name: string, unit: string, attempts: number, timer: boolean}[] | null>}
+ * Fetch all disciplines with optional search filter.
+ * @param {Object} [searchParams={}] Optional filter parameters (q for name search, unit for filtering)
+ * @returns {Promise<{id: number, name: string, unit: string, attempts: number, timer: boolean}[] | null>} Array of discipline objects or null if request fails
  */
 export async function getDisciplines(searchParams = {}) {
     if (await checkConnectivity()) {
@@ -167,9 +171,9 @@ export async function getDisciplines(searchParams = {}) {
 }
 
 /**
- * 
- * @param {{name: string, unit: string, attempts: number, timer: boolean}} disciplineData
- * @returns {Promise<{id: number, name: string, unit: string, attempts: number, timer: boolean}[] | null>}
+ * Create a new discipline in the database.
+ * @param {{name: string, unit: string, attempts: number, timer: boolean}} disciplineData Discipline data to create
+ * @returns {Promise<{id: number, name: string, unit: string, attempts: number, timer: boolean}[] | null>} Updated list of all disciplines or null if request fails
  */
 export async function createDiscipline(disciplineData) {
     if (await checkConnectivity()) {
@@ -197,10 +201,10 @@ export async function createDiscipline(disciplineData) {
 }
 
 /**
- * 
- * @param {number} id
- * @param {{name: string, unit: string, attempts: number, timer: boolean}} disciplineData
- * @returns {Promise<{id: number, name: string, unit: string, attempts: number, timer: boolean}[] | null>}
+ * Update an existing discipline by ID.
+ * @param {number} id ID of the discipline to update
+ * @param {{name: string, unit: string, attempts: number, timer: boolean}} disciplineData Updated discipline data
+ * @returns {Promise<{id: number, name: string, unit: string, attempts: number, timer: boolean}[] | null>} Updated list of all disciplines or null if request fails
  */
 export async function updateDiscipline(id, disciplineData) {
     if (await checkConnectivity()) {
@@ -228,9 +232,9 @@ export async function updateDiscipline(id, disciplineData) {
 }
 
 /**
- * 
- * @param {number} id
- * @returns {Promise<{id: number, name: string, unit: string, attempts: number, timer: boolean}[] | null>}
+ * Delete a discipline by ID.
+ * @param {number} id ID of the discipline to delete
+ * @returns {Promise<{id: number, name: string, unit: string, attempts: number, timer: boolean}[] | null>} Updated list of all disciplines or null if request fails
  */
 export async function deleteDiscipline(id) {
     if (await checkConnectivity()) {
@@ -254,8 +258,9 @@ export async function deleteDiscipline(id) {
 }
 
 /**
- * 
- * @returns {Promise<{id: number, name: string, forename: string, class: string}[] | null>}
+ * Fetch all participants with optional filters.
+ * @param {Object} [searchParams={}] Optional filter parameters (class for class filter, q for name search)
+ * @returns {Promise<{id: number, name: string, forename: string, gender: string, class: string}[] | null>} Array of participant objects or null if request fails
  */
 export async function getParticipants(searchParams = {}) {
     if (await checkConnectivity()) {
@@ -274,9 +279,9 @@ export async function getParticipants(searchParams = {}) {
 }
 
 /**
- * 
- * @param {{name: string, forename: string, class: string}} participantData
- * @returns {Promise<{id: number, name: string, forename: string, class: string}[] | null>}
+ * Create a new participant in the database.
+ * @param {{name: string, forename: string, gender: string, class: string}} participantData Participant data to create
+ * @returns {Promise<{id: number, name: string, forename: string, gender: string, class: string}[] | null>} Updated list of all participants or null if request fails
  */
 export async function createParticipant(participantData) {
     if (await checkConnectivity()) {
@@ -304,10 +309,10 @@ export async function createParticipant(participantData) {
 }
 
 /**
- * 
- * @param {number} id
- * @param {{name: string, forename: string, class: string}} participantData
- * @returns {Promise<{id: number, name: string, forename: string, class: string}[] | null>}
+ * Update an existing participant by ID.
+ * @param {number} id ID of the participant to update
+ * @param {{name: string, forename: string, gender: string, class: string}} participantData Updated participant data
+ * @returns {Promise<{id: number, name: string, forename: string, gender: string, class: string}[] | null>} Updated list of all participants or null if request fails
  */
 export async function updateParticipant(id, participantData) {
     if (await checkConnectivity()) {
@@ -335,9 +340,9 @@ export async function updateParticipant(id, participantData) {
 }
 
 /**
- * 
- * @param {number} id
- * @returns {Promise<{id: number, name: string, forename: string, class: string}[] | null>}
+ * Delete a participant by ID.
+ * @param {number} id ID of the participant to delete
+ * @returns {Promise<{id: number, name: string, forename: string, gender: string, class: string}[] | null>} Updated list of all participants or null if request fails
  */
 export async function deleteParticipant(id) {
     if (await checkConnectivity()) {
@@ -361,8 +366,9 @@ export async function deleteParticipant(id) {
 }
 
 /**
- * 
- * @returns {Promise<{id: number, participant_id: number, discipline_id: number, attempt_number: number, value: number, created_at: string}[] | null>}
+ * Fetch all measurements with optional filters.
+ * @param {Object} [searchParams={}] Optional filter parameters (participant_id, discipline_id, attempt_number)
+ * @returns {Promise<{id: number, participant_id: number, discipline_id: number, attempt_number: number, value: number, created_at: string}[] | null>} Array of measurement objects or null if request fails
  */
 export async function getMeasurements(searchParams = {}) {
     if (await checkConnectivity()) {
@@ -381,9 +387,9 @@ export async function getMeasurements(searchParams = {}) {
 }
 
 /**
- * 
- * @param {Array | {participant_id: number, discipline_id: number, attempt_number: number, value: number, created_at: string}} measurementData
- * @returns {Promise<null>}
+ * Create new measurement(s) in the database. Accepts a single measurement or an array of measurements.
+ * @param {Array<{participant_id: number, discipline_id: number, attempt_number: number, value: number, created_at: string}> | {participant_id: number, discipline_id: number, attempt_number: number, value: number, created_at: string}} measurementData Single measurement or array of measurements to create
+ * @returns {Promise<null>} Resolves when measurements are created or null if request fails
  */
 export async function createMeasurement(measurementData) {
     if (await checkConnectivity()) {
@@ -410,9 +416,9 @@ export async function createMeasurement(measurementData) {
 }
 
 /**
- * 
- * @param {number} id
- * @returns {Promise<null>}
+ * Delete a measurement by ID.
+ * @param {number} id ID of the measurement to delete
+ * @returns {Promise<null>} Resolves when measurement is deleted or null if request fails
  */
 export async function deleteMeasurement(id) {
     if (await checkConnectivity()) {
@@ -435,8 +441,9 @@ export async function deleteMeasurement(id) {
 }
 
 /**
- * 
- * @returns {Promise<{id: number, participant_id: number, discipline_id: number, attempt_number: number, value: number, created_at: string}[] | null>}
+ * Fetch measurement conflicts (measurements where the same participant has multiple values for the same discipline and attempt).
+ * @param {Object} [searchParams={}] Optional filter parameters (participant_id, discipline_id)
+ * @returns {Promise<{id: number, participant_id: number, discipline_id: number, attempt_number: number, value: number, created_at: string}[] | null>} Array of conflicting measurement objects or null if request fails
  */
 export async function getMeasurementConflicts(searchParams = {}) {
     if (await checkConnectivity()) {
@@ -455,8 +462,9 @@ export async function getMeasurementConflicts(searchParams = {}) {
 }
 
 /**
- * 
- * @returns {Promise<{discipline_id: number, mark: string, min_value: number, max_value: number}[] | null>}
+ * Fetch mark ranges with optional filters.
+ * @param {Object} [searchParams={}] Optional filter parameters (discipline_id, class_level, gender, mark)
+ * @returns {Promise<{discipline_id: number, class_level: number, gender: string, mark: string, min_value: number}[] | null>} Array of mark range objects or null if request fails
  */
 export async function getMarkRanges(searchParams = {}) {
     if (await checkConnectivity()) {
@@ -475,9 +483,9 @@ export async function getMarkRanges(searchParams = {}) {
 }
 
 /**
- * 
- * @param {{discipline_id: number, mark: string, min_value: number, max_value: number}} markRangeData
- * @returns {Promise<null>}
+ * Create a new mark range in the database.
+ * @param {{discipline_id: number, class_level: number, gender: string, mark: string, min_value: number}} markRangeData Mark range data to create
+ * @returns {Promise<null>} Resolves when mark range is created or null if request fails
  */
 export async function createMarkRange(markRangeData) {
     if (await checkConnectivity()) {
@@ -504,11 +512,11 @@ export async function createMarkRange(markRangeData) {
 }
 
 /**
- * 
- * @param {number} disciplineId
- * @param {string} mark
- * @param {{min_value: number, max_value: number}} markRangeData
- * @returns {Promise<null>}
+ * Update an existing mark range.
+ * @param {number} disciplineId ID of the discipline
+ * @param {string} mark Mark grade to update
+ * @param {{class_level: number, gender: string, min_value: number}} markRangeData Updated mark range data
+ * @returns {Promise<null>} Resolves when mark range is updated or null if request fails
  */
 export async function updateMarkRange(disciplineId, mark, markRangeData) {
     if (await checkConnectivity()) {
@@ -535,10 +543,10 @@ export async function updateMarkRange(disciplineId, mark, markRangeData) {
 }
 
 /**
- * 
- * @param {number} disciplineId
- * @param {string} mark
- * @returns {Promise<null>}
+ * Delete a mark range by discipline ID and mark grade.
+ * @param {number} disciplineId ID of the discipline
+ * @param {string} mark Mark grade to delete
+ * @returns {Promise<null>} Resolves when mark range is deleted or null if request fails
  */
 export async function deleteMarkRange(disciplineId, mark) {
     if (await checkConnectivity()) {
@@ -561,9 +569,9 @@ export async function deleteMarkRange(disciplineId, mark) {
 }
 
 /**
- * 
- * @param {Array | {participant_id: number, discipline_id: number, attempt_number: number, value: number, created_at: string}} measurements
- * @returns {Promise<{classes: {name: string, level: number}[], disciplines: {id: number, name: string, unit: string, attempts: number, timer: boolean}[], participants: {id: number, name: string, forename: string, class: string}[], measurements: {id: number, participant_id: number, discipline_id: number, attempt_number: number, value: number, created_at: string}[]} | null>}
+ * Sync measurements to the server and retrieve all synchronized data.
+ * @param {Array<{participant_id: number, discipline_id: number, attempt_number: number, value: number, created_at: string}> | {participant_id: number, discipline_id: number, attempt_number: number, value: number, created_at: string}} measurements Single measurement or array of measurements to sync
+ * @returns {Promise<{classes: {name: string, level: number}[], disciplines: {id: number, name: string, unit: string, attempts: number, timer: boolean}[], participants: {id: number, name: string, forename: string, class: string}[], measurements: {id: number, participant_id: number, discipline_id: number, attempt_number: number, value: number, created_at: string}[]} | null>} Synchronized data object containing all current data or null if request fails
  */
 export async function sync(measurements) {
     if (await checkConnectivity()) {

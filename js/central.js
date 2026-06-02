@@ -89,7 +89,7 @@ function displayClasses(classes) {
 
 /**
  * Display participants in a table with edit and delete buttons.
- * @param {{id: number, name: string, forename: string, class: string}[]} participants - Array of participant objects to display
+ * @param {{id: number, name: string, forename: string, gender: string, class: string}[]} participants - Array of participant objects to display
  * @returns {void}
  */
 function displayParticipants(participants) {
@@ -156,7 +156,7 @@ function populateClassFilterDropdown(classes) {
 /**
  * Setup event listeners for participant filter controls.
  * Filters participants by class and search query when filters change.
- * @param {{participants: {id: number, name: string, forename: string, class: string}[], classes: {name: string, level: number}[]}} data - Page data containing participants and classes
+ * @param {{participants: {id: number, name: string, forename: string, gender: string, class: string}[], classes: {name: string, level: number}[]}} data - Page data containing participants and classes
  * @returns {void}
  */
 function setupParticipantsFilters(data) {
