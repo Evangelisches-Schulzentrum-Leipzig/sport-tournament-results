@@ -234,7 +234,9 @@ function displayDisciplines(disciplines) {
         const row = document.createElement('tr');
         const timerCheckbox = document.createElement('input');
         timerCheckbox.type = 'checkbox';
-        timerCheckbox.checked = discipline.timer;
+        if (discipline.timer == "1" || discipline.timer == 1 || discipline.timer === true) {
+            timerCheckbox.setAttribute('checked', '');
+        }
         timerCheckbox.disabled = true;
 
         const timerCell = document.createElement('td');
