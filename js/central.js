@@ -207,6 +207,11 @@ async function initDisciplinesPage() {
         populateDisciplineFiltersDropdown(data.disciplines);
     }
 
+    // Display mark ranges tables if data available
+    if (data.disciplines && data.markRanges) {
+        displayMarkRanges(data.disciplines, data.markRanges);
+    }
+
     // Setup filter listeners
     setupDisciplinesFilters(data);
 
@@ -273,6 +278,121 @@ function populateDisciplineFiltersDropdown(disciplines) {
         option.value = discipline.id;
         option.textContent = discipline.name;
         filterSelect.appendChild(option);
+    });
+}
+
+/**
+ * Display mark ranges for each discipline in separate tables.
+ * Creates a table for each discipline showing mark ranges organized by class level and gender.
+ * Displays empty message if no mark ranges are defined for a discipline.
+ * @param {{id: number, name: string, unit: string, attempts: number, timer: boolean}[]} disciplines - Array of discipline objects
+ * @param {{discipline_id: number, class_level: number, gender: string, mark: number, min_value: number}[]} markRanges - Array of mark range objects
+ * @returns {void}
+ */
+function displayMarkRanges(disciplines, markRanges) {
+    const markRangesContainer = document.querySelector('#disciplines-con .sub-con:nth-of-type(2)');
+    if (!markRangesContainer) return;
+
+    // Find the table container (after the input row)
+    const inputRow = markRangesContainer.querySelector('.sub-con-input-row');
+    const tableContainer = inputRow?.parentElement || markRangesContainer;
+    
+    // Remove all existing tables (but keep the header and input row)
+    const existingTables = tableContainer.querySelectorAll('table');
+    existingTables.forEach(table => table.remove());
+
+    // Group mark ranges by discipline, class_level, and gender
+    const rangesByDiscipline = {};
+    markRanges.forEach(range => {
+        if (!rangesByDiscipline[range.discipline_id]) {
+            rangesByDiscipline[range.discipline_id] = {};
+        }
+        if (!rangesByDiscipline[range.discipline_id][range.class_level]) {
+            rangesByDiscipline[range.discipline_id][range.class_level] = {};
+        }
+        if (!rangesByDiscipline[range.discipline_id][range.class_level][range.gender]) {
+            rangesByDiscipline[range.discipline_id][range.class_level][range.gender] = {};
+        }
+        rangesByDiscipline[range.discipline_id][range.class_level][range.gender][range.mark] = range.min_value;
+    });
+
+    // Create a table for each discipline
+    disciplines.forEach(discipline => {
+        const table = document.createElement('table');
+        
+        // Create header with discipline name
+        const thead = document.createElement('thead');
+        const headerRow = document.createElement('tr');
+        headerRow.innerHTML = `<th colspan="9">${discipline.name}</th>`;
+        const headerRow2 = document.createElement('tr');
+        headerRow2.innerHTML = `
+            <th>Klassenstufe</th>
+            <th>Geschlecht</th>
+            <th>Note 1</th>
+            <th>Note 2</th>
+            <th>Note 3</th>
+            <th>Note 4</th>
+            <th>Note 5</th>
+            <th>Note 6</th>
+            <th>Aktionen</th>
+        `;
+        thead.appendChild(headerRow);
+        thead.appendChild(headerRow2);
+        table.appendChild(thead);
+
+        // Create tbody
+        const tbody = document.createElement('tbody');
+        
+        // Get all unique class levels for this discipline
+        const classLevels = rangesByDiscipline[discipline.id] ? 
+            Object.keys(rangesByDiscipline[discipline.id]).map(Number).sort((a, b) => a - b) : [];
+
+        if (classLevels.length === 0) {
+            // No mark ranges defined - show empty message
+            const row = document.createElement('tr');
+            row.innerHTML = `<td colspan="9" style="text-align: center; padding: 20px;">Keine Wertungstabellen definiert</td>`;
+            tbody.appendChild(row);
+        } else {
+            // Display mark ranges for each class level and gender
+            classLevels.forEach(classLevel => {
+                const genders = Object.keys(rangesByDiscipline[discipline.id][classLevel]);
+                
+                genders.forEach(gender => {
+                    const row = document.createElement('tr');
+                    const genderLabel = gender === 'male' ? 'Jungen' : 'Mädchen';
+                    const marks = rangesByDiscipline[discipline.id][classLevel][gender];
+                    
+                    // Get mark values for all 6 marks, or empty if not defined
+                    const markValues = [];
+                    for (let i = 1; i <= 6; i++) {
+                        if (marks[i] !== undefined) {
+                            markValues.push(marks[i]);
+                        } else {
+                            markValues.push('-');
+                        }
+                    }
+
+                    row.innerHTML = `
+                        <td>${classLevel}. Klasse</td>
+                        <td>${genderLabel}</td>
+                        <td>${markValues[0]}</td>
+                        <td>${markValues[1]}</td>
+                        <td>${markValues[2]}</td>
+                        <td>${markValues[3]}</td>
+                        <td>${markValues[4]}</td>
+                        <td>${markValues[5]}</td>
+                        <td>
+                            <button class="material-icons-round edit-mark-range" data-discipline-id="${discipline.id}" data-class-level="${classLevel}" data-gender="${gender}">edit</button>
+                            <button class="material-icons-round delete-mark-range" data-discipline-id="${discipline.id}" data-class-level="${classLevel}" data-gender="${gender}">delete</button>
+                        </td>
+                    `;
+                    tbody.appendChild(row);
+                });
+            });
+        }
+
+        table.appendChild(tbody);
+        tableContainer.appendChild(table);
     });
 }
 
@@ -508,6 +628,12 @@ async function handleAddMarkRange(data) {
             classSelect.value = '';
             genderSelect.value = '';
             markInputs.forEach(input => input.value = '');
+
+            // Refresh mark ranges display
+            const updatedData = await api.getData();
+            if (updatedData && updatedData.disciplines && updatedData.markRanges) {
+                displayMarkRanges(updatedData.disciplines, updatedData.markRanges);
+            }
 
             console.log('Wertungstabelle erfolgreich hinzugefügt');
         } else {
