@@ -36,7 +36,6 @@ CREATE TABLE IF NOT EXISTS `mark-ranges` (
     `id` int(11) NOT NULL PRIMARY KEY AUTO_INCREMENT,
     `discipline_id` int(11) NOT NULL,
     `min_value` float NOT NULL,
-    `max_value` float NOT NULL,
     `mark` int(11) NOT NULL,
     FOREIGN KEY (`discipline_id`) REFERENCES `disciplines`(`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

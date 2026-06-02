@@ -393,7 +393,7 @@ app.get('/mark-ranges', async (req, res) => {
         const conn = await pool.getConnection();
         try {
             const searchParams = req.query;
-            let query = "SELECT discipline_id, mark, min_value, max_value FROM mark_ranges WHERE 1=1";
+            let query = "SELECT discipline_id, mark, min_value FROM mark_ranges WHERE 1=1";
             const params: any[] = [];
             
             // Filter by discipline (support multiple disciplines)
@@ -414,7 +414,7 @@ app.get('/mark-ranges', async (req, res) => {
             
             query += ";";
             const markRangeRows = await conn.query(query, params);
-            var markRanges = (Array.isArray(markRangeRows) ? (markRangeRows as {discipline_id: number, mark: string, min_value: number, max_value: number}[]) : []);
+            var markRanges = (Array.isArray(markRangeRows) ? (markRangeRows as {discipline_id: number, mark: string, min_value: number}[]) : []);
             res.json(markRanges);
         } finally {
             conn.release();
@@ -429,8 +429,8 @@ app.post('/mark-ranges', async (req, res) => {
     try {
         const conn = await pool.getConnection();
         try {
-            const { discipline_id, mark, min_value, max_value } = req.body;
-            await conn.query("INSERT INTO mark_ranges (discipline_id, mark, min_value, max_value) VALUES (?, ?, ?, ?);", [discipline_id, mark, min_value, max_value]);
+            const { discipline_id, mark, min_value } = req.body;
+            await conn.query("INSERT INTO mark_ranges (discipline_id, mark, min_value) VALUES (?, ?, ?);", [discipline_id, mark, min_value]);
             res.status(200).send();
         } finally {
             conn.release();
@@ -446,8 +446,8 @@ app.patch('/mark-ranges/:discipline_id/:mark', async (req, res) => {
         const conn = await pool.getConnection();
         try {            
             const { discipline_id, mark } = req.params;
-            const { min_value, max_value } = req.body;
-            await conn.query("UPDATE mark_ranges SET min_value = ?, max_value = ? WHERE discipline_id = ? AND mark = ?;", [min_value, max_value, discipline_id, mark]);
+            const { min_value } = req.body;
+            await conn.query("UPDATE mark_ranges SET min_value = ? WHERE discipline_id = ? AND mark = ?;", [min_value, discipline_id, mark]);
             res.status(200).send();
         } finally {
             conn.release();
