@@ -313,16 +313,16 @@ async function initResultsPage() {
     }
 
     // Populate filter dropdowns
-    if (data.disciplines && data.disciplines.length > 0) {
+    if (data.disciplines) {
         populateResultsDisciplineFilterDropdown(data.disciplines);
     }
 
-    if (data.classes && data.classes.length > 0) {
+    if (data.classes) {
         populateResultsClassFilterDropdown(data.classes);
     }
 
     // Display initial results if measurements available
-    if (data.measurements && data.measurements.length > 0) {
+    if (data.measurements) {
         displayResults(data.measurements, data);
     }
 
@@ -375,6 +375,23 @@ function populateResultsClassFilterDropdown(classes) {
         option.textContent = className;
         filterSelect.appendChild(option);
     });
+
+    const levelFilter = document.querySelector('.sub-con select[name="class-level"]');
+    if (levelFilter) {
+        // Clear existing options except the first one
+        while (levelFilter.options.length > 1) {
+            levelFilter.remove(1);
+        }
+
+        // Add class level options
+        const uniqueLevels = [...new Set(classes.map(c => c.level))].sort((a, b) => a - b);
+        uniqueLevels.forEach(level => {
+            const option = document.createElement('option');
+            option.value = level;
+            option.textContent = `${level}. Klasse`;
+            levelFilter.appendChild(option);
+        });
+    }
 }
 
 /**
@@ -494,18 +511,12 @@ async function initDashboardPage() {
     }
 
     // Display disciplines if data available
-    if (data.disciplines && data.disciplines.length > 0) {
+    if (data.disciplines) {
         displayDashboardDisciplines(data.disciplines, data);
     }
 
-    // Display measurements as live events if available
-    if (data.measurements && data.measurements.length > 0) {
-        displayLiveEvents(data.measurements, data);
-        displayDashboardResults(data.measurements, data);
-    }
-
     // Populate filter dropdowns
-    if (data.classes && data.classes.length > 0) {
+    if (data.classes) {
         populateDashboardClassFilterDropdown(data.classes);
     }
 
@@ -540,105 +551,6 @@ function displayDashboardDisciplines(disciplines, data) {
             <span class="discipline-current-class">Klasse 8a</span>
         `;
         grid.appendChild(tile);
-    });
-}
-
-/**
- * Display recent measurements as live events on the dashboard.
- * Shows the 6 most recent measurements with participant, discipline, and result information.
- * @param {{id: number, participant_id: number, discipline_id: number, attempt_number: number, value: number, created_at: string}[]} measurements - Array of measurement objects
- * @param {{participants: {id: number, name: string, forename: string, class: string}[], disciplines: {id: number, name: string, unit: string, attempts: number, timer: boolean}[]}} data - Page data containing participants and disciplines
- * @returns {void}
- */
-function displayLiveEvents(measurements, data) {
-    const eventList = document.querySelector('#live-event-list');
-    if (!eventList) return;
-
-    // Create lookup maps
-    const participantMap = new Map();
-    const disciplineMap = new Map();
-    
-    if (data.participants) {
-        data.participants.forEach(p => participantMap.set(p.id, p));
-    }
-    
-    if (data.disciplines) {
-        data.disciplines.forEach(d => disciplineMap.set(d.id, d));
-    }
-
-    eventList.innerHTML = '';
-    
-    // Display last 6 measurements as events
-    const recentMeasurements = measurements.slice(-6).reverse();
-    recentMeasurements.forEach(m => {
-        const participant = participantMap.get(m.participant_id);
-        const discipline = disciplineMap.get(m.discipline_id);
-        
-        if (!participant || !discipline) return;
-
-        const event = document.createElement('div');
-        event.className = 'live-event';
-        
-        const date = new Date(m.created_at);
-        const time = date.toLocaleTimeString('de-DE');
-        
-        event.innerHTML = `
-            <span class="live-event-time">${time}</span>
-            <span class="live-event-discipline">${discipline.name}</span>
-            <span class="live-event-class">${participant.class}</span>
-            <span class="live-event-participant">${participant.forename} ${participant.name}</span>
-            <span class="live-event-result">${m.value}${discipline.unit}</span>
-        `;
-        eventList.appendChild(event);
-    });
-}
-
-/**
- * Display top 5 participants by measurement count on the dashboard.
- * Shows rankings with CSS styling for top 3 placements.
- * @param {{id: number, participant_id: number, discipline_id: number, attempt_number: number, value: number, created_at: string}[]} measurements - Array of measurement objects
- * @param {{participants: {id: number, name: string, forename: string, class: string}[]}} data - Page data containing participants
- * @returns {void}
- */
-function displayDashboardResults(measurements, data) {
-    const resultsList = document.querySelector('#results-list');
-    if (!resultsList) return;
-
-    // Create lookup maps
-    const participantMap = new Map();
-    
-    if (data.participants) {
-        data.participants.forEach(p => participantMap.set(p.id, p));
-    }
-
-    resultsList.innerHTML = '';
-
-    // Group by participant and calculate totals
-    const byParticipant = new Map();
-    measurements.forEach(m => {
-        if (!byParticipant.has(m.participant_id)) {
-            byParticipant.set(m.participant_id, { count: 0, participant: participantMap.get(m.participant_id) });
-        }
-        byParticipant.get(m.participant_id).count++;
-    });
-
-    // Sort by count and display
-    const sorted = Array.from(byParticipant.entries())
-        .sort((a, b) => b[1].count - a[1].count)
-        .slice(0, 5);
-
-    sorted.forEach((entry, index) => {
-        const participant = entry[1].participant;
-        if (!participant) return;
-
-        const row = document.createElement('tr');
-        const cssClass = index < 3 ? 'results-first-places' : '';
-        row.innerHTML = `
-            <td class="${cssClass}">${index + 1}</td>
-            <td>${participant.name}, ${participant.forename}</td>
-            <td>${entry[1].count} Ergebnisse</td>
-        `;
-        resultsList.appendChild(row);
     });
 }
 
