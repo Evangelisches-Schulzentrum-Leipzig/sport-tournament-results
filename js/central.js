@@ -24,7 +24,14 @@ async function initPage() {
 
 async function initParticipantsPage() {
     // Load data
-    const data = await api.getData();
+    const data = await Promise.all([
+        api.getParticipants(),
+        api.getClasses()
+    ]).then(([participants, classes]) => ({ participants, classes }))
+      .catch(error => {
+          console.error('Error loading participants data:', error);
+          return null;
+      });
     
     if (!data) {
         console.error('Failed to load participants data');
@@ -32,13 +39,13 @@ async function initParticipantsPage() {
     }
 
     // Populate classes table if data available
-    if (data.classes && data.classes.length > 0) {
+    if (data.classes) {
         displayClasses(data.classes);
         populateClassFilterDropdown(data.classes);
     }
 
     // Populate participants table if data available
-    if (data.participants && data.participants.length > 0) {
+    if (data.participants) {
         displayParticipants(data.participants);
     }
 
@@ -88,8 +95,7 @@ function displayParticipants(participants) {
 }
 
 function populateClassFilterDropdown(classes) {
-    const subCons = document.querySelectorAll('#classes-participants-con .sub-con');
-    const filterSelect = subCons[1]?.querySelector('select');
+    const filterSelect = document.querySelector('#classes-participants-con .sub-con select[name="class-filter"]');
     if (!filterSelect) return;
 
     // Clear existing options except the first one
@@ -104,15 +110,28 @@ function populateClassFilterDropdown(classes) {
         option.textContent = cls.name;
         filterSelect.appendChild(option);
     });
+
+    const levelFilter = document.querySelector('#class-level-filter');
+    if (levelFilter) {
+        // Clear existing options except the first one
+        while (levelFilter.options.length > 1) {
+            levelFilter.remove(1);
+        }
+
+        // Get unique levels
+        const uniqueLevels = [...new Set(classes.map(c => c.level))].sort((a, b) => a - b);
+        uniqueLevels.forEach(level => {
+            const option = document.createElement('option');
+            option.value = level;
+            option.textContent = `${level}. Klasse`;
+            levelFilter.appendChild(option);
+        });
+    }
 }
 
 function setupParticipantsFilters(data) {
-    const subCons = document.querySelectorAll('#classes-participants-con .sub-con');
-    const participantsSubCon = subCons[1];
-    if (!participantsSubCon) return;
-
-    const classFilter = participantsSubCon.querySelector('select');
-    const searchInput = participantsSubCon.querySelector('input[type="text"]');
+    const classFilter = document.querySelector('#classes-participants-con .sub-con select[name="class-filter"]');
+    const searchInput = document.querySelector('#classes-participants-con .sub-con input[name="class-search"]');
 
     const filterParticipants = async () => {
         const filters = {};
@@ -144,7 +163,7 @@ async function initDisciplinesPage() {
     }
 
     // Display disciplines if data available
-    if (data.disciplines && data.disciplines.length > 0) {
+    if (data.disciplines) {
         displayDisciplines(data.disciplines);
         populateDisciplineFiltersDropdown(data.disciplines);
     }
