@@ -60,6 +60,9 @@ async function initParticipantsPage() {
 
     // Setup event listeners for filters
     setupParticipantsFilters(data);
+
+    // Setup event listeners for add buttons
+    setupParticipantsEventListeners(data);
 }
 
 /**
@@ -206,6 +209,9 @@ async function initDisciplinesPage() {
 
     // Setup filter listeners
     setupDisciplinesFilters(data);
+
+    // Setup event listeners for add buttons
+    setupDisciplinesEventListeners(data);
 }
 
 /**
@@ -296,6 +302,221 @@ function setupDisciplinesFilters(data) {
     };
 
     if (searchInput) searchInput.addEventListener('input', filterDisciplines);
+}
+
+/**
+ * Setup event listeners for add discipline and mark range buttons on disciplines page.
+ * Handles adding new disciplines and mark ranges to the database.
+ * @param {{disciplines: {id: number, name: string, unit: string, attempts: number, timer: boolean}[], classes: {name: string, level: number}[]}} data - Page data containing disciplines and classes
+ * @returns {void}
+ */
+function setupDisciplinesEventListeners(data) {
+    const addDisciplineBtn = document.querySelector('#add-discipline-btn');
+    const addTableBtn = document.querySelector('#add-table-btn');
+
+    // Populate mark range discipline dropdown
+    const disciplineSelect = document.querySelector('#new-table-discipline');
+    if (disciplineSelect && data.disciplines) {
+        while (disciplineSelect.options.length > 1) {
+            disciplineSelect.remove(1);
+        }
+        data.disciplines.forEach(disc => {
+            const option = document.createElement('option');
+            option.value = disc.id;
+            option.textContent = `${disc.name} (${disc.unit})`;
+            disciplineSelect.appendChild(option);
+        });
+    }
+
+    // Populate mark range class dropdown
+    const classSelect = document.querySelector('#new-table-class');
+    if (classSelect && data.classes) {
+        while (classSelect.options.length > 1) {
+            classSelect.remove(1);
+        }
+        data.classes.forEach(cls => {
+            const option = document.createElement('option');
+            option.value = cls.level;
+            option.textContent = `${cls.level}. Klasse`;
+            classSelect.appendChild(option);
+        });
+    }
+
+    if (addDisciplineBtn) {
+        addDisciplineBtn.addEventListener('click', () => handleAddDiscipline(data));
+    }
+
+    if (addTableBtn) {
+        addTableBtn.addEventListener('click', () => handleAddMarkRange(data));
+    }
+}
+
+/**
+ * Handle adding a new discipline to the database.
+ * Collects form data, validates it, creates the discipline via API, and refreshes the display.
+ * @async
+ * @param {{disciplines: {id: number, name: string, unit: string, attempts: number, timer: boolean}[], classes: {name: string, level: number}[]}} data - Page data containing disciplines and classes
+ * @returns {Promise<void>}
+ */
+async function handleAddDiscipline(data) {
+    const nameInput = document.querySelector('#new-discipline-name');
+    const unitSelect = document.querySelector('#new-discipline-unit');
+    const attemptsInput = document.querySelector('#new-discipline-attempts');
+    const timerCheckbox = document.querySelector('#new-discipline-timer');
+
+    if (!nameInput || !unitSelect || !attemptsInput || !timerCheckbox) {
+        console.error('Input fields not found');
+        return;
+    }
+
+    const disciplineName = nameInput.value.trim();
+    const unit = unitSelect.value;
+    const attempts = parseInt(attemptsInput.value);
+    const hasTimer = timerCheckbox.checked;
+
+    if (!disciplineName) {
+        alert('Bitte geben Sie einen Disziplinennamen ein');
+        return;
+    }
+
+    if (!unit) {
+        alert('Bitte wählen Sie eine Einheit aus');
+        return;
+    }
+
+    if (isNaN(attempts) || attempts < 1) {
+        alert('Bitte geben Sie eine gültige Anzahl von Versuchen ein');
+        return;
+    }
+
+    try {
+        const result = await api.createDiscipline({
+            name: disciplineName,
+            unit: unit,
+            attempts: attempts,
+            timer: hasTimer
+        });
+
+        if (result) {
+            // Clear input fields
+            nameInput.value = '';
+            unitSelect.value = '';
+            attemptsInput.value = '2';
+            timerCheckbox.checked = false;
+
+            // Refresh disciplines data
+            const updatedDisciplines = await api.getDisciplines();
+            if (updatedDisciplines) {
+                displayDisciplines(updatedDisciplines);
+                populateDisciplineFiltersDropdown(updatedDisciplines);
+                
+                // Update mark range discipline dropdown
+                const disciplineSelect = document.querySelector('#new-table-discipline');
+                if (disciplineSelect) {
+                    while (disciplineSelect.options.length > 1) {
+                        disciplineSelect.remove(1);
+                    }
+                    updatedDisciplines.forEach(disc => {
+                        const option = document.createElement('option');
+                        option.value = disc.id;
+                        option.textContent = `${disc.name} (${disc.unit})`;
+                        disciplineSelect.appendChild(option);
+                    });
+                }
+            }
+            
+            console.log('Disziplin erfolgreich hinzugefügt');
+        } else {
+            alert('Fehler beim Hinzufügen der Disziplin');
+        }
+    } catch (error) {
+        console.error('Error adding discipline:', error);
+        alert('Fehler beim Hinzufügen der Disziplin');
+    }
+}
+
+/**
+ * Handle adding a new mark range (Wertungstabelle) to the database.
+ * Collects form data, validates it, creates the mark range via API, and refreshes the display.
+ * @async
+ * @param {{disciplines: {id: number, name: string, unit: string, attempts: number, timer: boolean}[], classes: {name: string, level: number}[]}} data - Page data containing disciplines and classes
+ * @returns {Promise<void>}
+ */
+async function handleAddMarkRange(data) {
+    const disciplineSelect = document.querySelector('#new-table-discipline');
+    const classSelect = document.querySelector('#new-table-class');
+    const genderSelect = document.querySelector('#new-table-gender');
+    
+    // Get mark inputs for ranks 1-5
+    const markInputs = [1, 2, 3, 4, 5].map(i => document.querySelector(`#new-table-min-${i}`));
+
+    if (!disciplineSelect || !classSelect || !genderSelect || markInputs.some(input => !input)) {
+        console.error('Input fields not found');
+        return;
+    }
+
+    const selectedDiscipline = disciplineSelect.value;
+    const selectedClass = classSelect.value;
+    const gender = genderSelect.value;
+    const marks = markInputs.map(input => input.value.trim());
+
+    if (!selectedDiscipline) {
+        alert('Bitte wählen Sie eine Disziplin aus');
+        return;
+    }
+
+    if (!selectedClass) {
+        alert('Bitte wählen Sie eine Klassenstufe aus');
+        return;
+    }
+
+    if (!gender) {
+        alert('Bitte wählen Sie ein Geschlecht aus');
+        return;
+    }
+
+    // Validate that all mark fields have values
+    if (marks.some(mark => !mark)) {
+        alert('Bitte füllen Sie alle Noten aus');
+        return;
+    }
+
+    try {
+        let success = true;
+        for (let i = 0; i < marks.length; i++) {
+            if (isNaN(parseFloat(marks[i]))) {
+                alert(`Bitte geben Sie eine gültige Zahl für Note ${i + 1} ein`);
+                return;
+            }
+
+            var result = await api.createMarkRange({
+                discipline_id: parseInt(selectedDiscipline),
+                class_level: parseInt(selectedClass),
+                gender: gender,
+                mark: i + 1,
+                min_value: parseFloat(marks[i])
+            });
+            if (result === null) {
+                success = false;
+                break;
+            }
+        }
+
+        if (success) {
+            // Clear input fields
+            disciplineSelect.value = '';
+            classSelect.value = '';
+            genderSelect.value = '';
+            markInputs.forEach(input => input.value = '');
+
+            console.log('Wertungstabelle erfolgreich hinzugefügt');
+        } else {
+            alert('Fehler beim Hinzufügen der Wertungstabelle');
+        }
+    } catch (error) {
+        console.error('Error adding mark range:', error);
+        alert('Fehler beim Hinzufügen der Wertungstabelle');
+    }
 }
 
 /**
@@ -611,6 +832,184 @@ function setupDashboardFilters(data) {
     if (classFilter) classFilter.addEventListener('change', applyDashboardFilters);
     if (classLevelFilter) classLevelFilter.addEventListener('change', applyDashboardFilters);
     if (disciplineFilter) disciplineFilter.addEventListener('change', applyDashboardFilters);
+}
+
+/**
+ * Setup event listeners for add class and participant buttons on participants page.
+ * Handles adding new classes and participants to the database.
+ * @param {{participants: {id: number, name: string, forename: string, gender: string, class: string}[], classes: {name: string, level: number}[]}} data - Page data containing participants and classes
+ * @returns {void}
+ */
+function setupParticipantsEventListeners(data) {
+    const addClassBtn = document.querySelector('#add-class-btn');
+    const addParticipantBtn = document.querySelector('#add-participant-btn');
+
+    // Populate new-participant-class dropdown
+    const classSelect = document.querySelector('#new-participant-class');
+    if (classSelect && data.classes) {
+        while (classSelect.options.length > 1) {
+            classSelect.remove(1);
+        }
+        data.classes.forEach(cls => {
+            const option = document.createElement('option');
+            option.value = cls.name;
+            option.textContent = `Klasse ${cls.name}`;
+            classSelect.appendChild(option);
+        });
+    }
+
+    if (addClassBtn) {
+        addClassBtn.addEventListener('click', () => handleAddClass(data));
+    }
+
+    if (addParticipantBtn) {
+        addParticipantBtn.addEventListener('click', () => handleAddParticipant(data));
+    }
+}
+
+/**
+ * Handle adding a new class to the database.
+ * Collects form data, validates it, creates the class via API, and refreshes the display.
+ * @async
+ * @param {{participants: {id: number, name: string, forename: string, gender: string, class: string}[], classes: {name: string, level: number}[]}} data - Page data containing participants and classes
+ * @returns {Promise<void>}
+ */
+async function handleAddClass(data) {
+    const nameInput = document.querySelector('#new-class-name');
+    const levelInput = document.querySelector('#new-class-level');
+
+    if (!nameInput || !levelInput) {
+        console.error('Input fields not found');
+        return;
+    }
+
+    const className = nameInput.value.trim();
+    const classLevel = parseInt(levelInput.value);
+
+    if (!className) {
+        alert('Bitte geben Sie einen Klassennamen ein');
+        return;
+    }
+
+    if (isNaN(classLevel)) {
+        alert('Bitte geben Sie eine gültige Klassenstufe ein');
+        return;
+    }
+
+    try {
+        const result = await api.createClass({
+            name: className,
+            level: classLevel
+        });
+
+        if (result) {
+            // Clear input fields
+            nameInput.value = '';
+            levelInput.value = '';
+
+            // Refresh classes data
+            const updatedClasses = await api.getClasses();
+            if (updatedClasses) {
+                displayClasses(updatedClasses);
+                populateClassFilterDropdown(updatedClasses);
+                
+                // Update participant class dropdown
+                const classSelect = document.querySelector('#new-participant-class');
+                if (classSelect) {
+                    while (classSelect.options.length > 1) {
+                        classSelect.remove(1);
+                    }
+                    updatedClasses.forEach(cls => {
+                        const option = document.createElement('option');
+                        option.value = cls.name;
+                        option.textContent = `Klasse ${cls.name}`;
+                        classSelect.appendChild(option);
+                    });
+                }
+            }
+            
+            console.log('Klasse erfolgreich hinzugefügt');
+        } else {
+            alert('Fehler beim Hinzufügen der Klasse');
+        }
+    } catch (error) {
+        console.error('Error adding class:', error);
+        alert('Fehler beim Hinzufügen der Klasse');
+    }
+}
+
+/**
+ * Handle adding a new participant to the database.
+ * Collects form data, validates it, creates the participant via API, and refreshes the display.
+ * @async
+ * @param {{participants: {id: number, name: string, forename: string, gender: string, class: string}[], classes: {name: string, level: number}[]}} data - Page data containing participants and classes
+ * @returns {Promise<void>}
+ */
+async function handleAddParticipant(data) {
+    const firstNameInput = document.querySelector('#new-participant-first-name');
+    const lastNameInput = document.querySelector('#new-participant-last-name');
+    const genderSelect = document.querySelector('#new-participant-gender');
+    const classSelect = document.querySelector('#new-participant-class');
+
+    if (!firstNameInput || !lastNameInput || !genderSelect || !classSelect) {
+        console.error('Input fields not found');
+        return;
+    }
+
+    const firstName = firstNameInput.value.trim();
+    const lastName = lastNameInput.value.trim();
+    const gender = genderSelect.value;
+    const selectedClass = classSelect.value;
+
+    if (!firstName) {
+        alert('Bitte geben Sie einen Vornamen ein');
+        return;
+    }
+
+    if (!lastName) {
+        alert('Bitte geben Sie einen Nachnamen ein');
+        return;
+    }
+
+    if (!gender) {
+        alert('Bitte wählen Sie ein Geschlecht aus');
+        return;
+    }
+
+    if (!selectedClass) {
+        alert('Bitte wählen Sie eine Klasse aus');
+        return;
+    }
+
+    try {
+        const result = await api.createParticipant({
+            name: lastName,
+            forename: firstName,
+            gender: gender,
+            class: selectedClass
+        });
+
+        if (result) {
+            // Clear input fields
+            firstNameInput.value = '';
+            lastNameInput.value = '';
+            genderSelect.value = '';
+            classSelect.value = '';
+
+            // Refresh participants data
+            const updatedParticipants = await api.getParticipants();
+            if (updatedParticipants) {
+                displayParticipants(updatedParticipants);
+            }
+            
+            console.log('Teilnehmer erfolgreich hinzugefügt');
+        } else {
+            alert('Fehler beim Hinzufügen des Teilnehmers');
+        }
+    } catch (error) {
+        console.error('Error adding participant:', error);
+        alert('Fehler beim Hinzufügen des Teilnehmers');
+    }
 }
 
 // Initialize page when DOM is loaded
