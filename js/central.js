@@ -1,7 +1,10 @@
 import * as api from './central-api.js';
 
 /**
- * Initialize page based on current URL
+ * Initialize page based on current URL pathname.
+ * Determines which page to load and calls appropriate initialization function.
+ * @async
+ * @returns {Promise<void>}
  */
 async function initPage() {
     const pathname = window.location.pathname;
@@ -22,6 +25,12 @@ async function initPage() {
     }
 }
 
+/**
+ * Initialize the participants page by loading participants and classes data.
+ * Displays classes and participants tables and sets up filter event listeners.
+ * @async
+ * @returns {Promise<void>}
+ */
 async function initParticipantsPage() {
     // Load data
     const data = await Promise.all([
@@ -53,6 +62,11 @@ async function initParticipantsPage() {
     setupParticipantsFilters(data);
 }
 
+/**
+ * Display classes in a table with edit and delete buttons.
+ * @param {{name: string, level: number}[]} classes - Array of class objects to display
+ * @returns {void}
+ */
 function displayClasses(classes) {
     const classSection = document.querySelector('#classes-participants-con .sub-con');
     const tbody = classSection?.querySelector('tbody');
@@ -73,6 +87,11 @@ function displayClasses(classes) {
     });
 }
 
+/**
+ * Display participants in a table with edit and delete buttons.
+ * @param {{id: number, name: string, forename: string, class: string}[]} participants - Array of participant objects to display
+ * @returns {void}
+ */
 function displayParticipants(participants) {
     const subCons = document.querySelectorAll('#classes-participants-con .sub-con');
     const tbody = subCons[1]?.querySelector('tbody');
@@ -94,6 +113,11 @@ function displayParticipants(participants) {
     });
 }
 
+/**
+ * Populate class filter dropdowns with available classes and class levels.
+ * @param {{name: string, level: number}[]} classes - Array of class objects
+ * @returns {void}
+ */
 function populateClassFilterDropdown(classes) {
     const filterSelect = document.querySelector('#classes-participants-con .sub-con select[name="class-filter"]');
     if (!filterSelect) return;
@@ -129,6 +153,12 @@ function populateClassFilterDropdown(classes) {
     }
 }
 
+/**
+ * Setup event listeners for participant filter controls.
+ * Filters participants by class and search query when filters change.
+ * @param {{participants: {id: number, name: string, forename: string, class: string}[], classes: {name: string, level: number}[]}} data - Page data containing participants and classes
+ * @returns {void}
+ */
 function setupParticipantsFilters(data) {
     const classFilter = document.querySelector('#classes-participants-con .sub-con select[name="class-filter"]');
     const searchInput = document.querySelector('#classes-participants-con .sub-con input[name="class-search"]');
@@ -154,6 +184,12 @@ function setupParticipantsFilters(data) {
     if (searchInput) searchInput.addEventListener('input', filterParticipants);
 }
 
+/**
+ * Initialize the disciplines page by loading all data and displaying disciplines.
+ * Sets up filter event listeners for discipline search.
+ * @async
+ * @returns {Promise<void>}
+ */
 async function initDisciplinesPage() {
     const data = await api.getData();
     
@@ -172,6 +208,11 @@ async function initDisciplinesPage() {
     setupDisciplinesFilters(data);
 }
 
+/**
+ * Display disciplines in a table with edit and delete buttons.
+ * @param {{id: number, name: string, unit: string, attempts: number, timer: boolean}[]} disciplines - Array of discipline objects to display
+ * @returns {void}
+ */
 function displayDisciplines(disciplines) {
     const disciplinesSubCon = document.querySelector('#disciplines-con .sub-con');
     const tbody = disciplinesSubCon?.querySelector('tbody');
@@ -205,6 +246,11 @@ function displayDisciplines(disciplines) {
     });
 }
 
+/**
+ * Populate discipline filter dropdown with available disciplines.
+ * @param {{id: number, name: string, unit: string, attempts: number, timer: boolean}[]} disciplines - Array of discipline objects
+ * @returns {void}
+ */
 function populateDisciplineFiltersDropdown(disciplines) {
     const disciplinesSubCon = document.querySelector('#disciplines-con .sub-con');
     const filterSelect = disciplinesSubCon?.querySelector('select[name="discipline-filter"]');
@@ -224,6 +270,12 @@ function populateDisciplineFiltersDropdown(disciplines) {
     });
 }
 
+/**
+ * Setup event listeners for discipline filter controls.
+ * Filters disciplines by search query when input changes.
+ * @param {{disciplines: {id: number, name: string, unit: string, attempts: number, timer: boolean}[]}} data - Page data containing disciplines
+ * @returns {void}
+ */
 function setupDisciplinesFilters(data) {
     const subCon = document.querySelector('#disciplines-con .sub-con');
     if (!subCon) return;
@@ -246,6 +298,12 @@ function setupDisciplinesFilters(data) {
     if (searchInput) searchInput.addEventListener('input', filterDisciplines);
 }
 
+/**
+ * Initialize the results page by loading measurements and class data.
+ * Displays results table with discipline columns and sets up filter event listeners.
+ * @async
+ * @returns {Promise<void>}
+ */
 async function initResultsPage() {
     const data = await api.getData();
     
@@ -272,6 +330,11 @@ async function initResultsPage() {
     setupResultsFilters(data);
 }
 
+/**
+ * Populate discipline filter dropdown on the results page.
+ * @param {{id: number, name: string, unit: string, attempts: number, timer: boolean}[]} disciplines - Array of discipline objects
+ * @returns {void}
+ */
 function populateResultsDisciplineFilterDropdown(disciplines) {
     const filterSelect = document.querySelector('#results-table-con')?.parentElement?.querySelector('select[name="discipline"]');
     if (!filterSelect) return;
@@ -290,6 +353,11 @@ function populateResultsDisciplineFilterDropdown(disciplines) {
     });
 }
 
+/**
+ * Populate class filter dropdown on the results page with unique class names.
+ * @param {{name: string, level: number}[]} classes - Array of class objects
+ * @returns {void}
+ */
 function populateResultsClassFilterDropdown(classes) {
     const filterSelect = document.querySelector('.sub-con select[name="class"]');
     if (!filterSelect) return;
@@ -309,6 +377,12 @@ function populateResultsClassFilterDropdown(classes) {
     });
 }
 
+/**
+ * Display measurement results grouped by participant with total points calculation.
+ * @param {{id: number, participant_id: number, discipline_id: number, attempt_number: number, value: number, created_at: string}[]} measurements - Array of measurement objects
+ * @param {{participants: {id: number, name: string, forename: string, class: string}[], disciplines: {id: number, name: string, unit: string, attempts: number, timer: boolean}[]}} data - Page data containing participants and disciplines
+ * @returns {void}
+ */
 function displayResults(measurements, data) {
     // Create a map for quick lookups
     const participantMap = new Map();
@@ -367,6 +441,12 @@ function displayResults(measurements, data) {
     });
 }
 
+/**
+ * Setup event listeners for results page filter controls.
+ * Filters measurements by discipline and class when filters change.
+ * @param {{participants: {id: number, name: string, forename: string, class: string}[], disciplines: {id: number, name: string, unit: string, attempts: number, timer: boolean}[], measurements: {id: number, participant_id: number, discipline_id: number, attempt_number: number, value: number, created_at: string}[], classes: {name: string, level: number}[]}} data - Page data containing all tournament data
+ * @returns {void}
+ */
 function setupResultsFilters(data) {
     const subCon = document.querySelector('.sub-con');
     if (!subCon) return;
@@ -399,6 +479,12 @@ function setupResultsFilters(data) {
     if (refreshBtn) refreshBtn.addEventListener('click', applyFilters);
 }
 
+/**
+ * Initialize the dashboard page by loading all tournament data.
+ * Displays disciplines, live events, and results summary with filter controls.
+ * @async
+ * @returns {Promise<void>}
+ */
 async function initDashboardPage() {
     const data = await api.getData();
     
@@ -427,6 +513,13 @@ async function initDashboardPage() {
     setupDashboardFilters(data);
 }
 
+/**
+ * Display disciplines as tiles on the dashboard with progress information.
+ * Shows count of completed measurements vs total participants for each discipline.
+ * @param {{id: number, name: string, unit: string, attempts: number, timer: boolean}[]} disciplines - Array of discipline objects
+ * @param {{participants: {id: number, name: string, forename: string, class: string}[], measurements: {id: number, participant_id: number, discipline_id: number, attempt_number: number, value: number, created_at: string}[]}} data - Page data containing participants and measurements
+ * @returns {void}
+ */
 function displayDashboardDisciplines(disciplines, data) {
     const grid = document.querySelector('#discipline-grid');
     if (!grid) return;
@@ -450,6 +543,13 @@ function displayDashboardDisciplines(disciplines, data) {
     });
 }
 
+/**
+ * Display recent measurements as live events on the dashboard.
+ * Shows the 6 most recent measurements with participant, discipline, and result information.
+ * @param {{id: number, participant_id: number, discipline_id: number, attempt_number: number, value: number, created_at: string}[]} measurements - Array of measurement objects
+ * @param {{participants: {id: number, name: string, forename: string, class: string}[], disciplines: {id: number, name: string, unit: string, attempts: number, timer: boolean}[]}} data - Page data containing participants and disciplines
+ * @returns {void}
+ */
 function displayLiveEvents(measurements, data) {
     const eventList = document.querySelector('#live-event-list');
     if (!eventList) return;
@@ -493,6 +593,13 @@ function displayLiveEvents(measurements, data) {
     });
 }
 
+/**
+ * Display top 5 participants by measurement count on the dashboard.
+ * Shows rankings with CSS styling for top 3 placements.
+ * @param {{id: number, participant_id: number, discipline_id: number, attempt_number: number, value: number, created_at: string}[]} measurements - Array of measurement objects
+ * @param {{participants: {id: number, name: string, forename: string, class: string}[]}} data - Page data containing participants
+ * @returns {void}
+ */
 function displayDashboardResults(measurements, data) {
     const resultsList = document.querySelector('#results-list');
     if (!resultsList) return;
@@ -535,6 +642,11 @@ function displayDashboardResults(measurements, data) {
     });
 }
 
+/**
+ * Populate class filter dropdown on the dashboard with unique class names.
+ * @param {{name: string, level: number}[]} classes - Array of class objects
+ * @returns {void}
+ */
 function populateDashboardClassFilterDropdown(classes) {
     const filterSelect = document.querySelector('#results-class-filter');
     if (!filterSelect) return;
@@ -554,6 +666,12 @@ function populateDashboardClassFilterDropdown(classes) {
     });
 }
 
+/**
+ * Setup event listeners for dashboard filter controls.
+ * Filters measurements and disciplines by selected class when filter changes.
+ * @param {{participants: {id: number, name: string, forename: string, class: string}[], disciplines: {id: number, name: string, unit: string, attempts: number, timer: boolean}[], measurements: {id: number, participant_id: number, discipline_id: number, attempt_number: number, value: number, created_at: string}[], classes: {name: string, level: number}[]}} data - Page data containing all tournament data
+ * @returns {void}
+ */
 function setupDashboardFilters(data) {
     const classFilter = document.querySelector('#results-class-filter');
     const classLevelFilter = document.querySelector('#results-classlevel-filter');
