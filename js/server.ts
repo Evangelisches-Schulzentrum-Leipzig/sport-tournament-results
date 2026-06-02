@@ -2,6 +2,8 @@ import { createPool } from 'mariadb';
 import express from 'express';
 import cors from 'cors';
 import { config } from 'dotenv';
+import { createServer } from 'http';
+import { WebSocketServer } from 'ws';
 
 config();
 
@@ -16,6 +18,9 @@ const pool = createPool({
 
 const app = express()
 const port = process.env['API_PORT'] || 80;
+
+// Track all WebSocket connections
+const connections = new Set<any>();
 
 app.use(cors())
 app.use(express.json())
@@ -658,6 +663,67 @@ app.post('/sync', async (req, res) => {
     }
 })
 
-app.listen(port, () => {
+// Create HTTP server for WebSocket upgrade
+const server = createServer(app);
+
+// Create WebSocket server
+const wss = new WebSocketServer({ 
+  server,
+  path: '/ws'
+});
+
+// Handle WebSocket connections
+wss.on('connection', (ws) => {
+  console.log('New WebSocket client connected');
+  
+  // Add connection to the set
+  connections.add(ws);
+  
+  // Handle incoming messages
+  ws.on('message', (data) => {
+    console.log('Received message:', data.toString());
+    
+    // Broadcast to all connected clients
+    const message = {
+      type: 'message',
+      data: data.toString(),
+      timestamp: new Date().toISOString()
+    };
+    
+    broadcastToAll(JSON.stringify(message));
+  });
+  
+  // Handle connection close
+  ws.on('close', () => {
+    console.log('Client disconnected');
+    connections.delete(ws);
+  });
+  
+  // Handle errors
+  ws.on('error', (error) => {
+    console.error('WebSocket error:', error);
+  });
+  
+  // Send welcome message to new client
+  const welcomeMessage = {
+    type: 'connect',
+    message: 'Connected to WebSocket server',
+    connectedClients: connections.size,
+    timestamp: new Date().toISOString()
+  };
+  ws.send(JSON.stringify(welcomeMessage));
+});
+
+// Broadcast message to all connected clients
+function broadcastToAll(message: string) {
+  connections.forEach((client) => {
+    if (client.readyState === 1) { // OPEN state
+      client.send(message);
+    }
+  });
+}
+
+// Start the server
+server.listen(port, () => {
   console.log(`app listening on port ${port}`)
 })
