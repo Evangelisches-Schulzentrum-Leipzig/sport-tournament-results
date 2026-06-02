@@ -207,7 +207,7 @@ app.get('/participants', async (req, res) => {
         try {
             const searchParams = req.query;
 
-            let query = "SELECT id, name, forename, class_name AS class FROM participants WHERE 1=1";
+            let query = "SELECT id, name, forename, gender, class_name AS class FROM participants WHERE 1=1";
             const params: any[] = [];
             
             // Apply class filter
@@ -228,7 +228,7 @@ app.get('/participants', async (req, res) => {
             query += ";";
             
             const participantRows = await conn.query(query, params);
-            var participants = (Array.isArray(participantRows) ? (participantRows as {id: number, name: string, forename: string, class: string}[]) : []);
+            var participants = (Array.isArray(participantRows) ? (participantRows as {id: number, name: string, forename: string, gender: string, class: string}[]) : []);
             res.json(participants);
         } finally {
             conn.release();
@@ -243,11 +243,11 @@ app.post('/participants', async (req, res) => {
     try {
         const conn = await pool.getConnection();
         try {
-            const { name, forename, class: className } = req.body;
-            await conn.query("INSERT INTO participants (name, forename, class_name) VALUES (?, ?, ?);", [name, forename, className]);
+            const { name, forename, gender, class: className } = req.body;
+            await conn.query("INSERT INTO participants (name, forename, gender, class_name) VALUES (?, ?, ?, ?);", [name, forename, gender, className]);
 
-            const participantRows = await conn.query("SELECT id, name, forename, class_name AS class FROM participants;");
-            var participants = (Array.isArray(participantRows) ? (participantRows as {id: number, name: string, forename: string, class: string}[]) : []);
+            const participantRows = await conn.query("SELECT id, name, forename, gender, class_name AS class FROM participants;");
+            var participants = (Array.isArray(participantRows) ? (participantRows as {id: number, name: string, forename: string, gender: string, class: string}[]) : []);
             res.json(participants);
         } finally {
             conn.release();
@@ -263,10 +263,10 @@ app.patch('/participants/:id', async (req, res) => {
         const conn = await pool.getConnection();
         try {
             const { id } = req.params;
-            const { name, forename, class: className } = req.body;
-            await conn.query("UPDATE participants SET name = ?, forename = ?, class_name = ? WHERE id = ?;", [name, forename, className, id]);
-            const participantRows = await conn.query("SELECT id, name, forename, class_name AS class FROM participants;");
-            var participants = (Array.isArray(participantRows) ? (participantRows as {id: number, name: string, forename: string, class: string}[]) : []);
+            const { name, forename, gender, class: className } = req.body;
+            await conn.query("UPDATE participants SET name = ?, forename = ?, gender = ?, class_name = ? WHERE id = ?;", [name, forename, gender, className, id]);
+            const participantRows = await conn.query("SELECT id, name, forename, gender, class_name AS class FROM participants;");
+            var participants = (Array.isArray(participantRows) ? (participantRows as {id: number, name: string, forename: string, gender: string, class: string}[]) : []);
             res.json(participants);
         } finally {
             conn.release();
@@ -284,8 +284,8 @@ app.delete('/participants/:id', async (req, res) => {
             const { id } = req.params;
             await conn.query("DELETE FROM participants WHERE id = ?;", [id]);
 
-            const participantRows = await conn.query("SELECT id, name, forename, class_name AS class FROM participants;");
-            var participants = (Array.isArray(participantRows) ? (participantRows as {id: number, name: string, forename: string, class: string}[]) : []);
+            const participantRows = await conn.query("SELECT id, name, forename, gender, class_name AS class FROM participants;");
+            var participants = (Array.isArray(participantRows) ? (participantRows as {id: number, name: string, forename: string, gender: string, class: string}[]) : []);
             res.json(participants);
         } finally {
             conn.release();
@@ -393,7 +393,7 @@ app.get('/mark-ranges', async (req, res) => {
         const conn = await pool.getConnection();
         try {
             const searchParams = req.query;
-            let query = "SELECT discipline_id, mark, min_value FROM mark_ranges WHERE 1=1";
+            let query = "SELECT discipline_id, class_level, gender, mark, min_value FROM mark_ranges WHERE 1=1";
             const params: any[] = [];
             
             // Filter by discipline (support multiple disciplines)
@@ -403,7 +403,23 @@ app.get('/mark-ranges', async (req, res) => {
                 query += ` AND discipline_id IN (${placeholders})`;
                 params.push(...disciplineFilter);
             }
-            
+
+            // Filter by class level (support multiple class levels)
+            if (searchParams['class_level']) {
+                const classLevelFilter = Array.isArray(searchParams['class_level']) ? searchParams['class_level'] : [searchParams['class_level']];
+                const placeholders = classLevelFilter.map(() => '?').join(',');
+                query += ` AND class_level IN (${placeholders})`;
+                params.push(...classLevelFilter);
+            }
+
+            // Filter by gender (support multiple genders)
+            if (searchParams['gender']) {
+                const genderFilter = Array.isArray(searchParams['gender']) ? searchParams['gender'] : [searchParams['gender']];
+                const placeholders = genderFilter.map(() => '?').join(',');
+                query += ` AND gender IN (${placeholders})`;
+                params.push(...genderFilter);
+            }
+
             // Filter by mark (support multiple marks)
             if (searchParams['mark']) {
                 const markFilter = Array.isArray(searchParams['mark']) ? searchParams['mark'] : [searchParams['mark']];
@@ -414,7 +430,7 @@ app.get('/mark-ranges', async (req, res) => {
             
             query += ";";
             const markRangeRows = await conn.query(query, params);
-            var markRanges = (Array.isArray(markRangeRows) ? (markRangeRows as {discipline_id: number, mark: string, min_value: number}[]) : []);
+            var markRanges = (Array.isArray(markRangeRows) ? (markRangeRows as {discipline_id: number, class_level: number, gender: string, mark: string, min_value: number}[]) : []);
             res.json(markRanges);
         } finally {
             conn.release();
@@ -429,8 +445,8 @@ app.post('/mark-ranges', async (req, res) => {
     try {
         const conn = await pool.getConnection();
         try {
-            const { discipline_id, mark, min_value } = req.body;
-            await conn.query("INSERT INTO mark_ranges (discipline_id, mark, min_value) VALUES (?, ?, ?);", [discipline_id, mark, min_value]);
+            const { discipline_id, class_level, gender, mark, min_value } = req.body;
+            await conn.query("INSERT INTO mark_ranges (discipline_id, class_level, gender, mark, min_value) VALUES (?, ?, ?, ?, ?);", [discipline_id, class_level, gender, mark, min_value]);
             res.status(200).send();
         } finally {
             conn.release();
@@ -446,8 +462,8 @@ app.patch('/mark-ranges/:discipline_id/:mark', async (req, res) => {
         const conn = await pool.getConnection();
         try {            
             const { discipline_id, mark } = req.params;
-            const { min_value } = req.body;
-            await conn.query("UPDATE mark_ranges SET min_value = ? WHERE discipline_id = ? AND mark = ?;", [min_value, discipline_id, mark]);
+            const { class_level, gender, min_value } = req.body;
+            await conn.query("UPDATE mark_ranges SET class_level = ?, gender = ?, min_value = ? WHERE discipline_id = ? AND mark = ?;", [class_level, gender, min_value, discipline_id, mark]);
             res.status(200).send();
         } finally {
             conn.release();
