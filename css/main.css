@@ -140,7 +140,7 @@ div#data-input-con th:nth-child(3) {
 }
 div#data-input-con tr.has-timer th:nth-child(n+4):not(:last-child),
 div#data-input-con tr:not(.has-timer) th:nth-child(n+4) {
-    @apply w-[9999px];
+    @apply w-2500;
 }
 th button {
     @apply flex gap-x-1 items-center bg-primary text-text-primary rounded-sm px-2 py-1 text-base cursor-pointer;
@@ -215,6 +215,31 @@ div#nav-bar div#sync-state-con span#last-sync-event {
     @apply bg-primary text-text-primary rounded-sm px-2 py-1 text-base cursor-pointer w-fit flex items-center gap-x-1;
 }
 .sub-con .sub-con-header button:hover {
+    @apply bg-primary-hover;
+}
+.sub-con .sub-con-input-row {
+    @apply flex items-center gap-2 mb-2 w-full;
+}
+.sub-con .sub-con-input-row input,
+.sub-con .sub-con-input-row select {
+    @apply bg-surface-background border border-border rounded px-4 py-2 w-full;
+}
+.sub-con .sub-con-input-row select {
+    @apply pr-8;
+}
+.sub-con .sub-con-input-row > div:has(input[type="checkbox"]) {
+    @apply flex items-center gap-2 w-fit mx-2;
+}
+.sub-con .sub-con-input-row > div input[type="checkbox"] {
+    @apply w-5 h-5 rounded-xs bg-surface-background border border-border px-2 py-1;
+}
+.sub-con .sub-con-input-row > div:has(input[type="checkbox"]) label {
+    @apply text-nowrap;
+}
+.sub-con .sub-con-input-row button {
+    @apply bg-primary text-text-primary rounded-sm px-4 py-1 cursor-pointer w-full max-w-75;
+}
+.sub-con .sub-con-input-row button:hover {
     @apply bg-primary-hover;
 }
 .sub-con table:not(:first-child) {

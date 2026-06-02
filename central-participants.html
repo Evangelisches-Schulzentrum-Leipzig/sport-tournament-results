@@ -40,6 +40,11 @@
                     </div>
                     <button><span class="material-icons-round">add</span> Klasse hinzufügen</button>
                 </div>
+                <div class="sub-con-input-row">
+                    <input type="text" name="new-class-name" id="new-class-name" placeholder="Klassenname">
+                    <input type="number" name="new-class-level" id="new-class-level" placeholder="Klassenstufe">
+                    <button id="add-class-btn" class="material-icons-round">check</button>
+                </div>
                 <table>
                     <thead>
                         <tr>
@@ -74,6 +79,16 @@
                         <input type="text" name="class-search" id="class-search" placeholder="Teilnehmer suchen...">
                     </div>
                     <button><span class="material-icons-round">add</span> Teilnehmer hinzufügen</button>
+                </div>
+                <div class="sub-con-input-row">
+                    <input type="text" name="new-participant-first-name" id="new-participant-first-name" placeholder="Vorname">
+                    <input type="text" name="new-participant-last-name" id="new-participant-last-name" placeholder="Nachname">
+                    <select name="new-participant-class" id="new-participant-class">
+                        <option value="">Klasse auswählen</option>
+                        <option value="1a">Klasse 1a</option>
+                        <option value="2b">Klasse 2b</option>
+                    </select>
+                    <button id="add-participant-btn" class="material-icons-round">check</button>
                 </div>
                 <table>
                     <thead>

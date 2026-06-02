@@ -816,7 +816,7 @@ div#data-input-con th:first-child, div#data-input-con th:nth-child(2), div#data-
   white-space: nowrap;
 }
 div#data-input-con tr.has-timer th:nth-child(n+4):not(:last-child), div#data-input-con tr:not(.has-timer) th:nth-child(n+4) {
-  width: 9999px;
+  width: calc(var(--spacing) * 2500);
 }
 th button {
   display: flex;
@@ -1031,6 +1031,60 @@ div#nav-bar div#sync-state-con span#last-sync-event {
   color: var(--color-text-primary);
 }
 .sub-con .sub-con-header button:hover {
+  background-color: var(--color-primary-hover);
+}
+.sub-con .sub-con-input-row {
+  margin-bottom: calc(var(--spacing) * 2);
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: calc(var(--spacing) * 2);
+}
+.sub-con .sub-con-input-row input, .sub-con .sub-con-input-row select {
+  width: 100%;
+  border-radius: var(--radius);
+  border-style: var(--tw-border-style);
+  border-width: 1px;
+  border-color: var(--color-border);
+  background-color: var(--color-surface-background);
+  padding-inline: calc(var(--spacing) * 4);
+  padding-block: calc(var(--spacing) * 2);
+}
+.sub-con .sub-con-input-row select {
+  padding-right: calc(var(--spacing) * 8);
+}
+.sub-con .sub-con-input-row > div:has(input[type="checkbox"]) {
+  margin-inline: calc(var(--spacing) * 2);
+  display: flex;
+  width: fit-content;
+  align-items: center;
+  gap: calc(var(--spacing) * 2);
+}
+.sub-con .sub-con-input-row > div input[type="checkbox"] {
+  height: calc(var(--spacing) * 5);
+  width: calc(var(--spacing) * 5);
+  border-radius: var(--radius-xs);
+  border-style: var(--tw-border-style);
+  border-width: 1px;
+  border-color: var(--color-border);
+  background-color: var(--color-surface-background);
+  padding-inline: calc(var(--spacing) * 2);
+  padding-block: calc(var(--spacing) * 1);
+}
+.sub-con .sub-con-input-row > div:has(input[type="checkbox"]) label {
+  text-wrap: nowrap;
+}
+.sub-con .sub-con-input-row button {
+  width: 100%;
+  max-width: calc(var(--spacing) * 75);
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  background-color: var(--color-primary);
+  padding-inline: calc(var(--spacing) * 4);
+  padding-block: calc(var(--spacing) * 1);
+  color: var(--color-text-primary);
+}
+.sub-con .sub-con-input-row button:hover {
   background-color: var(--color-primary-hover);
 }
 .sub-con table:not(:first-child) {
