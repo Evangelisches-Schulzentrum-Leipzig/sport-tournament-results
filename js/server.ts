@@ -149,7 +149,7 @@ app.post('/classes', async (req, res) => {
         const conn = await pool.getConnection();
         try {
             const { name, level } = req.body;
-            await conn.query("INSERT INTO classes (name, level) VALUES (?, ?);", [name, level]);
+            await conn.query("INSERT INTO classes (name, level) VALUES (?, ?) ON DUPLICATE KEY UPDATE level = VALUES(level);", [name, level]);
 
             const classRows = await conn.query("SELECT name, level FROM classes;");
             var classes = (Array.isArray(classRows) ? (classRows as {name: string, level: number}[]) : []);
@@ -244,7 +244,7 @@ app.post('/participants', async (req, res) => {
         const conn = await pool.getConnection();
         try {
             const { name, forename, gender, class: className } = req.body;
-            await conn.query("INSERT INTO participants (name, forename, gender, class_name) VALUES (?, ?, ?, ?);", [name, forename, gender, className]);
+            await conn.query("INSERT INTO participants (name, forename, gender, class_name) VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE name = VALUES(name), forename = VALUES(forename), gender = VALUES(gender), class_name = VALUES(class_name);", [name, forename, gender, className]);
 
             const participantRows = await conn.query("SELECT id, name, forename, gender, class_name AS class FROM participants;");
             var participants = (Array.isArray(participantRows) ? (participantRows as {id: number, name: string, forename: string, gender: string, class: string}[]) : []);
@@ -336,7 +336,7 @@ app.post('/disciplines', async (req, res) => {
         const conn = await pool.getConnection();
         try {
             const { name, unit, attempts, timer } = req.body;
-            await conn.query("INSERT INTO disciplines (name, unit, attempts, timer) VALUES (?, ?, ?, ?);", [name, unit, attempts, timer]);
+            await conn.query("INSERT INTO disciplines (name, unit, attempts, timer) VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE unit = VALUES(unit), attempts = VALUES(attempts), timer = VALUES(timer);", [name, unit, attempts, timer]);
 
             const disciplineRows = await conn.query("SELECT id, name, unit, attempts, timer FROM disciplines;");
             var disciplines = (Array.isArray(disciplineRows) ? (disciplineRows as {id: number, name: string, unit: string, attempts: number, timer: boolean}[]) : []);
@@ -446,7 +446,7 @@ app.post('/mark-ranges', async (req, res) => {
         const conn = await pool.getConnection();
         try {
             const { discipline_id, class_level, gender, mark, min_value } = req.body;
-            await conn.query("INSERT INTO `mark-ranges` (discipline_id, class_level, gender, mark, min_value) VALUES (?, ?, ?, ?, ?);", [discipline_id, class_level, gender, mark, min_value]);
+            await conn.query("INSERT INTO `mark-ranges` (discipline_id, class_level, gender, mark, min_value) VALUES (?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE min_value = VALUES(min_value);", [discipline_id, class_level, gender, mark, min_value]);
             res.status(200).send();
         } finally {
             conn.release();
@@ -495,7 +495,7 @@ app.delete('/mark-ranges/:discipline_id/:mark', async (req, res) => {
         const conn = await pool.getConnection();
         try {
             const { discipline_id, mark } = req.params;
-            await conn.query("DELETE FROM mark_ranges WHERE discipline_id = ? AND mark = ?;", [discipline_id, mark]);
+            await conn.query("DELETE FROM `mark-ranges` WHERE discipline_id = ? AND mark = ?;", [discipline_id, mark]);
             res.status(200).send();
         } finally {
             conn.release();
