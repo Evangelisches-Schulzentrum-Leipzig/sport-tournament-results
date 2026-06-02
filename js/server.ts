@@ -393,7 +393,7 @@ app.get('/mark-ranges', async (req, res) => {
         const conn = await pool.getConnection();
         try {
             const searchParams = req.query;
-            let query = "SELECT discipline_id, class_level, gender, mark, min_value FROM mark_ranges WHERE 1=1";
+            let query = "SELECT discipline_id, class_level, gender, mark, min_value FROM `mark-ranges` WHERE 1=1";
             const params: any[] = [];
             
             // Filter by discipline (support multiple disciplines)
@@ -446,7 +446,7 @@ app.post('/mark-ranges', async (req, res) => {
         const conn = await pool.getConnection();
         try {
             const { discipline_id, class_level, gender, mark, min_value } = req.body;
-            await conn.query("INSERT INTO mark_ranges (discipline_id, class_level, gender, mark, min_value) VALUES (?, ?, ?, ?, ?);", [discipline_id, class_level, gender, mark, min_value]);
+            await conn.query("INSERT INTO `mark-ranges` (discipline_id, class_level, gender, mark, min_value) VALUES (?, ?, ?, ?, ?);", [discipline_id, class_level, gender, mark, min_value]);
             res.status(200).send();
         } finally {
             conn.release();
@@ -463,7 +463,7 @@ app.patch('/mark-ranges/:discipline_id/:mark', async (req, res) => {
         try {            
             const { discipline_id, mark } = req.params;
             const { class_level, gender, min_value } = req.body;
-            await conn.query("UPDATE mark_ranges SET class_level = ?, gender = ?, min_value = ? WHERE discipline_id = ? AND mark = ?;", [class_level, gender, min_value, discipline_id, mark]);
+            await conn.query("UPDATE `mark-ranges` SET class_level = ?, gender = ?, min_value = ? WHERE discipline_id = ? AND mark = ?;", [class_level, gender, min_value, discipline_id, mark]);
             res.status(200).send();
         } finally {
             conn.release();
@@ -479,7 +479,7 @@ app.delete('/mark-ranges/:discipline_id', async (req, res) => {
         const conn = await pool.getConnection();
         try {
             const { discipline_id } = req.params;
-            await conn.query("DELETE FROM mark_ranges WHERE discipline_id = ?;", [discipline_id]);
+            await conn.query("DELETE FROM `mark-ranges` WHERE discipline_id = ?;", [discipline_id]);
             res.status(200).send();
         } finally {
             conn.release();
