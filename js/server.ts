@@ -28,16 +28,65 @@ app.get('/data', async (req, res) => {
     try {
         const conn = await pool.getConnection();
         try {
-            const classRows = await conn.query("SELECT name, level FROM classes;");
+            const searchParams = req.query;
+            
+            // Classes query with optional search
+            let classQuery = "SELECT name, level FROM classes WHERE 1=1";
+            const classParams: any[] = [];
+            if (searchParams['classQ']) {
+                classQuery += ` AND name LIKE ?`;
+                classParams.push(`%${searchParams['classQ']}%`);
+            }
+            classQuery += ";";
+            const classRows = await conn.query(classQuery, classParams);
             var classes = (Array.isArray(classRows) ? (classRows as {name: string, level: number}[]) : []);
 
-            const disciplineRows = await conn.query("SELECT id, name, unit, attempts, timer FROM disciplines;");
+            // Disciplines query with optional search
+            let disciplineQuery = "SELECT id, name, unit, attempts, timer FROM disciplines WHERE 1=1";
+            const disciplineParams: any[] = [];
+            if (searchParams['disciplineQ']) {
+                disciplineQuery += ` AND name LIKE ?`;
+                disciplineParams.push(`%${searchParams['disciplineQ']}%`);
+            }
+            disciplineQuery += ";";
+            const disciplineRows = await conn.query(disciplineQuery, disciplineParams);
             var disciplines = (Array.isArray(disciplineRows) ? (disciplineRows as {id: number, name: string, unit: string, attempts: number, timer: boolean}[]) : []);
 
-            const participantRows = await conn.query("SELECT id, name, forename, class_name AS class FROM participants;");
+            // Participants query with filters
+            let participantQuery = "SELECT id, name, forename, class_name AS class FROM participants WHERE 1=1";
+            const participantParams: any[] = [];
+            if (searchParams['class']) {
+                const classFilter = Array.isArray(searchParams['class']) ? searchParams['class'] : [searchParams['class']];
+                const placeholders = classFilter.map(() => '?').join(',');
+                participantQuery += ` AND class_name IN (${placeholders})`;
+                participantParams.push(...classFilter);
+            }
+            if (searchParams['q']) {
+                participantQuery += ` AND (name LIKE ? OR forename LIKE ?)`;
+                const searchTerm = `%${searchParams['q']}%`;
+                participantParams.push(searchTerm, searchTerm);
+            }
+            participantQuery += ";";
+            const participantRows = await conn.query(participantQuery, participantParams);
             var participants = (Array.isArray(participantRows) ? (participantRows as {id: number, name: string, forename: string, class: string}[]) : []);
 
-            const measurementRows = await conn.query("SELECT id, participant_id, discipline_id, attempt_number, value, created_at FROM measurements GROUP BY participant_id, discipline_id, attempt_number, value;");
+            // Measurements query with optional filters
+            let measurementQuery = "SELECT id, participant_id, discipline_id, attempt_number, value, created_at FROM measurements WHERE 1=1";
+            const measurementParams: any[] = [];
+            if (searchParams['participant_id']) {
+                const participantFilter = Array.isArray(searchParams['participant_id']) ? searchParams['participant_id'] : [searchParams['participant_id']];
+                const placeholders = participantFilter.map(() => '?').join(',');
+                measurementQuery += ` AND participant_id IN (${placeholders})`;
+                measurementParams.push(...participantFilter);
+            }
+            if (searchParams['discipline_id']) {
+                const disciplineFilter = Array.isArray(searchParams['discipline_id']) ? searchParams['discipline_id'] : [searchParams['discipline_id']];
+                const placeholders = disciplineFilter.map(() => '?').join(',');
+                measurementQuery += ` AND discipline_id IN (${placeholders})`;
+                measurementParams.push(...disciplineFilter);
+            }
+            measurementQuery += ` GROUP BY participant_id, discipline_id, attempt_number, value;`;
+            const measurementRows = await conn.query(measurementQuery, measurementParams);
             var measurements = (Array.isArray(measurementRows) ? (measurementRows as {id: number, participant_id: number, discipline_id: number, attempt_number: number, value: number, created_at: string}[]) : []);
 
             res.json({
@@ -59,7 +108,26 @@ app.get('/classes', async (req, res) => {
     try {
         const conn = await pool.getConnection();
         try {
-            const classRows = await conn.query("SELECT name, level FROM classes;");
+            const searchParams = req.query;
+            let query = "SELECT name, level FROM classes WHERE 1=1";
+            const params: any[] = [];
+            
+            // Search by class name
+            if (searchParams['q']) {
+                query += ` AND name LIKE ?`;
+                params.push(`%${searchParams['q']}%`);
+            }
+            
+            // Filter by level (support multiple levels)
+            if (searchParams['level']) {
+                const levelFilter = Array.isArray(searchParams['level']) ? searchParams['level'] : [searchParams['level']];
+                const placeholders = levelFilter.map(() => '?').join(',');
+                query += ` AND level IN (${placeholders})`;
+                params.push(...levelFilter);
+            }
+            
+            query += ";";
+            const classRows = await conn.query(query, params);
             var classes = (Array.isArray(classRows) ? (classRows as {name: string, level: number}[]) : []);
             res.json(classes);
         } finally {
@@ -78,6 +146,25 @@ app.post('/classes', async (req, res) => {
             const { name, level } = req.body;
             await conn.query("INSERT INTO classes (name, level) VALUES (?, ?);", [name, level]);
 
+            const classRows = await conn.query("SELECT name, level FROM classes;");
+            var classes = (Array.isArray(classRows) ? (classRows as {name: string, level: number}[]) : []);
+            res.json(classes);
+        } finally {
+            conn.release();
+        }
+    } catch (error) {
+        console.error((error as Error).message);
+        res.status(500).json({ error: 'Internal Server Error' });
+    }
+});
+
+app.patch('/classes/:name', async (req, res) => {
+    try {
+        const conn = await pool.getConnection();
+        try {
+            const { name } = req.params;
+            const { level } = req.body;
+            await conn.query("UPDATE classes SET level = ? WHERE name = ?;", [level, name]);
             const classRows = await conn.query("SELECT name, level FROM classes;");
             var classes = (Array.isArray(classRows) ? (classRows as {name: string, level: number}[]) : []);
             res.json(classes);
@@ -113,7 +200,29 @@ app.get('/participants', async (req, res) => {
     try {
         const conn = await pool.getConnection();
         try {
-            const participantRows = await conn.query("SELECT id, name, forename, class_name AS class FROM participants;");
+            const searchParams = req.query;
+
+            let query = "SELECT id, name, forename, class_name AS class FROM participants WHERE 1=1";
+            const params: any[] = [];
+            
+            // Apply class filter
+            if (searchParams['class']) {
+                const classFilter = Array.isArray(searchParams['class']) ? searchParams['class'] : [searchParams['class']];
+                const placeholders = classFilter.map(() => '?').join(',');
+                query += ` AND class_name IN (${placeholders})`;
+                params.push(...classFilter);
+            }
+            
+            // Apply search filter
+            if (searchParams['q']) {
+                query += ` AND (name LIKE ? OR forename LIKE ?)`;
+                const searchTerm = `%${searchParams['q']}%`;
+                params.push(searchTerm, searchTerm);
+            }
+            
+            query += ";";
+            
+            const participantRows = await conn.query(query, params);
             var participants = (Array.isArray(participantRows) ? (participantRows as {id: number, name: string, forename: string, class: string}[]) : []);
             res.json(participants);
         } finally {
@@ -132,6 +241,25 @@ app.post('/participants', async (req, res) => {
             const { name, forename, class: className } = req.body;
             await conn.query("INSERT INTO participants (name, forename, class_name) VALUES (?, ?, ?);", [name, forename, className]);
 
+            const participantRows = await conn.query("SELECT id, name, forename, class_name AS class FROM participants;");
+            var participants = (Array.isArray(participantRows) ? (participantRows as {id: number, name: string, forename: string, class: string}[]) : []);
+            res.json(participants);
+        } finally {
+            conn.release();
+        }
+    } catch (error) {
+        console.error((error as Error).message);
+        res.status(500).json({ error: 'Internal Server Error' });
+    }
+});
+
+app.patch('/participants/:id', async (req, res) => {
+    try {
+        const conn = await pool.getConnection();
+        try {
+            const { id } = req.params;
+            const { name, forename, class: className } = req.body;
+            await conn.query("UPDATE participants SET name = ?, forename = ?, class_name = ? WHERE id = ?;", [name, forename, className, id]);
             const participantRows = await conn.query("SELECT id, name, forename, class_name AS class FROM participants;");
             var participants = (Array.isArray(participantRows) ? (participantRows as {id: number, name: string, forename: string, class: string}[]) : []);
             res.json(participants);
@@ -167,7 +295,26 @@ app.get('/disciplines', async (req, res) => {
     try {
         const conn = await pool.getConnection();
         try {
-            const disciplineRows = await conn.query("SELECT id, name, unit, attempts, timer FROM disciplines;");
+            const searchParams = req.query;
+            let query = "SELECT id, name, unit, attempts, timer FROM disciplines WHERE 1=1";
+            const params: any[] = [];
+            
+            // Search by discipline name
+            if (searchParams['q']) {
+                query += ` AND name LIKE ?`;
+                params.push(`%${searchParams['q']}%`);
+            }
+            
+            // Filter by unit (support multiple units)
+            if (searchParams['unit']) {
+                const unitFilter = Array.isArray(searchParams['unit']) ? searchParams['unit'] : [searchParams['unit']];
+                const placeholders = unitFilter.map(() => '?').join(',');
+                query += ` AND unit IN (${placeholders})`;
+                params.push(...unitFilter);
+            }
+            
+            query += ";";
+            const disciplineRows = await conn.query(query, params);
             var disciplines = (Array.isArray(disciplineRows) ? (disciplineRows as {id: number, name: string, unit: string, attempts: number, timer: boolean}[]) : []);
             res.json(disciplines);
         } finally {
@@ -186,6 +333,25 @@ app.post('/disciplines', async (req, res) => {
             const { name, unit, attempts, timer } = req.body;
             await conn.query("INSERT INTO disciplines (name, unit, attempts, timer) VALUES (?, ?, ?, ?);", [name, unit, attempts, timer]);
 
+            const disciplineRows = await conn.query("SELECT id, name, unit, attempts, timer FROM disciplines;");
+            var disciplines = (Array.isArray(disciplineRows) ? (disciplineRows as {id: number, name: string, unit: string, attempts: number, timer: boolean}[]) : []);
+            res.json(disciplines);
+        } finally {
+            conn.release();
+        }
+    } catch (error) {
+        console.error((error as Error).message);
+        res.status(500).json({ error: 'Internal Server Error' });
+    }
+});
+
+app.patch('/disciplines/:id', async (req, res) => {
+    try {
+        const conn = await pool.getConnection();
+        try {
+            const { id } = req.params;
+            const { name, unit, attempts, timer } = req.body;
+            await conn.query("UPDATE disciplines SET name = ?, unit = ?, attempts = ?, timer = ? WHERE id = ?;", [name, unit, attempts, timer, id]);
             const disciplineRows = await conn.query("SELECT id, name, unit, attempts, timer FROM disciplines;");
             var disciplines = (Array.isArray(disciplineRows) ? (disciplineRows as {id: number, name: string, unit: string, attempts: number, timer: boolean}[]) : []);
             res.json(disciplines);
@@ -217,11 +383,142 @@ app.delete('/disciplines/:id', async (req, res) => {
     }
 });
 
+app.get('/mark-ranges', async (req, res) => {
+    try {
+        const conn = await pool.getConnection();
+        try {
+            const searchParams = req.query;
+            let query = "SELECT discipline_id, mark, min_value, max_value FROM mark_ranges WHERE 1=1";
+            const params: any[] = [];
+            
+            // Filter by discipline (support multiple disciplines)
+            if (searchParams['discipline_id']) {
+                const disciplineFilter = Array.isArray(searchParams['discipline_id']) ? searchParams['discipline_id'] : [searchParams['discipline_id']];
+                const placeholders = disciplineFilter.map(() => '?').join(',');
+                query += ` AND discipline_id IN (${placeholders})`;
+                params.push(...disciplineFilter);
+            }
+            
+            // Filter by mark (support multiple marks)
+            if (searchParams['mark']) {
+                const markFilter = Array.isArray(searchParams['mark']) ? searchParams['mark'] : [searchParams['mark']];
+                const placeholders = markFilter.map(() => '?').join(',');
+                query += ` AND mark IN (${placeholders})`;
+                params.push(...markFilter);
+            }
+            
+            query += ";";
+            const markRangeRows = await conn.query(query, params);
+            var markRanges = (Array.isArray(markRangeRows) ? (markRangeRows as {discipline_id: number, mark: string, min_value: number, max_value: number}[]) : []);
+            res.json(markRanges);
+        } finally {
+            conn.release();
+        }
+    } catch (error) {
+        console.error((error as Error).message);
+        res.status(500).json({ error: 'Internal Server Error' });
+    }
+});
+
+app.post('/mark-ranges', async (req, res) => {
+    try {
+        const conn = await pool.getConnection();
+        try {
+            const { discipline_id, mark, min_value, max_value } = req.body;
+            await conn.query("INSERT INTO mark_ranges (discipline_id, mark, min_value, max_value) VALUES (?, ?, ?, ?);", [discipline_id, mark, min_value, max_value]);
+            res.status(200).send();
+        } finally {
+            conn.release();
+        }
+    } catch (error) {
+        console.error((error as Error).message);
+        res.status(500).json({ error: 'Internal Server Error' });
+    }
+});
+
+app.patch('/mark-ranges/:discipline_id/:mark', async (req, res) => {
+    try {
+        const conn = await pool.getConnection();
+        try {            
+            const { discipline_id, mark } = req.params;
+            const { min_value, max_value } = req.body;
+            await conn.query("UPDATE mark_ranges SET min_value = ?, max_value = ? WHERE discipline_id = ? AND mark = ?;", [min_value, max_value, discipline_id, mark]);
+            res.status(200).send();
+        } finally {
+            conn.release();
+        }
+    } catch (error) {
+        console.error((error as Error).message);
+        res.status(500).json({ error: 'Internal Server Error' });
+    }
+});
+
+app.delete('/mark-ranges/:discipline_id', async (req, res) => {
+    try {
+        const conn = await pool.getConnection();
+        try {
+            const { discipline_id } = req.params;
+            await conn.query("DELETE FROM mark_ranges WHERE discipline_id = ?;", [discipline_id]);
+            res.status(200).send();
+        } finally {
+            conn.release();
+        }
+    } catch (error) {
+        console.error((error as Error).message);
+        res.status(500).json({ error: 'Internal Server Error' });
+    }
+});
+
+app.delete('/mark-ranges/:discipline_id/:mark', async (req, res) => {
+    try {
+        const conn = await pool.getConnection();
+        try {
+            const { discipline_id, mark } = req.params;
+            await conn.query("DELETE FROM mark_ranges WHERE discipline_id = ? AND mark = ?;", [discipline_id, mark]);
+            res.status(200).send();
+        } finally {
+            conn.release();
+        }
+    } catch (error) {
+        console.error((error as Error).message);
+        res.status(500).json({ error: 'Internal Server Error' });
+    }
+});
+
 app.get('/measurements', async (req, res) => {
     try {
         const conn = await pool.getConnection();
         try {
-            const measurementRows = await conn.query("SELECT id, participant_id, discipline_id, attempt_number, value, created_at FROM measurements GROUP BY participant_id, discipline_id, attempt_number, value;");
+            const searchParams = req.query;
+            let query = "SELECT id, participant_id, discipline_id, attempt_number, value, created_at FROM measurements WHERE 1=1";
+            const params: any[] = [];
+            
+            // Filter by participant (support multiple participants)
+            if (searchParams['participant_id']) {
+                const participantFilter = Array.isArray(searchParams['participant_id']) ? searchParams['participant_id'] : [searchParams['participant_id']];
+                const placeholders = participantFilter.map(() => '?').join(',');
+                query += ` AND participant_id IN (${placeholders})`;
+                params.push(...participantFilter);
+            }
+            
+            // Filter by discipline (support multiple disciplines)
+            if (searchParams['discipline_id']) {
+                const disciplineFilter = Array.isArray(searchParams['discipline_id']) ? searchParams['discipline_id'] : [searchParams['discipline_id']];
+                const placeholders = disciplineFilter.map(() => '?').join(',');
+                query += ` AND discipline_id IN (${placeholders})`;
+                params.push(...disciplineFilter);
+            }
+            
+            // Filter by attempt number (support multiple attempts)
+            if (searchParams['attempt_number']) {
+                const attemptFilter = Array.isArray(searchParams['attempt_number']) ? searchParams['attempt_number'] : [searchParams['attempt_number']];
+                const placeholders = attemptFilter.map(() => '?').join(',');
+                query += ` AND attempt_number IN (${placeholders})`;
+                params.push(...attemptFilter);
+            }
+            
+            query += ` GROUP BY participant_id, discipline_id, attempt_number, value;`;
+            const measurementRows = await conn.query(query, params);
             var measurements = (Array.isArray(measurementRows) ? (measurementRows as {id: number, participant_id: number, discipline_id: number, attempt_number: number, value: number, created_at: string}[]) : []);
             res.json(measurements);
         } finally {
@@ -270,6 +567,43 @@ app.delete('/measurements/:id', async (req, res) => {
             const { id } = req.params;
             await conn.query("DELETE FROM measurements WHERE id = ?;", [id]);
             res.status(200).send();
+        } finally {
+            conn.release();
+        }
+    } catch (error) {
+        console.error((error as Error).message);
+        res.status(500).json({ error: 'Internal Server Error' });
+    }
+});
+
+app.get('/measeurements/conflicts', async (req, res) => {
+    try {
+        const conn = await pool.getConnection();
+        try {
+            const searchParams = req.query;
+            let query = "SELECT id, participant_id, discipline_id, attempt_number, value, created_at FROM measurements WHERE 1=1";
+            const params: any[] = [];
+            
+            // Filter by participant (support multiple participants)
+            if (searchParams['participant_id']) {
+                const participantFilter = Array.isArray(searchParams['participant_id']) ? searchParams['participant_id'] : [searchParams['participant_id']];
+                const placeholders = participantFilter.map(() => '?').join(',');
+                query += ` AND participant_id IN (${placeholders})`;
+                params.push(...participantFilter);
+            }
+            
+            // Filter by discipline (support multiple disciplines)
+            if (searchParams['discipline_id']) {
+                const disciplineFilter = Array.isArray(searchParams['discipline_id']) ? searchParams['discipline_id'] : [searchParams['discipline_id']];
+                const placeholders = disciplineFilter.map(() => '?').join(',');
+                query += ` AND discipline_id IN (${placeholders})`;
+                params.push(...disciplineFilter);
+            }
+            
+            query += ` GROUP BY participant_id, discipline_id, attempt_number HAVING COUNT(*) > 1;`;
+            const measurementRows = await conn.query(query, params);
+            var measurements = (Array.isArray(measurementRows) ? (measurementRows as {id: number, participant_id: number, discipline_id: number, attempt_number: number, value: number, created_at: string}[]) : []);
+            res.json(measurements);
         } finally {
             conn.release();
         }
