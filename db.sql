@@ -11,12 +11,13 @@ CREATE TABLE IF NOT EXISTS `participants` (
     `forename` varchar(255) NOT NULL,
     `gender` enum('male', 'female') NOT NULL,
     `class_name` varchar(255) NOT NULL,
-    FOREIGN KEY (`class_name`) REFERENCES `classes`(`name`) ON DELETE CASCADE
+    FOREIGN KEY (`class_name`) REFERENCES `classes`(`name`) ON DELETE CASCADE,
+    UNIQUE KEY `unique_participant` (`name`, `forename`, `gender`, `class_name`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS `disciplines` (
     `id` int(11) NOT NULL PRIMARY KEY AUTO_INCREMENT,
-    `name` varchar(255) NOT NULL,
+    `name` varchar(255) NOT NULL UNIQUE,
     `unit` varchar(255) NOT NULL,
     `attempts` int(11) NOT NULL DEFAULT 2,
     `timer` tinyint(1) NOT NULL DEFAULT 0
@@ -40,5 +41,6 @@ CREATE TABLE IF NOT EXISTS `mark-ranges` (
     `gender` enum('male', 'female') NOT NULL,
     `min_value` float NOT NULL,
     `mark` int(11) NOT NULL,
-    FOREIGN KEY (`discipline_id`) REFERENCES `disciplines`(`id`) ON DELETE CASCADE
+    FOREIGN KEY (`discipline_id`) REFERENCES `disciplines`(`id`) ON DELETE CASCADE,
+    UNIQUE KEY `unique_mark` (`discipline_id`, `class_level`, `gender`, `mark`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
