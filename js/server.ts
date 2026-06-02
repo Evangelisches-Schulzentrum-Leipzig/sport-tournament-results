@@ -94,11 +94,17 @@ app.get('/data', async (req, res) => {
             const measurementRows = await conn.query(measurementQuery, measurementParams);
             var measurements = (Array.isArray(measurementRows) ? (measurementRows as {id: number, participant_id: number, discipline_id: number, attempt_number: number, value: number, created_at: string}[]) : []);
 
+            // Mark ranges query
+            const markRangeQuery = "SELECT discipline_id, class_level, gender, mark, min_value FROM `mark-ranges` ORDER BY discipline_id, class_level, gender, mark;";
+            const markRangeRows = await conn.query(markRangeQuery);
+            var markRanges = (Array.isArray(markRangeRows) ? (markRangeRows as {discipline_id: number, class_level: number, gender: string, mark: number, min_value: number}[]) : []);
+
             res.json({
                 classes: classes,
                 disciplines: disciplines,
                 participants: participants,
-                measurements: measurements
+                measurements: measurements,
+                markRanges: markRanges
             });
         } finally {
             conn.release();
