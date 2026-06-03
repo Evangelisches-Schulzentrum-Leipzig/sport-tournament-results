@@ -5,7 +5,7 @@ import { config } from 'dotenv';
 import { createServer } from 'http';
 import { WebSocketServer } from 'ws';
 
-config();
+config({ quiet: true });
 
 const pool = createPool({
     host: process.env['DB_HOST'] ?? '',
