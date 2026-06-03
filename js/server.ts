@@ -3,7 +3,7 @@ import express from 'express';
 import cors from 'cors';
 import { config } from 'dotenv';
 import { createServer } from 'http';
-import { WebSocketServer } from 'ws';
+import WebSocket, { WebSocketServer } from 'ws';
 
 config({ quiet: true });
 
@@ -19,15 +19,32 @@ const pool = createPool({
 const app = express()
 const port = process.env['API_PORT'] || 80;
 
-// Track all WebSocket connections
-const connections = new Set<any>();
-
 app.use(cors())
 app.use(express.json())
 
 app.get('/status', (req, res) => {
     res.json({ status: 'ok' });
 });
+
+async function getCurrentData() {
+    const conn = await pool.getConnection();
+    try {
+        const classRows = await conn.query("SELECT name, level FROM classes;");
+        const disciplineRows = await conn.query("SELECT id, name, unit, attempts, timer FROM disciplines;");
+        const participantRows = await conn.query("SELECT id, name, forename, gender, class_name AS class FROM participants;");
+        const measurementRows = await conn.query("SELECT id, participant_id, discipline_id, attempt_number, value, created_at FROM measurements;");
+        const markRangeRows = await conn.query("SELECT discipline_id, class_level, gender, mark, min_value FROM `mark-ranges` ORDER BY discipline_id, class_level, gender, mark;");
+        return {
+            classes: (Array.isArray(classRows) ? (classRows as {name: string, level: number}[]) : []),
+            disciplines: (Array.isArray(disciplineRows) ? (disciplineRows as {id: number, name: string, unit: string, attempts: number, timer: boolean}[]) : []),
+            participants: (Array.isArray(participantRows) ? (participantRows as {id: number, name: string, forename: string, gender: string, class: string}[]) : []),
+            measurements: (Array.isArray(measurementRows) ? (measurementRows as {id: number, participant_id: number, discipline_id: number, attempt_number: number, value: number, created_at: string}[]) : []),
+            markRanges: (Array.isArray(markRangeRows) ? (markRangeRows as {discipline_id: number, class_level: number, gender: string, mark: number, min_value: number}[]) : [])
+        };
+    } finally {
+        conn.release();
+    }
+}
 
 app.get('/data', async (req, res) => {
     try {
@@ -159,6 +176,8 @@ app.post('/classes', async (req, res) => {
 
             const classRows = await conn.query("SELECT name, level FROM classes;");
             var classes = (Array.isArray(classRows) ? (classRows as {name: string, level: number}[]) : []);
+            const currentData = await getCurrentData();
+            broadcastToAll(JSON.stringify({ type: 'update-data', data: currentData }));
             res.json(classes);
         } finally {
             conn.release();
@@ -178,6 +197,8 @@ app.patch('/classes/:name', async (req, res) => {
             await conn.query("UPDATE classes SET level = ? WHERE name = ?;", [level, name]);
             const classRows = await conn.query("SELECT name, level FROM classes;");
             var classes = (Array.isArray(classRows) ? (classRows as {name: string, level: number}[]) : []);
+            const currentData = await getCurrentData();
+            broadcastToAll(JSON.stringify({ type: 'update-data', data: currentData }));
             res.json(classes);
         } finally {
             conn.release();
@@ -197,6 +218,8 @@ app.delete('/classes/:name', async (req, res) => {
 
             const classRows = await conn.query("SELECT name, level FROM classes;");
             var classes = (Array.isArray(classRows) ? (classRows as {name: string, level: number}[]) : []);
+            const currentData = await getCurrentData();
+            broadcastToAll(JSON.stringify({ type: 'update-data', data: currentData }));
             res.json(classes);
         } finally {
             conn.release();
@@ -254,6 +277,8 @@ app.post('/participants', async (req, res) => {
 
             const participantRows = await conn.query("SELECT id, name, forename, gender, class_name AS class FROM participants;");
             var participants = (Array.isArray(participantRows) ? (participantRows as {id: number, name: string, forename: string, gender: string, class: string}[]) : []);
+            const currentData = await getCurrentData();
+            broadcastToAll(JSON.stringify({ type: 'update-data', data: currentData }));
             res.json(participants);
         } finally {
             conn.release();
@@ -273,6 +298,8 @@ app.patch('/participants/:id', async (req, res) => {
             await conn.query("UPDATE participants SET name = ?, forename = ?, gender = ?, class_name = ? WHERE id = ?;", [name, forename, gender, className, id]);
             const participantRows = await conn.query("SELECT id, name, forename, gender, class_name AS class FROM participants;");
             var participants = (Array.isArray(participantRows) ? (participantRows as {id: number, name: string, forename: string, gender: string, class: string}[]) : []);
+            const currentData = await getCurrentData();
+            broadcastToAll(JSON.stringify({ type: 'update-data', data: currentData }));
             res.json(participants);
         } finally {
             conn.release();
@@ -292,6 +319,8 @@ app.delete('/participants/:id', async (req, res) => {
 
             const participantRows = await conn.query("SELECT id, name, forename, gender, class_name AS class FROM participants;");
             var participants = (Array.isArray(participantRows) ? (participantRows as {id: number, name: string, forename: string, gender: string, class: string}[]) : []);
+            const currentData = await getCurrentData();
+            broadcastToAll(JSON.stringify({ type: 'update-data', data: currentData }));
             res.json(participants);
         } finally {
             conn.release();
@@ -346,6 +375,8 @@ app.post('/disciplines', async (req, res) => {
 
             const disciplineRows = await conn.query("SELECT id, name, unit, attempts, timer FROM disciplines;");
             var disciplines = (Array.isArray(disciplineRows) ? (disciplineRows as {id: number, name: string, unit: string, attempts: number, timer: boolean}[]) : []);
+            const currentData = await getCurrentData();
+            broadcastToAll(JSON.stringify({ type: 'update-data', data: currentData }));
             res.json(disciplines);
         } finally {
             conn.release();
@@ -365,6 +396,8 @@ app.patch('/disciplines/:id', async (req, res) => {
             await conn.query("UPDATE disciplines SET name = ?, unit = ?, attempts = ?, timer = ? WHERE id = ?;", [name, unit, attempts, timer, id]);
             const disciplineRows = await conn.query("SELECT id, name, unit, attempts, timer FROM disciplines;");
             var disciplines = (Array.isArray(disciplineRows) ? (disciplineRows as {id: number, name: string, unit: string, attempts: number, timer: boolean}[]) : []);
+            const currentData = await getCurrentData();
+            broadcastToAll(JSON.stringify({ type: 'update-data', data: currentData }));
             res.json(disciplines);
         } finally {
             conn.release();
@@ -384,6 +417,8 @@ app.delete('/disciplines/:id', async (req, res) => {
 
             const disciplineRows = await conn.query("SELECT id, name, unit, attempts, timer FROM disciplines;");
             var disciplines = (Array.isArray(disciplineRows) ? (disciplineRows as {id: number, name: string, unit: string, attempts: number, timer: boolean}[]) : []);
+            const currentData = await getCurrentData();
+            broadcastToAll(JSON.stringify({ type: 'update-data', data: currentData }));
             res.json(disciplines);
         } finally {
             conn.release();
@@ -453,6 +488,8 @@ app.post('/mark-ranges', async (req, res) => {
         try {
             const { discipline_id, class_level, gender, mark, min_value } = req.body;
             await conn.query("INSERT INTO `mark-ranges` (discipline_id, class_level, gender, mark, min_value) VALUES (?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE min_value = VALUES(min_value);", [discipline_id, class_level, gender, mark, min_value]);
+            const currentData = await getCurrentData();
+            broadcastToAll(JSON.stringify({ type: 'update-data', data: currentData }));
             res.status(200).send();
         } finally {
             conn.release();
@@ -470,6 +507,8 @@ app.patch('/mark-ranges/:discipline_id/:mark', async (req, res) => {
             const { discipline_id, mark } = req.params;
             const { class_level, gender, min_value } = req.body;
             await conn.query("UPDATE `mark-ranges` SET class_level = ?, gender = ?, min_value = ? WHERE discipline_id = ? AND mark = ?;", [class_level, gender, min_value, discipline_id, mark]);
+            const currentData = await getCurrentData();
+            broadcastToAll(JSON.stringify({ type: 'update-data', data: currentData }));
             res.status(200).send();
         } finally {
             conn.release();
@@ -486,6 +525,8 @@ app.delete('/mark-ranges/:discipline_id', async (req, res) => {
         try {
             const { discipline_id } = req.params;
             await conn.query("DELETE FROM `mark-ranges` WHERE discipline_id = ?;", [discipline_id]);
+            const currentData = await getCurrentData();
+            broadcastToAll(JSON.stringify({ type: 'update-data', data: currentData }));
             res.status(200).send();
         } finally {
             conn.release();
@@ -502,6 +543,8 @@ app.delete('/mark-ranges/:discipline_id/:mark', async (req, res) => {
         try {
             const { discipline_id, mark } = req.params;
             await conn.query("DELETE FROM `mark-ranges` WHERE discipline_id = ? AND mark = ?;", [discipline_id, mark]);
+            const currentData = await getCurrentData();
+            broadcastToAll(JSON.stringify({ type: 'update-data', data: currentData }));
             res.status(200).send();
         } finally {
             conn.release();
@@ -577,6 +620,8 @@ app.post('/measurements', async (req, res) => {
                     await conn.query("INSERT INTO measurements (participant_id, discipline_id, attempt_number, value, created_at) VALUES (?, ?, ?, ?, ?);", [participant_id, discipline_id, attempt_number, value, created_at]);
                 }            
             }
+            const currentData = await getCurrentData();
+            broadcastToAll(JSON.stringify({ type: 'update-data', data: currentData }));
             res.status(200).send();
         } finally {
             conn.release();
@@ -593,6 +638,8 @@ app.delete('/measurements/:id', async (req, res) => {
         try {
             const { id } = req.params;
             await conn.query("DELETE FROM measurements WHERE id = ?;", [id]);
+            const currentData = await getCurrentData();
+            broadcastToAll(JSON.stringify({ type: 'update-data', data: currentData }));
             res.status(200).send();
         } finally {
             conn.release();
@@ -664,18 +711,34 @@ app.post('/sync', async (req, res) => {
         try {
             if (Array.isArray(req.body)) {
                 for (const item of req.body) {
-                    const { participant_id, discipline_id, attempt_number, value, created_at } = item;
+                    const { participant_id, discipline_id, attempt_number, value, created_at, sync_ws_uuid } = item;
                     var result = await conn.query("SELECT * FROM measurements WHERE participant_id = ? AND discipline_id = ? AND attempt_number = ? AND value = ? LIMIT 1;", [participant_id, discipline_id, attempt_number, value]);
                     if (!Array.isArray(result) || result.length === 0) {
                         await conn.query("INSERT INTO measurements (participant_id, discipline_id, attempt_number, value, created_at) VALUES (?, ?, ?, ?, ?);", [participant_id, discipline_id, attempt_number, value, created_at]);
-                    }                
+                    }
+                    if (sync_ws_uuid) {
+                        // Update last sync time of this helper
+                        const helper = helpers.find(h => h.id === sync_ws_uuid);
+                        if (helper) {
+                            helper.lastSync = Date.now();
+                        }
+                        broadcastToAll(JSON.stringify({ type: 'clients', helpers: helpers }));
+                    }
                 }
             } else {
-                const { participant_id, discipline_id, attempt_number, value, created_at } = req.body;
+                const { participant_id, discipline_id, attempt_number, value, created_at, sync_ws_uuid } = req.body;
                 var result = await conn.query("SELECT * FROM measurements WHERE participant_id = ? AND discipline_id = ? AND attempt_number = ? AND value = ? LIMIT 1;", [participant_id, discipline_id, attempt_number, value]);
                 if (!Array.isArray(result) || result.length === 0) {
                     await conn.query("INSERT INTO measurements (participant_id, discipline_id, attempt_number, value, created_at) VALUES (?, ?, ?, ?, ?);", [participant_id, discipline_id, attempt_number, value, created_at]);
                 }            
+                if (sync_ws_uuid) {
+                    // Update last sync time of this helper
+                    const helper = helpers.find(h => h.id === sync_ws_uuid);
+                    if (helper) {
+                        helper.lastSync = Date.now();
+                    }
+                    broadcastToAll(JSON.stringify({ type: 'clients', helpers: helpers }));
+                }
             }
 
             // Give current data
@@ -706,64 +769,120 @@ app.post('/sync', async (req, res) => {
 // Create HTTP server for WebSocket upgrade
 const server = createServer(app);
 
+const helpers: { id: string; name: string; currentClass: string | null; currentDisciplineId: number | null; isAlive: boolean; lastSync: number | null; measurementCount: number; }[] = [];
+
 // Create WebSocket server
 const wss = new WebSocketServer({ 
-  server,
-  path: '/ws'
+    server,
+    path: '/ws'
 });
 
+function heartbeat(this: WebSocket & { isAlive?: boolean }) {
+    this.isAlive = true;
+}
+
 // Handle WebSocket connections
-wss.on('connection', (ws) => {
-  console.log('New WebSocket client connected');
-  
-  // Add connection to the set
-  connections.add(ws);
-  
-  // Handle incoming messages
-  ws.on('message', (data) => {
-    console.log('Received message:', data.toString());
+wss.on('connection', (ws: WebSocket & { isAlive?: boolean, uuid?: string }) => {
+    console.log('New WebSocket client connected');
+    ws.isAlive = true;
+    ws.uuid = crypto.randomUUID();
+
+    ws.on('pong', heartbeat);
     
-    // Broadcast to all connected clients
-    const message = {
-      type: 'message',
-      data: data.toString(),
-      timestamp: new Date().toISOString()
-    };
+    // Handle incoming messages
+    ws.on('message', (data) => {
+        console.log('Received message:', data.toString());
+        try {
+            const message = JSON.parse(data.toString());
+            if (message.type === 'register') {
+                // Add to helpers list
+                helpers.push({
+                    id: ws.uuid!,
+                    name: message.name || 'Unknown',
+                    currentClass: message.currentClass || null,
+                    currentDisciplineId: message.currentDisciplineId || null,
+                    isAlive: true,
+                    lastSync: null,
+                    measurementCount: 0
+                });
+                ws.send(JSON.stringify({ type: 'registered', id: ws.uuid }));
+                // Broadcast updated clients list
+                broadcastToAll(JSON.stringify({ type: 'clients', helpers: helpers }));
+            } else if (message.type === 'request-clients') {
+                // Send current clients list to this client
+                ws.send(JSON.stringify({ type: 'clients', helpers: helpers }));
+            } else if (message.type === 'select-class') {
+                // Update selected class for this helper
+                const helper = helpers.find(h => h.id === ws.uuid);
+                if (helper) {
+                    helper.currentClass = message.currentClass || null;
+                    // Broadcast updated clients list
+                    broadcastToAll(JSON.stringify({ type: 'clients', helpers: helpers }));
+                }
+            } else if (message.type === 'select-discipline') {
+                // Update selected discipline for this helper
+                const helper = helpers.find(h => h.id === ws.uuid);
+                if (helper) {
+                    helper.currentDisciplineId = message.currentDisciplineId || null;
+                    // Broadcast updated clients list
+                    broadcastToAll(JSON.stringify({ type: 'clients', helpers: helpers }));
+                }
+            }
+        } catch (error) {
+            console.error('Error processing message:', error);
+        }
+    });
     
-    broadcastToAll(JSON.stringify(message));
-  });
-  
-  // Handle connection close
-  ws.on('close', () => {
-    console.log('Client disconnected');
-    connections.delete(ws);
-  });
-  
-  // Handle errors
-  ws.on('error', (error) => {
-    console.error('WebSocket error:', error);
-  });
-  
-  // Send welcome message to new client
-  const welcomeMessage = {
-    type: 'connect',
-    message: 'Connected to WebSocket server',
-    connectedClients: connections.size,
-    timestamp: new Date().toISOString()
-  };
-  ws.send(JSON.stringify(welcomeMessage));
+    // Handle connection close
+    ws.on('close', () => {
+        console.log('Client disconnected');
+        // Mark helper as disconnected
+        const helperIndex = helpers.findIndex(h => h.id === ws.uuid);
+        if (helperIndex !== -1) {
+            helpers[helperIndex].isAlive = false;
+            ws.isAlive = false;
+            // Broadcast updated clients list
+            broadcastToAll(JSON.stringify({ type: 'clients', helpers: helpers }));
+        }
+    });
+    
+    // Handle errors
+    ws.on('error', (error) => {
+        console.error('WebSocket error:', error);
+    });
+});
+
+const interval = setInterval(function ping() {
+    wss.clients.forEach(function each(ws: WebSocket & { isAlive?: boolean, uuid?: string }) {
+        if (ws.isAlive === false) {
+            const helperIndex = helpers.findIndex(h => h.id === ws.uuid);
+            if (helperIndex !== -1) {
+                helpers[helperIndex].isAlive = false;
+                // Broadcast updated clients list
+                broadcastToAll(JSON.stringify({ type: 'clients', helpers: helpers }));
+            }
+            return ws.terminate();
+        }
+
+        ws.isAlive = false;
+        ws.ping();
+    });
+}, 30000);
+
+wss.on('close', function close() {
+    clearInterval(interval);
 });
 
 // Broadcast message to all connected clients
 function broadcastToAll(message: string) {
-  connections.forEach((client) => {
-    if (client.readyState === 1) { // OPEN state
-      client.send(message);
-    }
-  });
+    wss.clients.forEach((client: WebSocket & { isAlive?: boolean, uuid?: string }) => {
+        if (client.readyState === 1) { // OPEN state
+            client.send(message);
+        }
+    });
 }
 
 // Start the server
 server.listen(port, () => {
-  console.log(`app listening on port ${port}`)
+    console.log(`app listening on port ${port}`)
 })
