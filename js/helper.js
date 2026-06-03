@@ -2,6 +2,29 @@ import { getData, sync } from "./helper-api.js";
 import { addClassOrUpdate, addDisciplineOrUpdate, addParticipantOrUpdate, addMeasurementOrUpdate, openDatabase, getDisciplines, getClasses, getDisciplineById, getParticipants, getClassMeasurements, getSyncMeasurements, getSyncedMeasurements, setSyncTime } from "./helper-db.js"
 import { convertFloatToUnit, convertUnitToFloat } from "./utils.js"
 
+const HELPER_NAME_KEY = 'helperName';
+
+function promptForHelperName() {
+    try {
+        const existing = localStorage.getItem(HELPER_NAME_KEY);
+        if (existing && existing.trim()) return;
+        while (true) {
+            const input = prompt('Bitte geben Sie Ihren Namen ein:');
+            if (input === null) break; // user cancelled
+            const name = input.trim();
+            if (name) {
+                localStorage.setItem(HELPER_NAME_KEY, name);
+                break;
+            }
+            alert('Name darf nicht leer sein.');
+        }
+    } catch (e) {
+        console.error('Unable to access localStorage for helper name:', e);
+    }
+}
+
+promptForHelperName();
+
 openDatabase().then(async request => {
     const data = await getData();
     if (data) {
