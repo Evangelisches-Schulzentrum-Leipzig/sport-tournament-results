@@ -958,6 +958,16 @@ async function initDashboardPage() {
     // Populate filter dropdowns
     if (data.classes) {
         populateDashboardClassFilterDropdown(data.classes);
+        populateDashboardClassLevelFilterDropdown(data.classes);
+    }
+
+    if (data.disciplines) {
+        populateDashboardDisciplineFilterDropdown(data.disciplines);
+    }
+
+    // Display initial results
+    if (data.measurements) {
+        displayDashboardResults(data.measurements, data, {});
     }
 
     // Setup dashboard filters
@@ -1084,8 +1094,147 @@ function populateDashboardClassFilterDropdown(classes) {
 }
 
 /**
+ * Populate class level filter dropdown on the dashboard with unique class levels.
+ * @param {{name: string, level: number}[]} classes - Array of class objects
+ * @returns {void}
+ */
+function populateDashboardClassLevelFilterDropdown(classes) {
+    const filterSelect = document.querySelector('#results-classlevel-filter');
+    if (!filterSelect) return;
+
+    // Clear existing options except the first one
+    while (filterSelect.options.length > 1) {
+        filterSelect.remove(1);
+    }
+
+    // Get unique class levels
+    const uniqueLevels = [...new Set(classes.map(c => c.level))].sort((a, b) => a - b);
+    uniqueLevels.forEach(level => {
+        const option = document.createElement('option');
+        option.value = level;
+        option.textContent = `${level}. Klasse`;
+        filterSelect.appendChild(option);
+    });
+}
+
+/**
+ * Populate discipline filter dropdown on the dashboard with available disciplines.
+ * @param {{id: number, name: string, unit: string, attempts: number, timer: boolean}[]} disciplines - Array of discipline objects
+ * @returns {void}
+ */
+function populateDashboardDisciplineFilterDropdown(disciplines) {
+    const filterSelect = document.querySelector('#results-discipline-filter');
+    if (!filterSelect) return;
+
+    // Clear existing options except the first one
+    while (filterSelect.options.length > 1) {
+        filterSelect.remove(1);
+    }
+
+    // Add discipline options
+    disciplines.forEach(discipline => {
+        const option = document.createElement('option');
+        option.value = discipline.id;
+        option.textContent = discipline.name;
+        filterSelect.appendChild(option);
+    });
+}
+
+/**
+ * Display results on the dashboard with optional discipline and class filtering.
+ * Shows top participants with total points when all disciplines are displayed,
+ * or best value for selected discipline when filtering by discipline.
+ * @param {{id: number, participant_id: number, discipline_id: number, attempt_number: number, value: number, created_at: string}[]} measurements - Array of measurement objects
+ * @param {{participants: {id: number, name: string, forename: string, class: string}[], disciplines: {id: number, name: string, unit: string, attempts: number, timer: boolean}[], classes: {name: string, level: number}[]}} data - Page data containing participants, disciplines and classes
+ * @param {Object} [filters={}] - Optional filter parameters with keys: disciplineId, class, classLevel
+ * @returns {void}
+ */
+function displayDashboardResults(measurements, data, filters = {}) {
+    const resultsList = document.querySelector('#results-list');
+    if (!resultsList) return;
+
+    const participantMap = new Map();
+    const disciplineMap = new Map();
+    const classMap = new Map();
+
+    if (data.participants) {
+        data.participants.forEach(p => participantMap.set(p.id, p));
+    }
+
+    if (data.disciplines) {
+        data.disciplines.forEach(d => disciplineMap.set(d.id, d));
+    }
+
+    if (data.classes) {
+        data.classes.forEach(c => classMap.set(c.name, c));
+    }
+
+    // Determine if showing a specific discipline or all
+    const showingSpecificDiscipline = filters.disciplineId && filters.disciplineId !== '';
+    let selectedDiscipline = null;
+
+    if (showingSpecificDiscipline) {
+        selectedDiscipline = data.disciplines?.find(d => d.id == filters.disciplineId);
+    }
+
+    const { disciplineRankings, overallRankings } = computeRankings(data.participants, data.disciplines, data.measurements);
+
+    // Build results list
+    let place = 1;
+    const resultRows = [];
+
+    overallRankings.forEach(ranking => {
+        const participant = participantMap.get(ranking.participantId);
+        if (!participant) return;
+
+        // Apply class filter
+        if (filters.class && participant.class !== filters.class) {
+            return;
+        }
+
+        // Apply class level filter
+        if (filters.classLevel) {
+            const participantClass = classMap.get(participant.class);
+            if (!participantClass || participantClass.level != filters.classLevel) {
+                return;
+            }
+        }
+
+        let displayValue;
+        if (showingSpecificDiscipline && selectedDiscipline) {
+            // Show best value for the selected discipline
+            const rankingData = disciplineRankings.get(selectedDiscipline.id)?.find(r => r.participantId === ranking.participantId);
+            displayValue = rankingData?.value !== null ? convertFloatToUnit(rankingData?.value, selectedDiscipline.unit) : '-';
+        } else {
+            // Show total points when all disciplines are displayed
+            displayValue = ranking.totalPoints;
+        }
+
+        resultRows.push({
+            place: place,
+            participantName: `${participant.name}, ${participant.forename}`,
+            value: displayValue
+        });
+
+        place++;
+    });
+
+    // Clear table and add rows (limit to top 5)
+    resultsList.innerHTML = '';
+    resultRows.slice(0, 5).forEach((row, index) => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td class="${index < 3 ? 'results-first-places' : ''}">${row.place}</td>
+            <td>${row.participantName}</td>
+            <td>${row.value}</td>
+        `;
+        resultsList.appendChild(tr);
+    });
+}
+
+/**
  * Setup event listeners for dashboard filter controls.
- * Filters measurements and disciplines by selected class when filter changes.
+ * Filters results and live events by selected class, class level, and discipline when filters change.
  * @param {{participants: {id: number, name: string, forename: string, class: string}[], disciplines: {id: number, name: string, unit: string, attempts: number, timer: boolean}[], measurements: {id: number, participant_id: number, discipline_id: number, attempt_number: number, value: number, created_at: string}[], classes: {name: string, level: number}[]}} data - Page data containing all tournament data
  * @returns {void}
  */
@@ -1101,16 +1250,17 @@ function setupDashboardFilters(data) {
             filters['class'] = classFilter.value;
         }
 
-        const filteredData = await api.getData(filters);
-        if (filteredData) {
-            if (filteredData.measurements) {
-                displayDashboardResults(filteredData.measurements, filteredData);
-                displayLiveEvents(filteredData.measurements, filteredData);
-            }
-            if (filteredData.participants) {
-                displayDashboardDisciplines(data.disciplines, filteredData);
-            }
+        if (classLevelFilter && classLevelFilter.value) {
+            filters['classLevel'] = classLevelFilter.value;
         }
+
+        if (disciplineFilter && disciplineFilter.value) {
+            filters['disciplineId'] = disciplineFilter.value;
+        }
+
+        // Display filtered results with client-side filtering
+        displayDashboardResults(data.measurements, data, filters);
+        displayDashboardDisciplines(data.disciplines, data);
     };
 
     if (classFilter) classFilter.addEventListener('change', applyDashboardFilters);
