@@ -808,6 +808,33 @@ wss.on('connection', (ws: WebSocket & { isAlive?: boolean, uuid?: string }) => {
                 ws.send(JSON.stringify({ type: 'registered', id: ws.uuid }));
                 // Broadcast updated clients list
                 broadcastToAll(JSON.stringify({ type: 'clients', helpers: helpers }));
+            } else if (message.type == 'reregister' && message.uuid) {
+                // Update name and current class/discipline for this helper
+                const helper = helpers.find(h => h.id === message.uuid);
+                if (helper) {
+                    ws.uuid = message.uuid; // Update WebSocket's uuid in case it changed
+                    helper.name = message.name || helper.name;
+                    helper.currentClass = message.currentClass || helper.currentClass;
+                    helper.currentDisciplineId = message.currentDisciplineId || helper.currentDisciplineId;
+                    console.log(`Helper re-registered: ${helper.name} (${helper.id})`);
+                    // Broadcast updated clients list
+                    broadcastToAll(JSON.stringify({ type: 'clients', helpers: helpers }));
+                } else {
+                    // If helper with this uuid doesn't exist, add as new helper
+                    helpers.push({
+                        id: message.uuid,
+                        name: message.name || 'Unknown',
+                        currentClass: message.currentClass || null,
+                        currentDisciplineId: message.currentDisciplineId || null,
+                        isAlive: true,
+                        lastSync: null,
+                        measurementCount: 0
+                    });
+                    ws.uuid = message.uuid; // Update WebSocket's uuid
+                    ws.send(JSON.stringify({ type: 'registered', id: message.uuid }));
+                    // Broadcast updated clients list
+                    broadcastToAll(JSON.stringify({ type: 'clients', helpers: helpers }));
+                }
             } else if (message.type === 'request-clients') {
                 // Send current clients list to this client
                 ws.send(JSON.stringify({ type: 'clients', helpers: helpers }));
