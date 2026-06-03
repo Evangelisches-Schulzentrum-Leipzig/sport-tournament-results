@@ -107,9 +107,11 @@ function displayParticipants(participants) {
     tbody.innerHTML = '';
     participants.forEach(participant => {
         const row = document.createElement('tr');
+        const genderLabel = participant.gender === 'male' ? 'Junge' : 'Mädchen';
         row.innerHTML = `
             <td>${participant.name}</td>
             <td>${participant.forename}</td>
+            <td>${genderLabel}</td>
             <td>${participant.class}</td>
             <td>
                 <button class="material-icons-round edit-participant" data-id="${participant.id}">edit</button>
