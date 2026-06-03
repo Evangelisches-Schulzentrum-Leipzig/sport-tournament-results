@@ -1,5 +1,6 @@
 import * as api from './central-api.js';
-import { convertFloatToUnit, convertUnitToFloat } from './utils.js';
+import { convertFloatToUnit, convertUnitToFloat, unitLabel } from './utils.js';
+import { computeRankings } from './central-logic.js';
 
 /**
  * Initialize page based on current URL pathname.
@@ -675,6 +676,7 @@ async function initResultsPage() {
     // Display initial results if measurements available
     if (data.measurements) {
         displayResults(data.measurements, data);
+        console.log(computeRankings(data.participants, data.disciplines, data.measurements));
     }
 
     // Setup filter listeners
@@ -764,27 +766,63 @@ function displayResults(measurements, data) {
         data.disciplines.forEach(d => disciplineMap.set(d.id, d));
     }
 
+    const thead = document.querySelector('#results-table-con thead');
+    if (!thead) return;
     const tbody = document.querySelector('#results-table-con tbody');
     if (!tbody) return;
 
-    // Group measurements by participant
-    const byParticipant = new Map();
-    measurements.forEach(m => {
-        if (!byParticipant.has(m.participant_id)) {
-            byParticipant.set(m.participant_id, []);
-        }
-        byParticipant.get(m.participant_id).push(m);
-    });
+    // Build table header with discipline columns
+    const headerRow1 = thead.querySelector('tr:first-child');
+    const headerRow2 = thead.querySelector('tr:nth-child(2)');
+
+    // Clear existing discipline columns
+    while (headerRow1.children.length > 4) {
+        headerRow1.removeChild(headerRow1.lastChild);
+    }
+    while (headerRow2.children.length > 4) {
+        headerRow2.removeChild(headerRow2.lastChild);
+    }
+    
+    // Add discipline columns
+    if (data.disciplines) {
+        data.disciplines.forEach(discipline => {
+            const th1 = document.createElement('th');
+            th1.colSpan = 2;
+            th1.textContent = discipline.name;
+            headerRow1.appendChild(th1);
+
+            const thValue = document.createElement('th');
+            thValue.textContent = `Wert ${unitLabel(discipline.unit)}`;
+            headerRow2.appendChild(thValue);
+
+            const thPoints = document.createElement('th');
+            thPoints.textContent = 'Punkte';
+            headerRow2.appendChild(thPoints);
+        });
+    }
+
+    // Add total points filler header
+    const totalTh = document.createElement('th');
+    totalTh.colSpan = 2;
+    totalTh.textContent = '';
+    headerRow1.appendChild(totalTh);
+
+    // Add total points header
+    const totalTh1 = document.createElement('th');
+    totalTh1.textContent = 'Punkte gesamt';
+    headerRow2.appendChild(totalTh1);
+
+    const { disciplineRankings, overallRankings } = computeRankings(data.participants, data.disciplines, data.measurements);
 
     tbody.innerHTML = '';
     let place = 1;
     
-    byParticipant.forEach((measurements, participantId) => {
-        const participant = participantMap.get(participantId);
+    overallRankings.forEach(ranking => {
+        const participant = participantMap.get(ranking.participantId);
         if (!participant) return;
 
         const row = document.createElement('tr');
-        let totalPoints = 0;
+        let totalPoints = ranking.totalPoints;
         let cells = `
             <td>${place}</td>
             <td>${participant.name}</td>
@@ -792,14 +830,14 @@ function displayResults(measurements, data) {
             <td>${participant.class}</td>
         `;
 
-        // Add measurement data for each discipline
-        measurements.forEach(m => {
-            const discipline = disciplineMap.get(m.discipline_id);
+        // Add value and points cells for each discipline
+        data.disciplines.forEach(discipline => {
+            const disciplineData = disciplineMap.get(discipline.id);
+            const rankingData = disciplineRankings.get(discipline.id)?.find(r => r.participantId === ranking.participantId);
             cells += `
-                <td>${convertFloatToUnit(m.value, discipline?.unit)}</td>
-                <td>0</td>
+                <td>${rankingData?.value !== null ? convertFloatToUnit(rankingData?.value, disciplineData?.unit) : '-'}</td>
+                <td>${rankingData && rankingData.value !== null ? disciplineRankings.get(discipline.id).length - disciplineRankings.get(discipline.id).indexOf(rankingData) : 0}</td>
             `;
-            totalPoints += 0; // Points calculation would go here if scoring logic exists
         });
 
         cells += `<td><strong>${totalPoints}</strong></td>`;

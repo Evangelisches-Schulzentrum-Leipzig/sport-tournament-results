@@ -35,3 +35,13 @@ export function unitLabel(unit) {
         return unit; // default to showing the unit as is
     }
 }
+
+export function unitOrder(unit) {
+    if (unit === 'minutes') {
+        return 1; // Time-based disciplines should be ranked with lower values better
+    } else if (unit === 'meters') {
+        return -1; // Distance-based disciplines should be ranked with higher values better
+    } else {
+        return 0; // Default order for unknown units
+    }
+}
