@@ -778,6 +778,10 @@ const wss = new WebSocketServer({
 });
 
 function heartbeat(ws: WebSocket & { isAlive?: boolean, uuid?: string }) {
+    const helper = helpers.find(h => h.id === ws.uuid);
+    if (helper) {
+        helper.isAlive = true;
+    }
     ws.isAlive = true;
 }
 

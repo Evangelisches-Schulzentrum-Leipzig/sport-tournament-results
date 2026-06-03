@@ -597,3 +597,82 @@ export async function sync(measurements) {
         return null;
     }
 }
+
+// WebSocket client for central dashboard to receive helper lists and updates
+const WS_URL = 'ws://localhost:8083/ws';
+let centralWs = null;
+let centralReconnectTimer = null;
+let centralOnClients = null;
+let centralBackoff = 1000;
+
+function handleCentralMessage(ev) {
+    try {
+        const message = JSON.parse(ev.data);
+        if (message.type === 'clients' && centralOnClients) {
+            centralOnClients(message.helpers || []);
+        }
+    } catch (e) {
+        console.error('Error parsing central WS message:', e);
+    }
+}
+
+function connectCentralWebSocket() {
+    if (centralWs && centralWs.readyState === WebSocket.OPEN) return;
+    try {
+        centralWs = new WebSocket(WS_URL);
+    } catch (e) {
+        console.error('Central: failed to create WebSocket', e);
+        scheduleCentralReconnect();
+        return;
+    }
+
+    centralWs.addEventListener('open', () => {
+        console.log('Central WebSocket connected');
+        centralBackoff = 1000;
+        // request current clients list
+        try { centralWs.send(JSON.stringify({ type: 'request-clients' })); } catch (e) {}
+    });
+
+    centralWs.addEventListener('message', handleCentralMessage);
+
+    centralWs.addEventListener('close', () => {
+        console.log('Central WebSocket closed');
+        centralWs = null;
+        scheduleCentralReconnect();
+    });
+
+    centralWs.addEventListener('error', (err) => {
+        console.error('Central WebSocket error', err);
+    });
+}
+
+function scheduleCentralReconnect() {
+    if (centralReconnectTimer) return;
+    centralReconnectTimer = setTimeout(() => {
+        centralReconnectTimer = null;
+        connectCentralWebSocket();
+        centralBackoff = Math.min(30000, centralBackoff * 1.5);
+    }, centralBackoff);
+}
+
+export function startCentralWebSocket(onClients) {
+    centralOnClients = onClients;
+    connectCentralWebSocket();
+}
+
+export function stopCentralWebSocket() {
+    if (centralWs) {
+        try { centralWs.close(); } catch (e) {}
+        centralWs = null;
+    }
+    if (centralReconnectTimer) {
+        clearTimeout(centralReconnectTimer);
+        centralReconnectTimer = null;
+    }
+}
+
+export function centralRequestClients() {
+    if (centralWs && centralWs.readyState === WebSocket.OPEN) {
+        try { centralWs.send(JSON.stringify({ type: 'request-clients' })); } catch (e) {}
+    }
+}
