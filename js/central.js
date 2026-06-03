@@ -1,4 +1,5 @@
 import * as api from './central-api.js';
+import { convertFloatToUnit, convertUnitToFloat } from './utils.js';
 
 /**
  * Initialize page based on current URL pathname.
@@ -795,7 +796,7 @@ function displayResults(measurements, data) {
         measurements.forEach(m => {
             const discipline = disciplineMap.get(m.discipline_id);
             cells += `
-                <td>${m.value}${discipline?.unit || ''}</td>
+                <td>${convertFloatToUnit(m.value, discipline?.unit)}</td>
                 <td>0</td>
             `;
             totalPoints += 0; // Points calculation would go here if scoring logic exists
