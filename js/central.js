@@ -67,6 +67,8 @@ async function initParticipantsPage() {
 
     // Setup event listeners for add buttons
     setupParticipantsEventListeners(data);
+    // Setup delete/edit handlers for classes and participants
+    setupDeleteHandlers();
 }
 
 /**
@@ -223,6 +225,8 @@ async function initDisciplinesPage() {
 
     // Setup event listeners for add buttons
     setupDisciplinesEventListeners(data);
+    // Setup delete/edit handlers for disciplines and mark ranges
+    setupDeleteHandlers();
 }
 
 /**
@@ -660,6 +664,148 @@ async function handleAddMarkRange(data) {
  * @async
  * @returns {Promise<void>}
  */
+/**
+ * Setup delete button handlers for classes, participants, disciplines and mark ranges.
+ * Attaches click listeners to current `.delete-*` buttons on the page.
+ * @returns {void}
+ */
+function setupDeleteHandlers() {
+    // Classes
+    document.querySelectorAll('.delete-class').forEach(btn => {
+        btn.removeEventListener('click', handleDeleteClass);
+        btn.addEventListener('click', handleDeleteClass);
+    });
+
+    // Participants
+    document.querySelectorAll('.delete-participant').forEach(btn => {
+        btn.removeEventListener('click', handleDeleteParticipant);
+        btn.addEventListener('click', handleDeleteParticipant);
+    });
+
+    // Disciplines
+    document.querySelectorAll('.delete-discipline').forEach(btn => {
+        btn.removeEventListener('click', handleDeleteDiscipline);
+        btn.addEventListener('click', handleDeleteDiscipline);
+    });
+
+    // Mark ranges (delete whole row for discipline/class/gender)
+    document.querySelectorAll('.delete-mark-range').forEach(btn => {
+        btn.removeEventListener('click', handleDeleteMarkRange);
+        btn.addEventListener('click', handleDeleteMarkRange);
+    });
+}
+
+async function handleDeleteClass(event) {
+    const name = event.currentTarget?.dataset?.name;
+    if (!name) return;
+    const confirmed = confirm(`Möchten Sie die Klasse "${name}" wirklich löschen?`);
+    if (!confirmed) return;
+    try {
+        const result = await api.deleteClass(name);
+        if (result) {
+            const updated = await api.getClasses();
+            if (updated) {
+                displayClasses(updated);
+                populateClassFilterDropdown(updated);
+
+                // Update participant class dropdown if present
+                const classSelect = document.querySelector('#new-participant-class');
+                if (classSelect) {
+                    while (classSelect.options.length > 1) classSelect.remove(1);
+                    updated.forEach(cls => {
+                        const option = document.createElement('option');
+                        option.value = cls.name;
+                        option.textContent = `Klasse ${cls.name}`;
+                        classSelect.appendChild(option);
+                    });
+                }
+            }
+        } else {
+            alert('Fehler beim Löschen der Klasse');
+        }
+    } catch (err) {
+        console.error('Error deleting class:', err);
+        alert('Fehler beim Löschen der Klasse');
+    }
+}
+
+async function handleDeleteParticipant(event) {
+    const id = parseInt(event.currentTarget?.dataset?.id);
+    if (!id) return;
+    const confirmed = confirm('Möchten Sie den Teilnehmer wirklich löschen?');
+    if (!confirmed) return;
+    try {
+        const result = await api.deleteParticipant(id);
+        if (result !== null) {
+            const updated = await api.getParticipants();
+            if (updated) displayParticipants(updated);
+        } else {
+            alert('Fehler beim Löschen des Teilnehmers');
+        }
+    } catch (err) {
+        console.error('Error deleting participant:', err);
+        alert('Fehler beim Löschen des Teilnehmers');
+    }
+}
+
+async function handleDeleteDiscipline(event) {
+    const id = parseInt(event.currentTarget?.dataset?.id);
+    if (!id) return;
+    const confirmed = confirm('Möchten Sie die Disziplin wirklich löschen? Dies entfernt auch zugehörige Wertungen.');
+    if (!confirmed) return;
+    try {
+        const result = await api.deleteDiscipline(id);
+        if (result) {
+            const updated = await api.getDisciplines();
+            if (updated) {
+                displayDisciplines(updated);
+                populateDisciplineFiltersDropdown(updated);
+
+                // Update mark range discipline dropdown if present
+                const disciplineSelect = document.querySelector('#new-table-discipline');
+                if (disciplineSelect) {
+                    while (disciplineSelect.options.length > 1) disciplineSelect.remove(1);
+                    updated.forEach(disc => {
+                        const option = document.createElement('option');
+                        option.value = disc.id;
+                        option.textContent = `${disc.name} (${disc.unit})`;
+                        disciplineSelect.appendChild(option);
+                    });
+                }
+            }
+        } else {
+            alert('Fehler beim Löschen der Disziplin');
+        }
+    } catch (err) {
+        console.error('Error deleting discipline:', err);
+        alert('Fehler beim Löschen der Disziplin');
+    }
+}
+
+async function handleDeleteMarkRange(event) {
+    const btn = event.currentTarget;
+    const disciplineId = parseInt(btn?.dataset?.disciplineId);
+    const classLevel = btn?.dataset?.classLevel;
+    const gender = btn?.dataset?.gender;
+    if (!disciplineId || !classLevel || !gender) return;
+    const confirmed = confirm(`Möchten Sie die Wertungstabelle für Disziplin ${disciplineId}, Klassenstufe ${classLevel}, Geschlecht ${gender} löschen?`);
+    if (!confirmed) return;
+    try {
+        // Attempt to delete marks 1..6 for this discipline; ignore individual failures
+        const marks = [1,2,3,4,5,6];
+        const deletePromises = marks.map(m => api.deleteMarkRange(disciplineId, String(m)));
+        await Promise.all(deletePromises);
+
+        // Refresh mark ranges display
+        const updatedData = await api.getData();
+        if (updatedData && updatedData.disciplines && updatedData.markRanges) {
+            displayMarkRanges(updatedData.disciplines, updatedData.markRanges);
+        }
+    } catch (err) {
+        console.error('Error deleting mark range:', err);
+        alert('Fehler beim Löschen der Wertungstabelle');
+    }
+}
 async function initResultsPage() {
     const data = await api.getData();
     
