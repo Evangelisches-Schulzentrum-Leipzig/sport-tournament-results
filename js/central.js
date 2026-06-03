@@ -1,6 +1,6 @@
 import * as api from './central-api.js';
 import { convertFloatToUnit, convertUnitToFloat, unitLabel } from './utils.js';
-import { computeRankings } from './central-logic.js';
+import { computeRankings, formatConflicts } from './central-logic.js';
 
 /**
  * Initialize page based on current URL pathname.
@@ -19,6 +19,8 @@ async function initPage() {
             await initDisciplinesPage();
         } else if (page.includes('central-results')) {
             await initResultsPage();
+        } else if (page.includes('central-sync')) {
+            await initSyncPage();
         } else {
             await initDashboardPage();
         }
@@ -1177,6 +1179,98 @@ async function handleAddParticipant(data) {
     } catch (error) {
         console.error('Error adding participant:', error);
         alert('Fehler beim Hinzufügen des Teilnehmers');
+    }
+}
+
+/**
+ * Initialize the sync page by loading conflicts and displaying them.
+ * @async
+ * @returns {Promise<void>}
+ */
+async function initSyncPage() {
+    try {
+        // Load conflicts and other data
+        const [conflicts, data] = await Promise.all([
+            api.getMeasurementConflicts(),
+            api.getData()
+        ]);
+
+        if (conflicts && data) {
+            // Format conflicts with participant and discipline information
+            const formattedConflicts = formatConflicts(
+                conflicts,
+                data.participants,
+                data.disciplines,
+                data.classes
+            );
+            
+            // Display conflicts
+            displayConflicts(formattedConflicts, data.disciplines);
+        } else {
+            console.warn('Failed to load conflicts or data');
+        }
+    } catch (error) {
+        console.error('Error initializing sync page:', error);
+    }
+}
+
+/**
+ * Display conflicts in the conflicts container.
+ * @param {Array} formattedConflicts - Array of formatted conflicts
+ * @param {{id: number, name: string, unit: string, attempts: number, timer: boolean}[]} disciplines
+ * @returns {void}
+ */
+function displayConflicts(formattedConflicts, disciplines) {
+    const conflictsContainer = document.getElementById('conflicts-con');
+    if (!conflictsContainer) return;
+
+    // Clear existing content
+    conflictsContainer.innerHTML = '';
+
+    // Create a discipline map for quick unit lookup
+    const disciplineMap = new Map(disciplines.map(d => [d.id, d]));
+
+    // Display each conflict
+    formattedConflicts.forEach(conflict => {
+        const discipline = disciplineMap.get(conflict.disciplineId);
+        const unit = discipline?.unit || '';
+        const unitStr = unitLabel(unit);
+
+        // Create conflict container
+        const conflictDiv = document.createElement('div');
+        conflictDiv.className = 'conflict-con';
+        
+        // Create header
+        const headerH3 = document.createElement('h3');
+        headerH3.textContent = 'Doppelte Werte';
+        
+        // Create conflict item
+        const itemDiv = document.createElement('div');
+        itemDiv.className = 'conflict-item';
+        
+        // Build HTML for the conflict item
+        itemDiv.innerHTML = `
+            <span class="conflict-item-class">${conflict.className}</span>
+            <span class="conflict-item-discipline">${conflict.disciplineName}</span>
+            <span class="conflict-item-try">Versuch ${conflict.attemptNumber}</span>
+            <span class="conflict-item-participant">${conflict.participantName}</span>
+            <div class="conflict-item-values">
+                ${conflict.values.map(v => `<span>${convertFloatToUnit(v.value, unit)}${unitStr}</span>`).join('')}
+            </div>
+        `;
+        
+        conflictDiv.appendChild(headerH3);
+        conflictDiv.appendChild(itemDiv);
+        conflictsContainer.appendChild(conflictDiv);
+    });
+
+    // Show message if no conflicts
+    if (formattedConflicts.length === 0) {
+        const noConflictsDiv = document.createElement('div');
+        noConflictsDiv.style.padding = '20px';
+        noConflictsDiv.style.textAlign = 'center';
+        noConflictsDiv.textContent = 'Keine Konflikte vorhanden';
+        conflictsContainer.appendChild(noConflictsDiv);
     }
 }
 

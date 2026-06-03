@@ -99,3 +99,45 @@ export function computeRankings(participants, disciplines, measurements) {
         overallRankings
     };
 }
+
+/**
+ * Format measurement conflicts to include participant, discipline, and class information.
+ * @param {Array<Array>} conflictGroups - Array of conflict groups from API response
+ * @param {{id: number, name: string, forename: string, class: string}[]} participants
+ * @param {{id: number, name: string, unit: string, attempts: number, timer: boolean}[]} disciplines
+ * @param {{name: string, level: number}[]} classes
+ * @returns {Array} Formatted conflicts with enriched data
+ */
+export function formatConflicts(conflictGroups, participants, disciplines, classes) {
+    const participantMap = new Map(participants.map(p => [p.id, p]));
+    const disciplineMap = new Map(disciplines.map(d => [d.id, d]));
+    const classMap = new Map(classes.map(c => [c.name, c]));
+
+    return conflictGroups.map(group => {
+        if (!group || group.length === 0) return null;
+        
+        const firstMeasurement = group[0];
+        const participant = participantMap.get(firstMeasurement.participant_id);
+        const discipline = disciplineMap.get(firstMeasurement.discipline_id);
+        
+        if (!participant || !discipline) return null;
+
+        const participantClass = classMap.get(participant.class);
+
+        return {
+            participantId: firstMeasurement.participant_id,
+            disciplineId: firstMeasurement.discipline_id,
+            attemptNumber: firstMeasurement.attempt_number,
+            participantName: `${participant.forename} ${participant.name}`,
+            disciplineName: discipline.name,
+            className: participant.class,
+            classLevel: participantClass?.level,
+            unit: discipline.unit,
+            values: group.map(m => ({
+                id: m.id,
+                value: m.value,
+                createdAt: m.created_at
+            }))
+        };
+    }).filter(conflict => conflict !== null);
+}
