@@ -998,9 +998,41 @@ async function initDashboardPage() {
 
         // Setup dashboard filters
         setupDashboardFilters(data);
+
+        // Start central websocket helpers view on dashboard
+        startDashboardHelpersView(data.disciplines);
     } catch (error) {
         console.error('Error initializing dashboard page:', error);
     }
+}
+
+// Start websocket and render helpers in dashboard view
+function startDashboardHelpersView(disciplines) {
+    const disciplineMap = new Map((disciplines || []).map(d => [d.id, d.name]));
+    api.startCentralWebSocket((helpers) => {
+        renderDashboardHelpers(helpers, disciplineMap);
+    });
+    setInterval(() => api.centralRequestClients(), 1000);
+}
+
+function renderDashboardHelpers(helpers, disciplineMap) {
+    const container = document.querySelector('#helper-list');
+    if (!container) return;
+    container.innerHTML = '';
+    helpers.forEach(h => {
+        const item = document.createElement('div');
+        item.className = 'helper-item';
+        const discName = h.currentDisciplineId ? (disciplineMap.get(h.currentDisciplineId) || h.currentDisciplineId) : 'Unbekannt';
+        const lastSync = h.lastSync ? timeAgo(new Date(h.lastSync)) : 'Nie';
+        const statusClass = h.isAlive ? 'online' : 'offline';
+        item.innerHTML = `
+            <h3>${h.name}</h3>
+            <span class="helper-current-discipline">${discName}</span>
+            <span class="helper-last-active">Letzter Sync: ${lastSync}</span>
+            <div class="helper-status-indicator ${statusClass}"></div>
+        `;
+        container.appendChild(item);
+    });
 }
 
 /**

@@ -478,10 +478,10 @@ div#nav-bar div#sync-state-con span#last-sync-event {
     @apply text-[11px] text-gray-500 font-mono col-span-full;
 }
 #dashboard-con div#helper-status div#helper-list .helper-item div.helper-status-indicator {
-    @apply w-full h-2 rounded-full bg-green-500 animate-pulse col-span-full mt-1;
+    @apply w-full h-2 rounded-full bg-red-500 col-span-full mt-1;
 }
 #dashboard-con div#helper-status div#helper-list .helper-item div.helper-status-indicator.online {
-    @apply bg-green-500;
+    @apply bg-green-500 animate-pulse;
 }
 
 #dashboard-con div#conflicts div#conflict-list {
