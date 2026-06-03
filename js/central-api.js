@@ -448,7 +448,7 @@ export async function deleteMeasurement(id) {
 export async function getMeasurementConflicts(searchParams = {}) {
     if (await checkConnectivity()) {
         const queryString = new URLSearchParams(searchParams).toString();
-        const url = queryString ? `${host}/measeurements/conflicts?${queryString}` : `${host}/measeurements/conflicts`;
+        const url = queryString ? `${host}/measurements/conflicts?${queryString}` : `${host}/measurements/conflicts`;
         return fetch(url)
             .then(response => response.json())
             .catch(error => {

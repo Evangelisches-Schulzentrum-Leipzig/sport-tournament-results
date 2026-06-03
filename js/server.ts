@@ -603,11 +603,13 @@ app.delete('/measurements/:id', async (req, res) => {
     }
 });
 
-app.get('/measeurements/conflicts', async (req, res) => {
+app.get('/measurements/conflicts', async (req, res) => {
     try {
         const conn = await pool.getConnection();
         try {
             const searchParams = req.query;
+            // Get measurements with same participant_id, discipline_id and attempt_number but different value or created_at
+            // Respond with conflicts of same participant, discipline and attempt_number in one array and other conflicts in another [[{id, participant_id, discipline_id, attempt_number, value, created_at}, {id, participant_id, discipline_id, attempt_number, value, created_at}], [...], ...]
             let query = "SELECT id, participant_id, discipline_id, attempt_number, value, created_at FROM measurements WHERE 1=1";
             const params: any[] = [];
             
@@ -627,10 +629,26 @@ app.get('/measeurements/conflicts', async (req, res) => {
                 params.push(...disciplineFilter);
             }
             
-            query += ` GROUP BY participant_id, discipline_id, attempt_number HAVING COUNT(*) > 1;`;
+            query += ` ORDER BY participant_id, discipline_id, attempt_number;`;
             const measurementRows = await conn.query(query, params);
             var measurements = (Array.isArray(measurementRows) ? (measurementRows as {id: number, participant_id: number, discipline_id: number, attempt_number: number, value: number, created_at: string}[]) : []);
-            res.json(measurements);
+            
+            // Group measurements by participant_id, discipline_id, and attempt_number
+            // Return only groups with conflicts (more than 1 measurement)
+            const conflictMap = new Map<string, typeof measurements>();
+            
+            for (const measurement of measurements) {
+                const key = `${measurement.participant_id}_${measurement.discipline_id}_${measurement.attempt_number}`;
+                if (!conflictMap.has(key)) {
+                    conflictMap.set(key, []);
+                }
+                conflictMap.get(key)!.push(measurement);
+            }
+            
+            // Filter to only include groups with conflicts and convert to array of arrays
+            const conflicts = Array.from(conflictMap.values()).filter(group => group.length > 1);
+            
+            res.json(conflicts);
         } finally {
             conn.release();
         }
