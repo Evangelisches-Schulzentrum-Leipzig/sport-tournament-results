@@ -141,3 +141,63 @@ export function formatConflicts(conflictGroups, participants, disciplines, class
         };
     }).filter(conflict => conflict !== null);
 }
+
+/**
+ * Compute a matrix showing the progress of participants in each discipline for each class.
+ * @param {{name: string, level: number}[]} classes - Array of class objects
+ * @param {{id: number, name: string, forename: string, class: string}[]} participants - Array of participant objects
+ * @param {{id: number, name: string, unit: string, attempts: number, timer: boolean}[]} disciplines - Array of discipline objects
+ * @param {{id: number, participant_id: number, discipline_id: number, attempt_number: number, value: number, created_at: string}[]} measurements - Array of measurement objects
+ * @returns {{[className: string]: {[disciplineName: string]: number, total: number}}} Matrix of participant counts for each class and discipline, including total participants in each class
+ */
+export function computeDisciplineProgressMatrix(classes, participants, disciplines, measurements) {
+    // Create a map of classes with number of participants in each class
+    const classMap = new Map();
+    classes.forEach(cls => {
+        classMap.set(cls.name, {
+            name: cls.name,
+            level: cls.level,
+            participantCount: participants.filter(p => p.class === cls.name).length
+        });
+    });
+
+    // Create a map of discipline_id to discipline for easy lookup
+    const disciplineMap = new Map(disciplines.map(d => [d.id, d]));
+
+    // Create a map of participant_id to their class and measurements by discipline
+    const participantProgress = new Map();
+    participants.forEach(p => {
+        participantProgress.set(p.id, {
+            class: p.class,
+            disciplines: new Set()
+        });
+    });
+
+    // Add discipline measurements for each participant
+    measurements.forEach(m => {
+        if (participantProgress.has(m.participant_id)) {
+            participantProgress.get(m.participant_id).disciplines.add(m.discipline_id);
+        }
+    });
+    
+    // Create a matrix for each class and discipline, indicating how many participants in that class have a measurement for that discipline
+    // matrix[className][disciplineName] = count
+    const matrix = {};
+    classMap.forEach((cls, className) => {
+        matrix[className] = {};
+        disciplineMap.forEach((discipline, disciplineId) => {
+            const count = participants.filter(p => 
+                p.class === className && 
+                participantProgress.get(p.id)?.disciplines.has(disciplineId)
+            ).length;
+            matrix[className][discipline.name] = count;
+        });
+    });
+
+    // Add total participants in each class to the matrix
+    Object.keys(matrix).forEach(className => {
+        matrix[className]['total'] = classMap.get(className).participantCount;
+    });
+
+    return matrix;
+}

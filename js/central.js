@@ -1,6 +1,6 @@
 import * as api from './central-api.js';
 import { convertFloatToUnit, convertUnitToFloat, unitLabel } from './utils.js';
-import { computeRankings, formatConflicts } from './central-logic.js';
+import { computeRankings, formatConflicts, computeDisciplineProgressMatrix } from './central-logic.js';
 
 /**
  * Initialize page based on current URL pathname.
@@ -906,6 +906,17 @@ async function initDashboardPage() {
         displayDashboardDisciplines(data.disciplines, data);
     }
 
+    // Compute and display progress matrix
+    if (data.classes && data.participants && data.disciplines && data.measurements) {
+        const progressMatrix = computeDisciplineProgressMatrix(
+            data.classes,
+            data.participants,
+            data.disciplines,
+            data.measurements
+        );
+        displayProgressMatrix(progressMatrix, data.disciplines);
+    }
+
     // Populate filter dropdowns
     if (data.classes) {
         populateDashboardClassFilterDropdown(data.classes);
@@ -942,6 +953,71 @@ function displayDashboardDisciplines(disciplines, data) {
             <span class="discipline-current-class">Klasse 8a</span>
         `;
         grid.appendChild(tile);
+    });
+}
+
+/**
+ * Display progress matrix showing participant completion status by class and discipline.
+ * Renders as a table with progress bars and percentages.
+ * @param {{[className: string]: {[disciplineName: string]: number, total: number}}} matrix - Progress matrix from computeDisciplineProgressMatrix
+ * @param {{id: number, name: string, unit: string, attempts: number, timer: boolean}[]} disciplines - Array of discipline objects for column ordering
+ * @returns {void}
+ */
+function displayProgressMatrix(matrix, disciplines) {
+    const table = document.querySelector('#progress-matrix');
+    if (!table) return;
+
+    // Update table header
+    const thead = table.querySelector('thead');
+    if (thead) {
+        const headerRow = thead.querySelector('tr');
+        if (headerRow) {
+            headerRow.innerHTML = '<th>Klasse</th>';
+            disciplines.forEach(discipline => {
+                const th = document.createElement('th');
+                th.textContent = discipline.name;
+                headerRow.appendChild(th);
+            });
+        }
+    }
+
+    // Update table body
+    const tableBody = table.querySelector('tbody');
+    if (!tableBody) return;
+
+    tableBody.innerHTML = '';
+
+    // Sort classes alphabetically for consistent display
+    const classNames = Object.keys(matrix).sort();
+
+    classNames.forEach(className => {
+        const classProgress = matrix[className];
+        const total = classProgress.total || 0;
+        
+        // Only display rows with at least one participant
+        if (total === 0) return;
+        
+        const row = document.createElement('tr');
+        row.innerHTML = `<td>${className}</td>`;
+
+        // Add progress cells for each discipline
+        disciplines.forEach(discipline => {
+            const completed = classProgress[discipline.name] || 0;
+            const percentage = total > 0 ? Math.round((completed / total) * 100) : 0;
+
+            const cell = document.createElement('td');
+            cell.innerHTML = `
+                <div class="progress-bar-con">
+                    <div class="progress-bar">
+                        <div class="progress-bar-fill" style="width: ${percentage}%;"></div>
+                    </div>
+                    <span class="progress-bar-percentage">${completed}/${total}</span>
+                </div>
+            `;
+            row.appendChild(cell);
+        });
+
+        tableBody.appendChild(row);
     });
 }
 
