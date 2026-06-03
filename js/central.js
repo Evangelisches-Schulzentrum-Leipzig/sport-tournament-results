@@ -1592,19 +1592,36 @@ function displayConflicts(formattedConflicts, disciplines) {
         itemDiv.className = 'conflict-item';
         
         // Build HTML for the conflict item
+        const valuesHtml = conflict.values.map((v, index) => 
+            `<span class="conflict-value" data-measurement-id="${v.id}" data-conflict-index="${index}" style="cursor: pointer;">${convertFloatToUnit(v.value, unit)}${unitStr}</span>`
+        ).join('');
+        
         itemDiv.innerHTML = `
             <span class="conflict-item-class">${conflict.className}</span>
             <span class="conflict-item-discipline">${conflict.disciplineName}</span>
             <span class="conflict-item-try">Versuch ${conflict.attemptNumber}</span>
             <span class="conflict-item-participant">${conflict.participantName}</span>
             <div class="conflict-item-values">
-                ${conflict.values.map(v => `<span>${convertFloatToUnit(v.value, unit)}${unitStr}</span>`).join('')}
+                ${valuesHtml}
             </div>
         `;
+        
+        // Store conflict data on the item div for later access
+        itemDiv.dataset.conflictData = JSON.stringify({
+            participantId: conflict.participantId,
+            disciplineId: conflict.disciplineId,
+            attemptNumber: conflict.attemptNumber,
+            valueIds: conflict.values.map(v => v.id)
+        });
         
         conflictDiv.appendChild(headerH3);
         conflictDiv.appendChild(itemDiv);
         conflictsContainer.appendChild(conflictDiv);
+    });
+
+    // Add click handlers to all value spans
+    conflictsContainer.querySelectorAll('.conflict-value').forEach(valueSpan => {
+        valueSpan.addEventListener('click', handleConflictValueClick);
     });
 
     // Show message if no conflicts
@@ -1614,6 +1631,69 @@ function displayConflicts(formattedConflicts, disciplines) {
         noConflictsDiv.style.textAlign = 'center';
         noConflictsDiv.textContent = 'Keine Konflikte vorhanden';
         conflictsContainer.appendChild(noConflictsDiv);
+    }
+}
+
+/**
+ * Handle click on a conflict value to resolve the conflict.
+ * When a value is clicked, delete all other conflicting values.
+ * @async
+ * @param {Event} event - Click event
+ * @returns {Promise<void>}
+ */
+async function handleConflictValueClick(event) {
+    event.stopPropagation();
+    
+    const valueSpan = event.target;
+    const conflictItem = valueSpan.closest('.conflict-item');
+    if (!conflictItem) return;
+    
+    // Get the conflict data
+    const conflictData = JSON.parse(conflictItem.dataset.conflictData);
+    const selectedMeasurementId = parseInt(valueSpan.dataset.measurementId);
+    
+    // Get all measurement IDs to delete (all except the selected one)
+    const measurementIdsToDelete = conflictData.valueIds.filter(id => id !== selectedMeasurementId);
+    
+    if (measurementIdsToDelete.length === 0) {
+        console.log('No conflicting measurements to delete');
+        return;
+    }
+    
+    // Ask user for confirmation
+    const confirmed = confirm(
+        `Möchten Sie ${measurementIdsToDelete.length} widersprüchliche Wert(e) löschen und nur diesen Wert behalten?`
+    );
+    
+    if (!confirmed) {
+        return;
+    }
+    
+    try {
+        // Delete all conflicting measurements
+        const deletePromises = measurementIdsToDelete.map(id => api.deleteMeasurement(id));
+        await Promise.all(deletePromises);
+        
+        console.log(`Successfully deleted ${measurementIdsToDelete.length} conflicting measurements`);
+        
+        // Reload the conflicts
+        const [conflicts, data] = await Promise.all([
+            api.getMeasurementConflicts(),
+            api.getData()
+        ]);
+
+        if (conflicts && data) {
+            const formattedConflicts = formatConflicts(
+                conflicts,
+                data.participants,
+                data.disciplines,
+                data.classes
+            );
+            displayConflicts(formattedConflicts, data.disciplines);
+        }
+    } catch (error) {
+        console.error('Error resolving conflict:', error);
+        alert('Fehler beim Löschen der widersprüchlichen Werte. Bitte versuchen Sie es später erneut.');
     }
 }
 
