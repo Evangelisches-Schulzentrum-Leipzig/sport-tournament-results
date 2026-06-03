@@ -2,13 +2,32 @@ import { unitOrder } from "./utils.js";
 
 /**
  * Compute rankings for participants based on their measurements in various disciplines.
+ * @param {{name: string, level: number}[]} classes
  * @param {{id: number, name: string, forename: string, class: string}[]} participants 
  * @param {{id: number, name: string, unit: string, attempts: number, timer: boolean}[]} disciplines 
  * @param {{id: number, participant_id: number, discipline_id: number, attempt_number: number, value: number, created_at: string}[]} measurements 
+ * @param {{discipline_id: number, class_level: number, gender: string, mark: string, min_value: number}[]} markRanges
+ * @return {{disciplineRankings: Map<number, Array<{participantId: number, value: number, mark: string|null}>>, overallRankings: Array<{participantId: number, totalPoints: number}>}} Rankings for each discipline and overall rankings
  */
-export function computeRankings(participants, disciplines, measurements) {
+export function computeRankings(classes, participants, disciplines, measurements, markRanges) {
     // Create a map of discipline_id to discipline for easy lookup
     const disciplineMap = new Map(disciplines.map(d => [d.id, d]));
+
+    // Create mark lookup markMap[discipline_id][class_level][gender] = {mark, min_value}
+    /** @type {{[discipline_id: number]: {[class_level: number]: {[gender: string]: {mark: string, min_value: number}}}}} */
+    const markMap = {};
+    markRanges.forEach(mr => {
+        if (!markMap[mr.discipline_id]) {
+            markMap[mr.discipline_id] = {};
+        }
+        if (!markMap[mr.discipline_id][mr.class_level]) {
+            markMap[mr.discipline_id][mr.class_level] = {};
+        }
+        if (!markMap[mr.discipline_id][mr.class_level][mr.gender]) {
+            markMap[mr.discipline_id][mr.class_level][mr.gender] = {};
+        }
+        markMap[mr.discipline_id][mr.class_level][mr.gender][mr.mark] = mr.min_value;
+    });
     
     // Create a map of participant_id to their measurements for easy lookup
     const participantMeasurements = new Map();
@@ -39,15 +58,31 @@ export function computeRankings(participants, disciplines, measurements) {
         if (!disciplineRankings.has(discipline.id)) {
             disciplineRankings.set(discipline.id, []);
         }
+        var className = participants.find(p => p.id === participantId).class;
+        var class_level = classes.find(c => c.name === className)?.level;
+        var gender = participants.find(p => p.id === participantId)?.gender;
+        var markInfo = markMap[discipline.id]?.[class_level]?.[gender];
+        // find first mark where bestMeas.value >= min_value, if none found assign mark 6
+        var mark = null;
+        if (markInfo) {
+            mark = 6; // default mark if no thresholds are met
+            for (const [m, minValue] of Object.entries(markInfo)) {
+                if (bestMeas.value >= minValue) {
+                    mark = parseInt(m);
+                    break;
+                }
+            }
+        }
         disciplineRankings.get(discipline.id).push({
             participantId,
-            value: bestMeas.value
+            value: bestMeas.value,
+            mark: mark
         });
     });
 
     // Add all disciplines to the rankings map, even if no participant has a measurement for it
     // Also add all participants to the rankings, even if they have no measurements
-    // Assign them the value null
+    // Assign them the value null and mark null
     disciplines.forEach(discipline => {
         if (!disciplineRankings.has(discipline.id)) {
             disciplineRankings.set(discipline.id, []);
@@ -57,7 +92,8 @@ export function computeRankings(participants, disciplines, measurements) {
             if (!rankings.some(r => r.participantId === participant.id)) {
                 rankings.push({
                     participantId: participant.id,
-                    value: null
+                    value: null,
+                    mark: null
                 });
             }
         });

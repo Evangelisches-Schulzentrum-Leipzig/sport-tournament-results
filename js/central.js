@@ -680,7 +680,6 @@ async function initResultsPage() {
     // Display initial results if measurements available
     if (data.measurements) {
         displayResults(data.measurements, data, {});
-        console.log(computeRankings(data.participants, data.disciplines, data.measurements));
     }
 
     // Setup filter listeners
@@ -808,7 +807,7 @@ function displayResults(measurements, data, filters = {}) {
     // Add discipline columns
     disciplinesToDisplay.forEach(discipline => {
         const th1 = document.createElement('th');
-        th1.colSpan = 2;
+        th1.colSpan = 3;
         th1.textContent = discipline.name;
         headerRow1.appendChild(th1);
 
@@ -819,13 +818,16 @@ function displayResults(measurements, data, filters = {}) {
         const thPoints = document.createElement('th');
         thPoints.textContent = 'Punkte';
         headerRow2.appendChild(thPoints);
+
+        const thMark = document.createElement('th');
+        thMark.textContent = 'Note';
+        headerRow2.appendChild(thMark);
     });
 
     // Only show total points if all disciplines are displayed
     if (allDisciplinesDisplayed) {
         // Add total points filler header
         const totalTh = document.createElement('th');
-        totalTh.colSpan = 2;
         totalTh.textContent = '';
         headerRow1.appendChild(totalTh);
 
@@ -835,14 +837,18 @@ function displayResults(measurements, data, filters = {}) {
         headerRow2.appendChild(totalTh1);
     }
 
-    const { disciplineRankings, overallRankings } = computeRankings(data.participants, data.disciplines, data.measurements);
+    const { disciplineRankings, overallRankings } = computeRankings(data.classes, data.participants, data.disciplines, data.measurements, data.markRanges);
 
     tbody.innerHTML = '';
     let place = 1;
+
+    var missingParticipants = data.participants.filter(p => !overallRankings.some(r => r.participantId === p.id));
+    var participantsToDisplay = overallRankings.map(r => participantMap.get(r.participantId)).filter(p => p !== undefined);
+    participantsToDisplay = participantsToDisplay.concat(missingParticipants);
     
-    overallRankings.forEach(ranking => {
-        const participant = participantMap.get(ranking.participantId);
-        if (!participant) return;
+    participantsToDisplay.forEach(participant => {
+        const ranking = overallRankings.find(r => r.participantId === participant.id);
+        if (!ranking) return;
 
         // Apply class filter
         if (filters.class && participant.class !== filters.class) {
@@ -873,6 +879,7 @@ function displayResults(measurements, data, filters = {}) {
             cells += `
                 <td>${rankingData?.value !== null ? convertFloatToUnit(rankingData?.value, disciplineData?.unit) : '-'}</td>
                 <td>${rankingData && rankingData.value !== null ? disciplineRankings.get(discipline.id).length - disciplineRankings.get(discipline.id).indexOf(rankingData) : 0}</td>
+                <td>${rankingData?.mark !== null ? rankingData?.mark : '-'}</td>
             `;
         });
 
@@ -1258,7 +1265,7 @@ function displayDashboardResults(measurements, data, filters = {}) {
         selectedDiscipline = data.disciplines?.find(d => d.id == filters.disciplineId);
     }
 
-    const { disciplineRankings, overallRankings } = computeRankings(data.participants, data.disciplines, data.measurements);
+    const { disciplineRankings, overallRankings } = computeRankings(data.classes, data.participants, data.disciplines, data.measurements, data.markRanges);
 
     // Build results list
     let place = 1;

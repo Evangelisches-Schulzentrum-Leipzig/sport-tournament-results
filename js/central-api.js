@@ -23,7 +23,7 @@ export async function checkConnectivity() {
  * Fetch all data from the server: classes, disciplines, participants, and measurements.
  * Supports filtering by search parameters.
  * @param {Object} [searchParams={}] Optional filter parameters
- * @returns {Promise<{classes: {name: string, level: number}[], disciplines: {id: number, name: string, unit: string, attempts: number, timer: boolean}[], participants: {id: number, name: string, forename: string, class: string}[], measurements: {id: number, participant_id: number, discipline_id: number, attempt_number: number, value: number, created_at: string}[]} | null>} Combined data object or null if request fails
+ * @returns {Promise<{classes: {name: string, level: number}[], disciplines: {id: number, name: string, unit: string, attempts: number, timer: boolean}[], participants: {id: number, name: string, forename: string, class: string}[], measurements: {id: number, participant_id: number, discipline_id: number, attempt_number: number, value: number, created_at: string}[], markRanges: {discipline_id: number, class_level: number, gender: string, mark: number, min_value: number}[]} | null>} Combined data object or null if request fails
  */
 export async function getData(searchParams = {}) {
     if (await checkConnectivity()) {

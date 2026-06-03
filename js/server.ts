@@ -58,7 +58,7 @@ app.get('/data', async (req, res) => {
             var disciplines = (Array.isArray(disciplineRows) ? (disciplineRows as {id: number, name: string, unit: string, attempts: number, timer: boolean}[]) : []);
 
             // Participants query with filters
-            let participantQuery = "SELECT id, name, forename, class_name AS class FROM participants WHERE 1=1";
+            let participantQuery = "SELECT id, name, forename, gender, class_name AS class FROM participants WHERE 1=1";
             const participantParams: any[] = [];
             if (searchParams['class']) {
                 const classFilter = Array.isArray(searchParams['class']) ? searchParams['class'] : [searchParams['class']];
@@ -73,7 +73,7 @@ app.get('/data', async (req, res) => {
             }
             participantQuery += ";";
             const participantRows = await conn.query(participantQuery, participantParams);
-            var participants = (Array.isArray(participantRows) ? (participantRows as {id: number, name: string, forename: string, class: string}[]) : []);
+            var participants = (Array.isArray(participantRows) ? (participantRows as {id: number, name: string, forename: string, gender: string, class: string}[]) : []);
 
             // Measurements query with optional filters
             let measurementQuery = "SELECT id, participant_id, discipline_id, attempt_number, value, created_at FROM measurements WHERE 1=1";
