@@ -932,46 +932,66 @@ function setupResultsFilters(data) {
  * @returns {Promise<void>}
  */
 async function initDashboardPage() {
-    const data = await api.getData();
-    
-    if (!data) {
-        console.error('Failed to load dashboard data');
-        return;
-    }
+    try {
+        const data = await api.getData();
+        
+        if (!data) {
+            console.error('Failed to load dashboard data');
+            return;
+        }
 
-    // Display disciplines if data available
-    if (data.disciplines) {
-        displayDashboardDisciplines(data.disciplines, data);
-    }
+        // Display disciplines if data available
+        if (data.disciplines) {
+            displayDashboardDisciplines(data.disciplines, data);
+        }
 
-    // Compute and display progress matrix
-    if (data.classes && data.participants && data.disciplines && data.measurements) {
-        const progressMatrix = computeDisciplineProgressMatrix(
-            data.classes,
-            data.participants,
-            data.disciplines,
-            data.measurements
-        );
-        displayProgressMatrix(progressMatrix, data.disciplines);
-    }
+        // Compute and display progress matrix
+        if (data.classes && data.participants && data.disciplines && data.measurements) {
+            const progressMatrix = computeDisciplineProgressMatrix(
+                data.classes,
+                data.participants,
+                data.disciplines,
+                data.measurements
+            );
+            displayProgressMatrix(progressMatrix, data.disciplines);
+        }
 
-    // Populate filter dropdowns
-    if (data.classes) {
-        populateDashboardClassFilterDropdown(data.classes);
-        populateDashboardClassLevelFilterDropdown(data.classes);
-    }
+        // Load and display conflicts
+        try {
+            const conflicts = await api.getMeasurementConflicts();
+            if (conflicts && data) {
+                const formattedConflicts = formatConflicts(
+                    conflicts,
+                    data.participants,
+                    data.disciplines,
+                    data.classes
+                );
+                displayDashboardConflicts(formattedConflicts, data.disciplines);
+            }
+        } catch (error) {
+            console.warn('Failed to load conflicts:', error);
+        }
 
-    if (data.disciplines) {
-        populateDashboardDisciplineFilterDropdown(data.disciplines);
-    }
+        // Populate filter dropdowns
+        if (data.classes) {
+            populateDashboardClassFilterDropdown(data.classes);
+            populateDashboardClassLevelFilterDropdown(data.classes);
+        }
 
-    // Display initial results
-    if (data.measurements) {
-        displayDashboardResults(data.measurements, data, {});
-    }
+        if (data.disciplines) {
+            populateDashboardDisciplineFilterDropdown(data.disciplines);
+        }
 
-    // Setup dashboard filters
-    setupDashboardFilters(data);
+        // Display initial results
+        if (data.measurements) {
+            displayDashboardResults(data.measurements, data, {});
+        }
+
+        // Setup dashboard filters
+        setupDashboardFilters(data);
+    } catch (error) {
+        console.error('Error initializing dashboard page:', error);
+    }
 }
 
 /**
@@ -1067,6 +1087,65 @@ function displayProgressMatrix(matrix, disciplines) {
 
         tableBody.appendChild(row);
     });
+}
+
+/**
+ * Display conflicts on the dashboard.
+ * Shows conflicting measurements for each participant and discipline.
+ * @param {Array} formattedConflicts - Array of formatted conflicts from formatConflicts()
+ * @param {{id: number, name: string, unit: string, attempts: number, timer: boolean}[]} disciplines - Array of discipline objects
+ * @returns {void}
+ */
+function displayDashboardConflicts(formattedConflicts, disciplines) {
+    const conflictList = document.getElementById('conflict-list');
+    const conflictCountSpan = document.querySelector('#conflicts .conflict-count');
+    
+    if (!conflictList) return;
+
+    // Clear existing content
+    conflictList.innerHTML = '';
+
+    // Create a discipline map for quick unit lookup
+    const disciplineMap = new Map(disciplines.map(d => [d.id, d]));
+
+    // Display each conflict
+    formattedConflicts.forEach(conflict => {
+        const discipline = disciplineMap.get(conflict.disciplineId);
+        const unit = discipline?.unit || '';
+        const unitStr = unitLabel(unit);
+
+        // Create conflict item
+        const itemDiv = document.createElement('div');
+        itemDiv.className = 'conflict-item';
+        
+        // Build HTML for the conflict item
+        itemDiv.innerHTML = `
+            <h3 class="conflict-issue">Doppelte Werte</h3>
+            <span class="conflict-discipline">${conflict.disciplineName}</span>
+            <span class="conflict-class">${conflict.className}</span>
+            <span class="conflict-participant">${conflict.participantName}</span>
+            <div class="conflict-item-values">
+                ${conflict.values.map(v => `<span>${convertFloatToUnit(v.value, unit)}${unitStr}</span>`).join('')}
+            </div>
+        `;
+        
+        conflictList.appendChild(itemDiv);
+    });
+
+    // Update conflict count
+    if (conflictCountSpan) {
+        const count = formattedConflicts.length;
+        conflictCountSpan.textContent = `${count} ${count === 1 ? 'Konflikt' : 'Konflikte'}`;
+    }
+
+    // Show message if no conflicts
+    if (formattedConflicts.length === 0) {
+        const noConflictsDiv = document.createElement('div');
+        noConflictsDiv.style.padding = '20px';
+        noConflictsDiv.style.textAlign = 'center';
+        noConflictsDiv.textContent = 'Keine Konflikte vorhanden';
+        conflictList.appendChild(noConflictsDiv);
+    }
 }
 
 /**
