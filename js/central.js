@@ -677,7 +677,7 @@ async function initResultsPage() {
 
     // Display initial results if measurements available
     if (data.measurements) {
-        displayResults(data.measurements, data);
+        displayResults(data.measurements, data, {});
         console.log(computeRankings(data.participants, data.disciplines, data.measurements));
     }
 
@@ -752,13 +752,15 @@ function populateResultsClassFilterDropdown(classes) {
 /**
  * Display measurement results grouped by participant with total points calculation.
  * @param {{id: number, participant_id: number, discipline_id: number, attempt_number: number, value: number, created_at: string}[]} measurements - Array of measurement objects
- * @param {{participants: {id: number, name: string, forename: string, class: string}[], disciplines: {id: number, name: string, unit: string, attempts: number, timer: boolean}[]}} data - Page data containing participants and disciplines
+ * @param {{participants: {id: number, name: string, forename: string, class: string}[], disciplines: {id: number, name: string, unit: string, attempts: number, timer: boolean}[], classes: {name: string, level: number}[]}} data - Page data containing participants and disciplines
+ * @param {Object} [filters={}] - Optional filter parameters with keys: disciplineId, class, classLevel
  * @returns {void}
  */
-function displayResults(measurements, data) {
+function displayResults(measurements, data, filters = {}) {
     // Create a map for quick lookups
     const participantMap = new Map();
     const disciplineMap = new Map();
+    const classMap = new Map();
     
     if (data.participants) {
         data.participants.forEach(p => participantMap.set(p.id, p));
@@ -768,10 +770,26 @@ function displayResults(measurements, data) {
         data.disciplines.forEach(d => disciplineMap.set(d.id, d));
     }
 
+    if (data.classes) {
+        data.classes.forEach(c => classMap.set(c.name, c));
+    }
+
     const thead = document.querySelector('#results-table-con thead');
     if (!thead) return;
     const tbody = document.querySelector('#results-table-con tbody');
     if (!tbody) return;
+
+    // Determine which disciplines to display
+    let disciplinesToDisplay = data.disciplines || [];
+    if (filters.disciplineId) {
+        const selectedDiscipline = disciplinesToDisplay.find(d => d.id == filters.disciplineId);
+        if (selectedDiscipline) {
+            disciplinesToDisplay = [selectedDiscipline];
+        }
+    }
+
+    // Check if all disciplines are being displayed
+    const allDisciplinesDisplayed = disciplinesToDisplay.length === (data.disciplines?.length || 0);
 
     // Build table header with discipline columns
     const headerRow1 = thead.querySelector('tr:first-child');
@@ -786,33 +804,34 @@ function displayResults(measurements, data) {
     }
     
     // Add discipline columns
-    if (data.disciplines) {
-        data.disciplines.forEach(discipline => {
-            const th1 = document.createElement('th');
-            th1.colSpan = 2;
-            th1.textContent = discipline.name;
-            headerRow1.appendChild(th1);
+    disciplinesToDisplay.forEach(discipline => {
+        const th1 = document.createElement('th');
+        th1.colSpan = 2;
+        th1.textContent = discipline.name;
+        headerRow1.appendChild(th1);
 
-            const thValue = document.createElement('th');
-            thValue.textContent = `Wert ${unitLabel(discipline.unit)}`;
-            headerRow2.appendChild(thValue);
+        const thValue = document.createElement('th');
+        thValue.textContent = `Wert ${unitLabel(discipline.unit)}`;
+        headerRow2.appendChild(thValue);
 
-            const thPoints = document.createElement('th');
-            thPoints.textContent = 'Punkte';
-            headerRow2.appendChild(thPoints);
-        });
+        const thPoints = document.createElement('th');
+        thPoints.textContent = 'Punkte';
+        headerRow2.appendChild(thPoints);
+    });
+
+    // Only show total points if all disciplines are displayed
+    if (allDisciplinesDisplayed) {
+        // Add total points filler header
+        const totalTh = document.createElement('th');
+        totalTh.colSpan = 2;
+        totalTh.textContent = '';
+        headerRow1.appendChild(totalTh);
+
+        // Add total points header
+        const totalTh1 = document.createElement('th');
+        totalTh1.textContent = 'Punkte gesamt';
+        headerRow2.appendChild(totalTh1);
     }
-
-    // Add total points filler header
-    const totalTh = document.createElement('th');
-    totalTh.colSpan = 2;
-    totalTh.textContent = '';
-    headerRow1.appendChild(totalTh);
-
-    // Add total points header
-    const totalTh1 = document.createElement('th');
-    totalTh1.textContent = 'Punkte gesamt';
-    headerRow2.appendChild(totalTh1);
 
     const { disciplineRankings, overallRankings } = computeRankings(data.participants, data.disciplines, data.measurements);
 
@@ -823,6 +842,19 @@ function displayResults(measurements, data) {
         const participant = participantMap.get(ranking.participantId);
         if (!participant) return;
 
+        // Apply class filter
+        if (filters.class && participant.class !== filters.class) {
+            return;
+        }
+
+        // Apply class level filter
+        if (filters.classLevel) {
+            const participantClass = classMap.get(participant.class);
+            if (!participantClass || participantClass.level != filters.classLevel) {
+                return;
+            }
+        }
+
         const row = document.createElement('tr');
         let totalPoints = ranking.totalPoints;
         let cells = `
@@ -832,8 +864,8 @@ function displayResults(measurements, data) {
             <td>${participant.class}</td>
         `;
 
-        // Add value and points cells for each discipline
-        data.disciplines.forEach(discipline => {
+        // Add value and points cells for each displayed discipline
+        disciplinesToDisplay.forEach(discipline => {
             const disciplineData = disciplineMap.get(discipline.id);
             const rankingData = disciplineRankings.get(discipline.id)?.find(r => r.participantId === ranking.participantId);
             cells += `
@@ -842,7 +874,11 @@ function displayResults(measurements, data) {
             `;
         });
 
-        cells += `<td><strong>${totalPoints}</strong></td>`;
+        // Only add total points if all disciplines are displayed
+        if (allDisciplinesDisplayed) {
+            cells += `<td><strong>${totalPoints}</strong></td>`;
+        }
+
         row.innerHTML = cells;
         tbody.appendChild(row);
         place++;
@@ -868,17 +904,19 @@ function setupResultsFilters(data) {
         const filters = {};
         
         if (disciplineFilter && disciplineFilter.value) {
-            filters['discipline_id'] = disciplineFilter.value;
+            filters['disciplineId'] = disciplineFilter.value;
         }
         
         if (classFilter && classFilter.value) {
             filters['class'] = classFilter.value;
         }
 
-        const filteredData = await api.getData(filters);
-        if (filteredData && filteredData.measurements) {
-            displayResults(filteredData.measurements, filteredData);
+        if (classLevelFilter && classLevelFilter.value) {
+            filters['classLevel'] = classLevelFilter.value;
         }
+
+        // Display filtered results with client-side filtering
+        displayResults(data.measurements, data, filters);
     };
 
     if (disciplineFilter) disciplineFilter.addEventListener('change', applyFilters);
