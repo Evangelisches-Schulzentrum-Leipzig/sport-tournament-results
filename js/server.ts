@@ -777,8 +777,8 @@ const wss = new WebSocketServer({
     path: '/ws'
 });
 
-function heartbeat(this: WebSocket & { isAlive?: boolean }) {
-    this.isAlive = true;
+function heartbeat(ws: WebSocket & { isAlive?: boolean, uuid?: string }) {
+    ws.isAlive = true;
 }
 
 // Handle WebSocket connections
@@ -787,7 +787,9 @@ wss.on('connection', (ws: WebSocket & { isAlive?: boolean, uuid?: string }) => {
     ws.isAlive = true;
     ws.uuid = crypto.randomUUID();
 
-    ws.on('pong', heartbeat);
+    ws.on('pong', () => {
+        heartbeat(ws);
+    });
     
     // Handle incoming messages
     ws.on('message', (data) => {
@@ -894,7 +896,7 @@ const interval = setInterval(function ping() {
         ws.isAlive = false;
         ws.ping();
     });
-}, 30000);
+}, 10000);
 
 wss.on('close', function close() {
     clearInterval(interval);

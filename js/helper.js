@@ -1,8 +1,6 @@
-import { getData, sync } from "./helper-api.js";
+import { getData, sync, checkConnectivity, HELPER_NAME_KEY } from "./helper-api.js";
 import { addClassOrUpdate, addDisciplineOrUpdate, addParticipantOrUpdate, addMeasurementOrUpdate, openDatabase, getDisciplines, getClasses, getDisciplineById, getParticipants, getClassMeasurements, getSyncMeasurements, getSyncedMeasurements, setSyncTime } from "./helper-db.js"
 import { convertFloatToUnit, convertUnitToFloat } from "./utils.js"
-
-const HELPER_NAME_KEY = 'helperName';
 
 function promptForHelperName() {
     try {
