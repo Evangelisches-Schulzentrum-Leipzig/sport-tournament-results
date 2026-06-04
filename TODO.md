@@ -11,7 +11,7 @@
 - [x] solve conflicts from dashboard
 - [ ] export all classwise with mark and values
 - [ ] export from results 
-- [ ] export to pdf and print
+- [-] export to pdf and print
 - [ ] edit buttons
 - [ ] implement values inside discipline grid dashboard
 - [ ] helper sync date, measurement count, current class and discipline
