@@ -37,10 +37,13 @@ export function displayConflicts(formattedConflicts, disciplines) {
         itemDiv.className = 'conflict-item';
 
         const valuesHtml = conflict.values.map((v, index) =>
-            `<span class="conflict-value"
-                data-measurement-id="${v.id}"
-                data-conflict-index="${index}"
-                style="cursor:pointer;">${convertFloatToUnit(v.value, unit)}${unitStr}</span>`
+            `<div class="conflict-value-container">
+                <span class="conflict-value"
+                    data-measurement-id="${v.id}"
+                    data-conflict-index="${index}"
+                    style="cursor:pointer;">${convertFloatToUnit(v.value, unit)}</span>
+                <span class="conflict-value-date">${new Date(v.createdAt).toLocaleTimeString()}</span>
+            </div>`
         ).join('');
 
         itemDiv.innerHTML = `

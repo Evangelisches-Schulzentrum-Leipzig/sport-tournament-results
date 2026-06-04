@@ -1243,7 +1243,13 @@ div#nav-bar div#sync-state-con span#last-sync-event {
   font-size: var(--text-lg);
   line-height: var(--tw-leading, var(--text-lg--line-height));
 }
-#conflicts-con .conflict-con .conflict-item div.conflict-item-values span {
+#conflicts-con .conflict-con .conflict-item div.conflict-item-values div.conflict-value-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: calc(var(--spacing) * 1);
+}
+#conflicts-con .conflict-con .conflict-item div.conflict-item-values div.conflict-value-container span.conflict-value {
   cursor: pointer;
   border-radius: var(--radius);
   border-style: var(--tw-border-style);
@@ -1257,6 +1263,11 @@ div#nav-bar div#sync-state-con span#last-sync-event {
       background-color: var(--color-primary-hover);
     }
   }
+}
+#conflicts-con .conflict-con .conflict-item div.conflict-item-values div.conflict-value-container span.conflict-value-date {
+  font-size: var(--text-xs);
+  line-height: var(--tw-leading, var(--text-xs--line-height));
+  color: var(--color-gray-500);
 }
 #import-export-con .import-con {
   display: grid;
@@ -1752,7 +1763,7 @@ div#nav-bar div#sync-state-con span#last-sync-event {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   column-gap: calc(var(--spacing) * 2);
-  row-gap: calc(var(--spacing) * 1);
+  row-gap: calc(var(--spacing) * 2);
   border-inline-start-style: var(--tw-border-style);
   border-inline-start-width: 2px;
   border-bottom-style: var(--tw-border-style);
@@ -1769,30 +1780,45 @@ div#nav-bar div#sync-state-con span#last-sync-event {
   font-weight: var(--font-weight-semibold);
   color: #ca8a04;
 }
+#dashboard-con div#conflicts div#conflict-list .conflict-item span.conflict-class {
+  text-align: center;
+}
 #dashboard-con div#conflicts div#conflict-list .conflict-item span.conflict-discipline, #dashboard-con div#conflicts div#conflict-list .conflict-item span.conflict-class, #dashboard-con div#conflicts div#conflict-list .conflict-item span.conflict-participant {
   font-size: var(--text-sm);
   line-height: var(--tw-leading, var(--text-sm--line-height));
   color: var(--color-gray-500);
 }
-#dashboard-con div#conflicts div#conflict-list .conflict-item button.resolve-conflict-btn {
+#dashboard-con div#conflicts div#conflict-list .conflict-item div.conflict-values {
   grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: calc(var(--spacing) * 2);
+}
+#dashboard-con div#conflicts div#conflict-list .conflict-item div.conflict-values div.conflict-value-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: calc(var(--spacing) * 1);
+}
+#dashboard-con div#conflicts div#conflict-list .conflict-item div.conflict-values div.conflict-value-container span.conflict-value {
   cursor: pointer;
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius);
   border-style: var(--tw-border-style);
   border-width: 1px;
-  border-color: var(--color-primary);
-  padding-inline: calc(var(--spacing) * 1);
-  padding-block: calc(var(--spacing) * 0.5);
+  border-color: var(--color-border);
+  background-color: var(--color-primary);
+  padding-inline: calc(var(--spacing) * 4);
+  padding-block: calc(var(--spacing) * 2);
   &:hover {
     @media (hover: hover) {
       background-color: var(--color-primary-hover);
     }
   }
-  &:hover {
-    @media (hover: hover) {
-      color: var(--color-text-primary);
-    }
-  }
+}
+#dashboard-con div#conflicts div#conflict-list .conflict-item div.conflict-values div.conflict-value-container span.conflict-value-date {
+  font-size: var(--text-xs);
+  line-height: var(--tw-leading, var(--text-xs--line-height));
+  color: var(--color-gray-500);
 }
 @layer base {
   input:where([type='text']),input:where(:not([type])),input:where([type='email']),input:where([type='url']),input:where([type='password']),input:where([type='number']),input:where([type='date']),input:where([type='datetime-local']),input:where([type='month']),input:where([type='search']),input:where([type='tel']),input:where([type='time']),input:where([type='week']),select:where([multiple]),textarea,select {

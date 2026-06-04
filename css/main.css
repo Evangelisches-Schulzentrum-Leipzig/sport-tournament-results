@@ -305,8 +305,14 @@ div#nav-bar div#sync-state-con span#last-sync-event {
 #conflicts-con .conflict-con .conflict-item div.conflict-item-values {
     @apply text-lg font-mono flex gap-2 col-span-full flex-wrap w-full;
 }
-#conflicts-con .conflict-con .conflict-item div.conflict-item-values span {
+#conflicts-con .conflict-con .conflict-item div.conflict-item-values div.conflict-value-container {
+    @apply flex flex-col items-center gap-1;
+}
+#conflicts-con .conflict-con .conflict-item div.conflict-item-values div.conflict-value-container span.conflict-value {
     @apply bg-primary hover:bg-primary-hover border border-border rounded px-4 py-2 cursor-pointer;
+}
+#conflicts-con .conflict-con .conflict-item div.conflict-item-values div.conflict-value-container span.conflict-value-date {
+    @apply text-xs text-gray-500;
 }
 #import-export-con .import-con {
     @apply grid grid-cols-3 gap-4 p-4;
@@ -491,16 +497,28 @@ div#nav-bar div#sync-state-con span#last-sync-event {
     @apply flex flex-col overflow-auto;
 }
 #dashboard-con div#conflicts div#conflict-list .conflict-item {
-    @apply border-s-2 border-s-[#ca8a04] p-2 border-b border-b-border grid grid-cols-3 gap-x-2 gap-y-1;
+    @apply border-s-2 border-s-[#ca8a04] p-2 border-b border-b-border grid grid-cols-3 gap-x-2 gap-y-2;
 }
 #dashboard-con div#conflicts div#conflict-list .conflict-item h3.conflict-issue {
     @apply text-sm font-semibold text-[#ca8a04] col-span-full;
+}
+#dashboard-con div#conflicts div#conflict-list .conflict-item span.conflict-class {
+    @apply text-center;
 }
 #dashboard-con div#conflicts div#conflict-list .conflict-item span.conflict-discipline,
 #dashboard-con div#conflicts div#conflict-list .conflict-item span.conflict-class,
 #dashboard-con div#conflicts div#conflict-list .conflict-item span.conflict-participant {
     @apply text-sm text-gray-500;
 }
-#dashboard-con div#conflicts div#conflict-list .conflict-item button.resolve-conflict-btn {
-    @apply border border-primary hover:bg-primary-hover hover:text-text-primary rounded-sm px-1 py-0.5 cursor-pointer col-span-full;
+#dashboard-con div#conflicts div#conflict-list .conflict-item div.conflict-values {
+    @apply flex gap-2 col-span-full flex-wrap;
+}
+#dashboard-con div#conflicts div#conflict-list .conflict-item div.conflict-values div.conflict-value-container {
+    @apply flex flex-col items-center gap-1;
+}
+#dashboard-con div#conflicts div#conflict-list .conflict-item div.conflict-values div.conflict-value-container span.conflict-value {
+    @apply bg-primary hover:bg-primary-hover border border-border rounded px-4 py-2 cursor-pointer;
+}
+#dashboard-con div#conflicts div#conflict-list .conflict-item div.conflict-values div.conflict-value-container span.conflict-value-date {
+    @apply text-xs text-gray-500;
 }

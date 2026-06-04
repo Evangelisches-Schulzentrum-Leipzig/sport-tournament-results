@@ -4,6 +4,7 @@
 
 import { computeRankings, computeDisciplineProgressMatrix } from '../../central-logic.js';
 import { convertFloatToUnit, unitLabel } from '../../utils.js';
+import { handleConflictValueClick } from '../handlers/dashboard-handler.js';
 
 export function displayDashboardDisciplines(disciplines, data) {
     const grid = document.querySelector('#discipline-grid');
@@ -103,14 +104,32 @@ export function displayDashboardConflicts(formattedConflicts, disciplines) {
         itemDiv.className = 'conflict-item';
         itemDiv.innerHTML = `
             <h3 class="conflict-issue">Doppelte Werte</h3>
-            <span class="conflict-discipline">${conflict.disciplineName}</span>
+            <span class="conflict-discipline">${conflict.disciplineName} ${unitStr}</span>
             <span class="conflict-class">${conflict.className}</span>
             <span class="conflict-participant">${conflict.participantName}</span>
-            <div class="conflict-item-values">
-                ${conflict.values.map(v => `<span>${convertFloatToUnit(v.value, unit)}${unitStr}</span>`).join('')}
+            <div class="conflict-values">
+                ${conflict.values.map((v, index) =>
+                    `<div class="conflict-value-container">
+                        <span class="conflict-value"
+                            data-measurement-id="${v.id}"
+                            data-conflict-index="${index}"
+                            style="cursor:pointer;">${convertFloatToUnit(v.value, unit)}</span>
+                        <span class="conflict-value-date">${new Date(v.createdAt).toLocaleTimeString()}</span>
+                    </div>`
+                ).join('')}
             </div>
         `;
+        itemDiv.dataset.conflictData = JSON.stringify({
+            participantId: conflict.participantId,
+            disciplineId: conflict.disciplineId,
+            attemptNumber: conflict.attemptNumber,
+            valueIds: conflict.values.map(v => v.id)
+        });
         conflictList.appendChild(itemDiv);
+    });
+
+    conflictList.querySelectorAll('.conflict-value').forEach(span => {
+        span.addEventListener('click', handleConflictValueClick);
     });
 
     if (conflictCountSpan) {

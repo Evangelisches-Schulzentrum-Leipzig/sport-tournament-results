@@ -8,7 +8,7 @@
 - [ ] change server hostname 
 - [ ] change username
 - [ ] live events (measurement, )
-- [ ] solve conflicts from dashboard
+- [x] solve conflicts from dashboard
 - [ ] export all classwise with mark and values
 - [ ] export from results 
 - [ ] export to pdf and print
