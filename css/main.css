@@ -275,6 +275,9 @@ div#nav-bar div#sync-state-con span#last-sync-event {
 .sub-con tr td.sync-state-con span {
     @apply text-green-500 animate-pulse;
 }
+#results-table-con {
+    @apply overflow-x-auto;
+}
 #result-export-con {
     @apply flex items-center gap-2 mb-2 mx-4 mt-4;
 }
