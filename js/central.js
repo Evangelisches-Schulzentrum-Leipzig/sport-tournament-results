@@ -21,6 +21,8 @@ async function initPage() {
             await initResultsPage();
         } else if (page.includes('central-sync')) {
             await initSyncPage();
+        } else if (page.includes('central-import-export')) {
+            await initImportExportPage();
         } else {
             await initDashboardPage();
         }
@@ -1921,6 +1923,150 @@ async function handleConflictValueClick(event) {
         console.error('Error resolving conflict:', error);
         alert('Fehler beim Löschen der widersprüchlichen Werte. Bitte versuchen Sie es später erneut.');
     }
+}
+
+/**
+ * Initialize the import/export page by setting up event listeners for import and export buttons.
+ * @async
+ * @returns {Promise<void>}
+ */
+async function initImportExportPage() {
+    setupImportExportEventListeners();
+}
+
+/**
+ * Set up event listeners for import/export buttons.
+ * @returns {void}
+ */
+function setupImportExportEventListeners() {
+    const importParticipantsBtn = document.getElementById('import-participants-btn');
+    const importParticipantsInput = document.getElementById('import-participants-file-input');
+    
+    if (importParticipantsBtn && importParticipantsInput) {
+        importParticipantsBtn.addEventListener('click', () => {
+            if (importParticipantsInput.files.length > 0) {
+                handleImportParticipants(importParticipantsInput.files[0]);
+            } else {
+                alert('Bitte wählen Sie eine JSON-Datei zum Importieren aus');
+            }
+        });
+    }
+}
+
+/**
+ * Parse JSON file and infer classes from participant data.
+ * Maps JSON fields: Vorname (forename), Nachname (name), Geschlecht (gender), Klasse (class)
+ * Infers class levels based on class names (e.g., 1a=1, 2b=2, 10s=10).
+ * 
+ * @async
+ * @param {File} file - The JSON file to import
+ * @returns {Promise<void>}
+ */
+async function handleImportParticipants(file) {
+    try {
+        if (file.type !== 'application/json') {
+            alert('Bitte wählen Sie eine gültige JSON-Datei aus');
+            return;
+        }
+        let jsonData;
+        try {             
+            jsonData = await file.text().then(text => JSON.parse(text));
+        } catch (parseError) {
+            alert('Fehler beim Parsen der JSON-Datei: ' + parseError.message);
+            return;
+        }
+        
+        if (!Array.isArray(jsonData)) {
+            alert('JSON-Datei muss ein Array von Teilnehmern sein');
+            return;
+        }
+    
+        // Extract and transform participant data
+        const participants = jsonData.filter(item => item['Status'] == "Aktiv").map(item => {
+            switch (item['Geschlecht']) {
+                case 'm':
+                case 'M':
+                    item['Geschlecht'] = 'male';
+                    break;
+                case 'w':
+                case 'W':
+                    item['Geschlecht'] = 'female';
+                    break;
+                default:
+                    item['Geschlecht'] = null;
+            }
+            return {
+                forename: item['Vorname'] || '',
+                name: item['Nachname'] || '',
+                gender: item['Geschlecht'] || null,
+                class: inferClassLevel(item['Klasse']) !== 0 ? item['Klasse'] : null
+            };
+        });
+        const validParticipants = participants.filter(p => p.forename && p.name && p.class && p.gender).filter(p => p.class !== null && inferClassLevel(p.class) >= 5 && inferClassLevel(p.class) <= 7);
+        const invalidCount = participants.length - validParticipants.length;
+        console.log(participants.filter(p => !p.forename || !p.name || !p.class || !p.gender));
+        console.log("Excluded because of deselected class levels (only 5-7 allowed):", participants.filter(p => p.class !== null && (inferClassLevel(p.class) < 5 || inferClassLevel(p.class) > 7)));
+
+        // Extract unique classes and infer levels
+        const classMap = new Map(); // class name -> level
+        validParticipants.forEach(p => {
+            if (p.class && !classMap.has(p.class)) {
+                const level = inferClassLevel(p.class);
+                classMap.set(p.class, level);
+            }
+        });
+
+        // Create class objects
+        const classes = Array.from(classMap.entries()).map(([name, level]) => ({
+            name,
+            level
+        })).filter(c => c.level !== 0); // Filter out classes where level inference failed
+
+        // Validate data
+        if (validParticipants.length === 0) {
+            alert('Keine gültigen Teilnehmer in der JSON-Datei gefunden');
+            return;
+        }
+
+        console.log(`Importing ${validParticipants.length} participants and ${classes.length} classes`);
+
+        // Create classes first (bulk)
+        if (classes.length > 0) {
+            const classResult = await api.createClass(classes);
+            if (!classResult) {
+                alert('Fehler beim Erstellen der Klassen');
+                return;
+            }
+            console.log('Classes created successfully');
+        }
+
+        // Create participants (bulk)
+        const participantResult = await api.createParticipant(validParticipants);
+        if (!participantResult) {
+            alert('Fehler beim Erstellen der Teilnehmer');
+            return;
+        }
+
+        alert(`Erfolgreich importiert: ${validParticipants.length} Teilnehmer und ${classes.length} Klassen`);
+        console.log('Participants imported successfully');
+
+    } catch (error) {
+        console.error('Error importing participants:', error);
+        alert('Fehler beim Importieren der Datei: ' + error.message);
+    }
+}
+
+/**
+ * Infer class level from class name.
+ * Examples: 1a -> 1, 10s -> 10, 9c -> 9
+ * Extracts the numeric prefix from the class name.
+ * 
+ * @param {string} className - The class name to parse
+ * @returns {number} The inferred class level, or 0 if unable to parse
+ */
+function inferClassLevel(className) {
+    const match = className.match(/^(\d+)/);
+    return match ? parseInt(match[1], 10) : 0;
 }
 
 // Initialize page when DOM is loaded

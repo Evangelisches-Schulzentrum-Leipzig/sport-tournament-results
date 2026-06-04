@@ -173,8 +173,15 @@ app.post('/classes', async (req, res) => {
     try {
         const conn = await pool.getConnection();
         try {
-            const { name, level } = req.body;
-            await conn.query("INSERT INTO classes (name, level) VALUES (?, ?) ON DUPLICATE KEY UPDATE level = VALUES(level);", [name, level]);
+            if (Array.isArray(req.body)) {
+                for (const item of req.body) {
+                    const { name, level } = item;
+                    await conn.query("INSERT INTO classes (name, level) VALUES (?, ?) ON DUPLICATE KEY UPDATE level = VALUES(level);", [name, level]);
+                }
+            } else {
+                const { name, level } = req.body;
+                await conn.query("INSERT INTO classes (name, level) VALUES (?, ?) ON DUPLICATE KEY UPDATE level = VALUES(level);", [name, level]);
+            }
 
             const classRows = await conn.query("SELECT name, level FROM classes;");
             var classes = (Array.isArray(classRows) ? (classRows as {name: string, level: number}[]) : []);
@@ -274,8 +281,15 @@ app.post('/participants', async (req, res) => {
     try {
         const conn = await pool.getConnection();
         try {
-            const { name, forename, gender, class: className } = req.body;
-            await conn.query("INSERT INTO participants (name, forename, gender, class_name) VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE name = VALUES(name), forename = VALUES(forename), gender = VALUES(gender), class_name = VALUES(class_name);", [name, forename, gender, className]);
+            if (Array.isArray(req.body)) {
+                for (const item of req.body) {
+                    const { name, forename, gender, class: className } = item;
+                    await conn.query("INSERT INTO participants (name, forename, gender, class_name) VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE name = VALUES(name), forename = VALUES(forename), gender = VALUES(gender), class_name = VALUES(class_name);", [name, forename, gender, className]);
+                }
+            } else {
+                const { name, forename, gender, class: className } = req.body;
+                await conn.query("INSERT INTO participants (name, forename, gender, class_name) VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE name = VALUES(name), forename = VALUES(forename), gender = VALUES(gender), class_name = VALUES(class_name);", [name, forename, gender, className]);
+            }
 
             const participantRows = await conn.query("SELECT id, name, forename, gender, class_name AS class FROM participants;");
             var participants = (Array.isArray(participantRows) ? (participantRows as {id: number, name: string, forename: string, gender: string, class: string}[]) : []);
