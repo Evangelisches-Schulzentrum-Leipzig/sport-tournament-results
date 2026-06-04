@@ -45,3 +45,16 @@ export function unitOrder(unit) {
         return 0; // Default order for unknown units
     }
 }
+
+/**
+ * Returns a human-readable relative time string (in German) for a given date.
+ * @param {Date} date
+ * @returns {string}
+ */
+export function timeAgo(date) {
+    const diff = Date.now() - date.getTime();
+    if (diff < 60 * 1000) return `Vor ${Math.floor(diff / 1000)} Sekunden`;
+    if (diff < 60 * 60 * 1000) return `Vor ${Math.floor(diff / (60 * 1000))} Minuten`;
+    if (diff < 24 * 60 * 60 * 1000) return `Vor ${Math.floor(diff / (60 * 60 * 1000))} Stunden`;
+    return `Vor ${Math.floor(diff / (24 * 60 * 60 * 1000))} Tagen`;
+}

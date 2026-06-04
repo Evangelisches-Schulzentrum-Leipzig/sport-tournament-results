@@ -516,13 +516,13 @@ app.post('/mark-ranges', async (req, res) => {
     }
 });
 
-app.patch('/mark-ranges/:discipline_id/:mark', async (req, res) => {
+app.patch('/mark-ranges/:discipline_id/:class_level/:gender/:mark', async (req, res) => {
     try {
         const conn = await pool.getConnection();
         try {            
-            const { discipline_id, mark } = req.params;
-            const { class_level, gender, min_value } = req.body;
-            await conn.query("UPDATE `mark-ranges` SET class_level = ?, gender = ?, min_value = ? WHERE discipline_id = ? AND mark = ?;", [class_level, gender, min_value, discipline_id, mark]);
+            const { discipline_id, class_level, gender, mark } = req.params;
+            const { min_value } = req.body;
+            await conn.query("UPDATE `mark-ranges` SET min_value = ? WHERE discipline_id = ? AND class_level = ? AND gender = ? AND mark = ?;", [min_value, discipline_id, class_level, gender, mark]);
             const currentData = await getCurrentData();
             broadcastToAll(JSON.stringify({ type: 'update-data', data: currentData }));
             res.status(200).send();
@@ -553,12 +553,12 @@ app.delete('/mark-ranges/:discipline_id', async (req, res) => {
     }
 });
 
-app.delete('/mark-ranges/:discipline_id/:mark', async (req, res) => {
+app.delete('/mark-ranges/:discipline_id/:class_level/:gender/:mark', async (req, res) => {
     try {
         const conn = await pool.getConnection();
         try {
-            const { discipline_id, mark } = req.params;
-            await conn.query("DELETE FROM `mark-ranges` WHERE discipline_id = ? AND mark = ?;", [discipline_id, mark]);
+            const { discipline_id, class_level, gender, mark } = req.params;
+            await conn.query("DELETE FROM `mark-ranges` WHERE discipline_id = ? AND class_level = ? AND gender = ? AND mark = ?;", [discipline_id, class_level, gender, mark]);
             const currentData = await getCurrentData();
             broadcastToAll(JSON.stringify({ type: 'update-data', data: currentData }));
             res.status(200).send();
@@ -762,8 +762,8 @@ app.post('/sync', async (req, res) => {
             var classes = (Array.isArray(classRows) ? (classRows as {name: string, level: number}[]) : []);
             const disciplineRows = await conn.query("SELECT id, name, unit, attempts, timer FROM disciplines;");
             var disciplines = (Array.isArray(disciplineRows) ? (disciplineRows as {id: number, name: string, unit: string, attempts: number, timer: boolean}[]) : []);
-            const participantRows = await conn.query("SELECT id, name, forename, class_name AS class FROM participants;");
-            var participants = (Array.isArray(participantRows) ? (participantRows as {id: number, name: string, forename: string, class: string}[]) : []);
+            const participantRows = await conn.query("SELECT id, name, forename, gender, class_name AS class FROM participants;");
+            var participants = (Array.isArray(participantRows) ? (participantRows as {id: number, name: string, forename: string, gender: string, class: string}[]) : []);
             const measurementRows = await conn.query("SELECT id, participant_id, discipline_id, attempt_number, value, created_at FROM measurements GROUP BY participant_id, discipline_id, attempt_number, value;");
             var measurements = (Array.isArray(measurementRows) ? (measurementRows as {id: number, participant_id: number, discipline_id: number, attempt_number: number, value: number, created_at: string}[]) : []);
 

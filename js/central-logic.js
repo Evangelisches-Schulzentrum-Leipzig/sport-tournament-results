@@ -10,130 +10,111 @@ import { unitOrder } from "./utils.js";
  * @return {{disciplineRankings: Map<number, Array<{participantId: number, value: number, mark: string|null}>>, overallRankings: Array<{participantId: number, totalPoints: number}>}} Rankings for each discipline and overall rankings
  */
 export function computeRankings(classes, participants, disciplines, measurements, markRanges) {
-    // Create a map of discipline_id to discipline for easy lookup
     const disciplineMap = new Map(disciplines.map(d => [d.id, d]));
+    const participantMap = new Map(participants.map(p => [p.id, p]));
+    const classMap = new Map(classes.map(c => [c.name, c]));
 
-    // Create mark lookup markMap[discipline_id][class_level][gender] = {mark, min_value}
-    /** @type {{[discipline_id: number]: {[class_level: number]: {[gender: string]: {mark: string, min_value: number}}}}} */
+    // Build mark lookup: markMap[discipline_id][class_level][gender][mark] = min_value
     const markMap = {};
     markRanges.forEach(mr => {
-        if (!markMap[mr.discipline_id]) {
-            markMap[mr.discipline_id] = {};
-        }
-        if (!markMap[mr.discipline_id][mr.class_level]) {
-            markMap[mr.discipline_id][mr.class_level] = {};
-        }
-        if (!markMap[mr.discipline_id][mr.class_level][mr.gender]) {
-            markMap[mr.discipline_id][mr.class_level][mr.gender] = {};
-        }
+        if (!markMap[mr.discipline_id]) markMap[mr.discipline_id] = {};
+        if (!markMap[mr.discipline_id][mr.class_level]) markMap[mr.discipline_id][mr.class_level] = {};
+        if (!markMap[mr.discipline_id][mr.class_level][mr.gender]) markMap[mr.discipline_id][mr.class_level][mr.gender] = {};
         markMap[mr.discipline_id][mr.class_level][mr.gender][mr.mark] = mr.min_value;
     });
-    
-    // Create a map of participant_id to their measurements for easy lookup
-    const participantMeasurements = new Map();
+
+    // Find the best measurement per participant per discipline
+    // bestPerDiscipline: Map<participantId, Map<disciplineId, bestMeasurement>>
+    const bestPerDiscipline = new Map();
     measurements.forEach(m => {
-        if (!participantMeasurements.has(m.participant_id)) {
-            participantMeasurements.set(m.participant_id, []);
+        const discipline = disciplineMap.get(m.discipline_id);
+        if (!discipline) return;
+        const order = unitOrder(discipline.unit);
+        if (!bestPerDiscipline.has(m.participant_id)) {
+            bestPerDiscipline.set(m.participant_id, new Map());
         }
-        participantMeasurements.get(m.participant_id).push(m);
-    });
-    
-    // Map of participant with their best performance in each discipline
-    const participantBestPerformances = new Map();
-    participantMeasurements.forEach((measList, participantId) => {
-        measList.sort((a, b) => {
-            const discipline = disciplineMap.get(a.discipline_id);
-            if (!discipline) return 0;
-            const order = unitOrder(discipline.unit);
-            return order * (a.value - b.value);
-        });
-        participantBestPerformances.set(participantId, measList[0]);
+        const disciplineBests = bestPerDiscipline.get(m.participant_id);
+        const existing = disciplineBests.get(m.discipline_id);
+        // order=-1 (meters): keep higher value; order=1 (minutes): keep lower value
+        if (!existing || order * m.value < order * existing.value) {
+            disciplineBests.set(m.discipline_id, m);
+        }
     });
 
-    // Create a ranking of participants based on their best performances in each discipline
+    // Build per-discipline rankings
     const disciplineRankings = new Map();
-    participantBestPerformances.forEach((bestMeas, participantId) => {
-        const discipline = disciplineMap.get(bestMeas.discipline_id);
-        if (!discipline) return;
-        if (!disciplineRankings.has(discipline.id)) {
-            disciplineRankings.set(discipline.id, []);
-        }
-        var className = participants.find(p => p.id === participantId).class;
-        var class_level = classes.find(c => c.name === className)?.level;
-        var gender = participants.find(p => p.id === participantId)?.gender;
-        var markInfo = markMap[discipline.id]?.[class_level]?.[gender];
-        // find first mark where bestMeas.value >= min_value, if none found assign mark 6
-        var mark = null;
-        if (markInfo) {
-            mark = 6; // default mark if no thresholds are met
-            for (const [m, minValue] of Object.entries(markInfo)) {
-                if (bestMeas.value >= minValue) {
-                    mark = parseInt(m);
-                    break;
+    disciplines.forEach(d => disciplineRankings.set(d.id, []));
+
+    bestPerDiscipline.forEach((disciplineBests, participantId) => {
+        const participant = participantMap.get(participantId);
+        if (!participant) return;
+        const class_level = classMap.get(participant.class)?.level;
+
+        disciplineBests.forEach((bestMeas, disciplineId) => {
+            const discipline = disciplineMap.get(disciplineId);
+            if (!discipline) return;
+            const order = unitOrder(discipline.unit);
+            const markInfo = markMap[disciplineId]?.[class_level]?.[participant.gender];
+
+            let mark = null;
+            if (markInfo) {
+                // Sort marks most-demanding-first so the first qualifying entry is the best achievable mark.
+                // For meters (order=-1): descending threshold order (highest min_value = hardest = best mark).
+                // For minutes (order=1): ascending threshold order (lowest min_value = hardest = best mark).
+                const sortedEntries = Object.entries(markInfo)
+                    .sort((a, b) => order * (parseFloat(a[1]) - parseFloat(b[1])));
+                for (const [m, minValue] of sortedEntries) {
+                    const qualifies = order === 1
+                        ? bestMeas.value <= minValue  // time: lower is better
+                        : bestMeas.value >= minValue; // distance: higher is better
+                    if (qualifies) {
+                        mark = parseInt(m);
+                        break;
+                    }
                 }
             }
-        }
-        disciplineRankings.get(discipline.id).push({
-            participantId,
-            value: bestMeas.value,
-            mark: mark
+
+            disciplineRankings.get(disciplineId).push({ participantId, value: bestMeas.value, mark });
         });
     });
 
-    // Add all disciplines to the rankings map, even if no participant has a measurement for it
-    // Also add all participants to the rankings, even if they have no measurements
-    // Assign them the value null and mark null
+    // Fill in participants who have no measurement for a given discipline
     disciplines.forEach(discipline => {
-        if (!disciplineRankings.has(discipline.id)) {
-            disciplineRankings.set(discipline.id, []);
-        }
         const rankings = disciplineRankings.get(discipline.id);
         participants.forEach(participant => {
             if (!rankings.some(r => r.participantId === participant.id)) {
-                rankings.push({
-                    participantId: participant.id,
-                    value: null,
-                    mark: null
-                });
+                rankings.push({ participantId: participant.id, value: null, mark: null });
             }
         });
     });
 
-    // Sort each discipline's rankings
+    // Sort each discipline's rankings (null values go last)
     disciplineRankings.forEach((rankings, disciplineId) => {
         const discipline = disciplineMap.get(disciplineId);
         const order = unitOrder(discipline.unit);
-        rankings.sort((a, b) => order * (a.value - b.value));
+        rankings.sort((a, b) => {
+            if (a.value === null && b.value === null) return 0;
+            if (a.value === null) return 1;
+            if (b.value === null) return -1;
+            return order * (a.value - b.value);
+        });
     });
 
-    // Create a final ranking list for each participant based on their best performances across all disciplines
-    // Assign in each discipline a score based on their rank (e.g., 1st place = (length) point, 2nd place = (length -1) points, etc.) and sum these scores for an overall ranking
-    // Participants who did not participate in a discipline get the worst score for that discipline 0
+    // Compute overall rankings: rank score = (discipline length - rank position), summed across disciplines
     const overallRankings = [];
     participants.forEach(participant => {
         let totalPoints = 0;
-        disciplineRankings.forEach((rankings, disciplineId) => {
+        disciplineRankings.forEach(rankings => {
             const rank = rankings.findIndex(r => r.participantId === participant.id);
             if (rank !== -1 && rankings[rank].value !== null) {
-                // rank is 0-based, so add 1 to get the actual rank, and then calculate points as (length - rank)
                 totalPoints += rankings.length - rank;
-            } else {
-                totalPoints += 0; // If participant did not participate, assign worst score
             }
         });
-        overallRankings.push({
-            participantId: participant.id,
-            totalPoints
-        });
+        overallRankings.push({ participantId: participant.id, totalPoints });
     });
-
-    // Sort overall rankings by total points (higher is better)
     overallRankings.sort((a, b) => b.totalPoints - a.totalPoints);
 
-    return {
-        disciplineRankings,
-        overallRankings
-    };
+    return { disciplineRankings, overallRankings };
 }
 
 /**

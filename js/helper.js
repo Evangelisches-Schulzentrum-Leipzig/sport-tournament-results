@@ -30,7 +30,7 @@ openDatabase().then(async request => {
         await Promise.all([
             ...classes.map(cls => addClassOrUpdate(cls.name, cls.level)),
             ...disciplines.map(discipline => addDisciplineOrUpdate(discipline.name, discipline.unit, discipline.attempts, discipline.timer)),
-            ...participants.map(participant => addParticipantOrUpdate(participant.name, participant.forename, participant.class)),
+            ...participants.map(participant => addParticipantOrUpdate(participant.name, participant.forename, participant.class, participant.gender)),
             ...measurements.map(measurement => addMeasurementOrUpdate(measurement.participant_id, measurement.discipline_id, measurement.attempt_number, measurement.value, measurement.created_at, new Date()))
         ])
     }
@@ -266,7 +266,7 @@ async function displaySyncState() {
 }
 
 async function syncWithServer() {
-    let {classes, disciplines, participants, serverMeasurements} = await getSyncMeasurements().then(measurements => {
+    let {classes, disciplines, participants, measurements: serverMeasurements} = await getSyncMeasurements().then(measurements => {
         if (measurements.length === 0) {
             return {classes: null, disciplines: null, participants: null, measurements: null};
         }
@@ -289,15 +289,15 @@ async function syncWithServer() {
             return response;
         }).catch(error => {
             console.error("Error syncing measurements:", error);
-            return {classes: null, disciplines: null, participants: null, serverMeasurements: null};
+            return {classes: null, disciplines: null, participants: null, measurements: null};
         }));
     }).catch(error => {
         console.error("Error getting measurements to sync:", error);
     });
     if (!classes || !disciplines || !participants) {
-        ({classes, disciplines, participants, serverMeasurements} = await getData().catch(error => {
+        ({classes, disciplines, participants, measurements: serverMeasurements} = await getData().catch(error => {
             console.error("Error fetching data after sync failure:", error);
-            return {classes: null, disciplines: null, participants: null, serverMeasurements: null};
+            return {classes: null, disciplines: null, participants: null, measurements: null};
         }));
     }
     if (!classes || !disciplines || !participants) {
@@ -308,7 +308,7 @@ async function syncWithServer() {
     Promise.all([
         ...classes.map(cls => addClassOrUpdate(cls.name, cls.level)),
         ...disciplines.map(discipline => addDisciplineOrUpdate(discipline.name, discipline.unit, discipline.attempts, discipline.timer)),
-        ...participants.map(participant => addParticipantOrUpdate(participant.name, participant.forename, participant.class)),
+        ...participants.map(participant => addParticipantOrUpdate(participant.name, participant.forename, participant.class, participant.gender)),
         ...(serverMeasurements ? serverMeasurements.map(measurement => addMeasurementOrUpdate(measurement.participant_id, measurement.discipline_id, measurement.attempt_number, measurement.value, measurement.created_at, new Date())) : [])
     ]).then(() => {
         updateSelectOptions();

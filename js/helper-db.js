@@ -92,7 +92,7 @@ export function addClassOrUpdate(name, level) {
  * @param {string} class_name 
  * @returns {Promise<void>}
  */
-export function addParticipantOrUpdate(name, forename, class_name) {
+export function addParticipantOrUpdate(name, forename, class_name, gender) {
     return new Promise((resolve, reject) => {
         const transaction = db.transaction('participants', 'readwrite');
         const store = transaction.objectStore('participants');
@@ -103,10 +103,13 @@ export function addParticipantOrUpdate(name, forename, class_name) {
             const existingParticipants = event.target.result;
             const existingParticipant = existingParticipants.find(p => p.forename === forename && p.class_name === class_name);
             if (existingParticipant) {
+                if (existingParticipant.gender !== gender) {
+                    store.put({ ...existingParticipant, gender });
+                }
                 resolve();
                 return;
             }
-            const request = store.put({ name, forename, class_name });
+            const request = store.put({ name, forename, class_name, gender });
 
             request.addEventListener('success', () => resolve());
             request.addEventListener('error', event => reject(event.target.error));

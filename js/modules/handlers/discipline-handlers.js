@@ -142,7 +142,7 @@ export async function handleDeleteMarkRange(event) {
     if (!confirm(`Möchten Sie die Wertungstabelle für Disziplin ${disciplineId}, Klassenstufe ${classLevel}, Geschlecht ${gender} löschen?`)) return;
 
     try {
-        await Promise.all([1, 2, 3, 4, 5, 6].map(m => api.deleteMarkRange(disciplineId, String(m))));
+        await Promise.all([1, 2, 3, 4, 5, 6].map(m => api.deleteMarkRange(disciplineId, classLevel, gender, String(m))));
 
         const updatedData = await api.getData();
         if (updatedData?.disciplines && updatedData?.markRanges) {
