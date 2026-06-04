@@ -131,7 +131,7 @@ async function updateDataInputTable() {
     }
     var inputHtml = [];
     for (let index = 0; index < discipline.attempts; index++) {
-        inputHtml.push(`<td><input type="text" data-unit="${discipline.unit}" data-attempt="${index + 1}" data-discipline="${disciplineId}" data-participant="$participant$" value="$measurement$"></td>`);
+        inputHtml.push(`<td><input type="text" inputmode="decimal" data-unit="${discipline.unit}" data-attempt="${index + 1}" data-discipline="${disciplineId}" data-participant="$participant$" value="$measurement$"></td>`);
     }
 
     thead.innerHTML = `
