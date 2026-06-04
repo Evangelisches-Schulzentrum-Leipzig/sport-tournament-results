@@ -2,7 +2,7 @@
 
 ## Missing
 - [ ] Sort listings (classes, participants, selects, mark tables, disciplines, helpers and state)
-- [ ] Fix nav
+- [x] Fix nav
 - [ ] Add input handling based on unit to mark table
 - [ ] Adress on screen keyboard
 - [ ] change server hostname 

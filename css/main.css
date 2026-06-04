@@ -165,7 +165,7 @@ td button.individual-timer {
 }
 
 div#nav-bar {
-    @apply grid grid-cols-[min-content_auto_auto] md:grid-cols-[auto_auto_auto] items-center justify-between gap-4 px-4 py-2 bg-surface border-b border-border;
+    @apply grid grid-cols-[min-content_auto_auto] md:grid-cols-[auto_auto_auto] items-center justify-between gap-4 px-4 py-2 bg-surface border-b border-border top-0 z-10 sticky;
 }
 div#nav-bar div#nav-links {
     @apply flex items-center gap-4;
