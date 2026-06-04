@@ -1,7 +1,7 @@
 # TODO
 
 ## Missing
-- [ ] Sort listings (classes, participants, selects, mark tables, disciplines, helpers and state)
+- [x] Sort listings (classes, participants, selects, mark tables, disciplines, helpers and state)
 - [x] Fix nav
 - [ ] Add input handling based on unit to mark table
 - [ ] Adress on screen keyboard

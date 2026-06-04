@@ -13,6 +13,15 @@ export function displayConflicts(formattedConflicts, disciplines) {
     conflictsContainer.innerHTML = '';
     const disciplineMap = new Map(disciplines.map(d => [d.id, d]));
 
+    formattedConflicts.sort((a, b) => {
+        // sort by discipline name first, then by participant name
+        const disciplineA = disciplineMap.get(a.disciplineId)?.name || '';
+        const disciplineB = disciplineMap.get(b.disciplineId)?.name || '';
+        if (disciplineA === disciplineB) {
+            return a.participantName.localeCompare(b.participantName);
+        }
+        return disciplineA.localeCompare(disciplineB);
+    });
     formattedConflicts.forEach(conflict => {
         const discipline = disciplineMap.get(conflict.disciplineId);
         const unit = discipline?.unit || '';

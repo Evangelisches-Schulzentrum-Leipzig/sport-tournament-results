@@ -8,6 +8,13 @@ export function displayClasses(classes) {
     if (!tbody) return;
 
     tbody.innerHTML = '';
+    classes.sort((a, b) => {
+        // sort by level first, then by name
+        if (a.level === b.level) {
+            return a.name.localeCompare(b.name);
+        }
+        return a.level - b.level;
+    })
     classes.forEach(cls => {
         const row = document.createElement('tr');
         row.innerHTML = `
@@ -28,6 +35,19 @@ export function displayParticipants(participants) {
     if (!tbody) return;
 
     tbody.innerHTML = '';
+    participants.sort((a, b) => {
+        // sort by class level first, then by class name, then by participant name, then by forename
+        if (a.class_level === b.class_level) {
+            if (a.class === b.class) {
+                if (a.name === b.name) {
+                    return a.forename.localeCompare(b.forename);
+                }
+                return a.name.localeCompare(b.name);
+            }
+            return a.class.localeCompare(b.class);
+        }
+        return a.class_level - b.class_level;
+    })
     participants.forEach(participant => {
         const row = document.createElement('tr');
         const genderLabel = participant.gender === 'male' ? 'Junge' : 'Mädchen';

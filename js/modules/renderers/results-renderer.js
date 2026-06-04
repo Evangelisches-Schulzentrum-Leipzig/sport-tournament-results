@@ -11,6 +11,7 @@ export function populateResultsDisciplineFilterDropdown(disciplines) {
 
     while (filterSelect.options.length > 1) filterSelect.remove(1);
 
+    disciplines.sort((a, b) => a.name.localeCompare(b.name))
     disciplines.forEach(discipline => {
         const option = document.createElement('option');
         option.value = discipline.id;
@@ -25,7 +26,9 @@ export function populateResultsClassFilterDropdown(classes) {
 
     while (filterSelect.options.length > 1) filterSelect.remove(1);
 
-    [...new Set(classes.map(c => c.name))].forEach(className => {
+    var classNames = [...new Set(classes.map(c => c.name))]
+    classNames.sort((a, b) => a.localeCompare(b));
+    classNames.forEach(className => {
         const option = document.createElement('option');
         option.value = className;
         option.textContent = className;
@@ -36,7 +39,9 @@ export function populateResultsClassFilterDropdown(classes) {
     if (levelFilter) {
         while (levelFilter.options.length > 1) levelFilter.remove(1);
 
-        [...new Set(classes.map(c => c.level))].sort((a, b) => a - b).forEach(level => {
+        var levels = [...new Set(classes.map(c => c.level))];
+        levels.sort((a, b) => a - b);
+        levels.forEach(level => {
             const option = document.createElement('option');
             option.value = level;
             option.textContent = `${level}. Klasse`;
@@ -103,6 +108,31 @@ export function displayResults(measurements, data, filters = {}) {
         ...missingParticipants
     ];
 
+    participantsToDisplay.sort((a, b) => {
+        // Sort by overall points desc, then by class level asc, then by class name, then by participant name, then by forename
+        const rankingA = overallRankings.find(r => r.participantId === a.id);
+        const rankingB = overallRankings.find(r => r.participantId === b.id);
+        const pointsA = rankingA?.totalPoints || 0;
+        const pointsB = rankingB?.totalPoints || 0;
+
+        if (pointsA === pointsB) {
+            const classLevelA = classMap.get(a.class)?.level || 0;
+            const classLevelB = classMap.get(b.class)?.level || 0;
+
+            if (classLevelA === classLevelB) {
+                if (a.class === b.class) {
+                    if (a.name === b.name) {
+                        return a.forename.localeCompare(b.forename);
+                    }
+                    return a.name.localeCompare(b.name);
+                }
+                return a.class.localeCompare(b.class);
+            }
+            return classLevelA - classLevelB;
+        }
+        return pointsB - pointsA;
+    });
+
     participantsToDisplay.forEach(participant => {
         const ranking = overallRankings.find(r => r.participantId === participant.id);
         if (!ranking) return;
@@ -137,6 +167,8 @@ export function displayResults(measurements, data, filters = {}) {
 
         row.innerHTML = cells;
         tbody.appendChild(row);
-        place++;
+        if (ranking.totalPoints !== null && ranking.totalPoints > 0) {
+            place++;
+        }
     });
 }

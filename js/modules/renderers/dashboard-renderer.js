@@ -10,6 +10,7 @@ export function displayDashboardDisciplines(disciplines, data) {
     if (!grid) return;
 
     grid.innerHTML = '';
+    disciplines.sort((a, b) => a.name.localeCompare(b.name))
     disciplines.forEach(discipline => {
         const count = data.measurements?.filter(m => m.discipline_id === discipline.id).length || 0;
         const total = data.participants?.length || 0;
@@ -29,6 +30,8 @@ export function displayDashboardDisciplines(disciplines, data) {
 export function displayProgressMatrix(matrix, disciplines) {
     const table = document.querySelector('#progress-matrix');
     if (!table) return;
+
+    disciplines.sort((a, b) => a.name.localeCompare(b.name))
 
     const thead = table.querySelector('thead');
     if (thead) {
@@ -82,6 +85,15 @@ export function displayDashboardConflicts(formattedConflicts, disciplines) {
     conflictList.innerHTML = '';
     const disciplineMap = new Map(disciplines.map(d => [d.id, d]));
 
+    formattedConflicts.sort((a, b) => {
+        // sort by discipline name first, then by participant name
+        const disciplineA = disciplineMap.get(a.disciplineId)?.name || '';
+        const disciplineB = disciplineMap.get(b.disciplineId)?.name || '';
+        if (disciplineA === disciplineB) {
+            return a.participantName.localeCompare(b.participantName);
+        }
+        return disciplineA.localeCompare(disciplineB);
+    });
     formattedConflicts.forEach(conflict => {
         const discipline = disciplineMap.get(conflict.disciplineId);
         const unit = discipline?.unit || '';
@@ -172,7 +184,9 @@ export function populateDashboardClassFilterDropdown(classes) {
     const filterSelect = document.querySelector('#results-class-filter');
     if (!filterSelect) return;
     while (filterSelect.options.length > 1) filterSelect.remove(1);
-    [...new Set(classes.map(c => c.name))].forEach(className => {
+    var classNames = [...new Set(classes.map(c => c.name))];
+    classNames.sort((a, b) => a.localeCompare(b));
+    classNames.forEach(className => {
         const option = document.createElement('option');
         option.value = className;
         option.textContent = className;
@@ -184,7 +198,9 @@ export function populateDashboardClassLevelFilterDropdown(classes) {
     const filterSelect = document.querySelector('#results-classlevel-filter');
     if (!filterSelect) return;
     while (filterSelect.options.length > 1) filterSelect.remove(1);
-    [...new Set(classes.map(c => c.level))].sort((a, b) => a - b).forEach(level => {
+    var levels = [...new Set(classes.map(c => c.level))];
+    levels.sort((a, b) => a - b);
+    levels.forEach(level => {
         const option = document.createElement('option');
         option.value = level;
         option.textContent = `${level}. Klasse`;
@@ -196,6 +212,7 @@ export function populateDashboardDisciplineFilterDropdown(disciplines) {
     const filterSelect = document.querySelector('#results-discipline-filter');
     if (!filterSelect) return;
     while (filterSelect.options.length > 1) filterSelect.remove(1);
+    disciplines.sort((a, b) => a.name.localeCompare(b.name))
     disciplines.forEach(discipline => {
         const option = document.createElement('option');
         option.value = discipline.id;
