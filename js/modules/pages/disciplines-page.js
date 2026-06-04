@@ -47,6 +47,22 @@ function setupFilters(data) {
 }
 
 function setupEventListeners(data) {
+    const showAddDisciplineRowBtn = document.querySelector('#show-add-discipline-row-btn');
+    const showAddTableRowBtn = document.querySelector('#show-add-table-row-btn');
+    const addDisciplineRow = document.querySelector('#add-discipline-row');
+    const addTableRow = document.querySelector('#add-table-row');
+
+    if (showAddDisciplineRowBtn && addDisciplineRow) {
+        showAddDisciplineRowBtn.addEventListener('click', () => {
+            addDisciplineRow.style.display = addDisciplineRow.style.display === 'flex' ? 'none' : 'flex';
+        });
+    }
+    if (showAddTableRowBtn && addTableRow) {
+        showAddTableRowBtn.addEventListener('click', () => {
+            addTableRow.style.display = addTableRow.style.display === 'flex' ? 'none' : 'flex';
+        });
+    }
+
     const addDisciplineBtn = document.querySelector('#add-discipline-btn');
     const addTableBtn = document.querySelector('#add-table-btn');
 

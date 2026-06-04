@@ -49,6 +49,22 @@ function setupFilters(data) {
 }
 
 function setupEventListeners(data) {
+    const showAddClassRowBtn = document.querySelector('#show-add-class-row-btn');
+    const showAddParticipantRowBtn = document.querySelector('#show-add-participant-row-btn');
+    const addClassRow = document.querySelector('#add-class-row');
+    const addParticipantRow = document.querySelector('#add-participant-row');
+
+    if (showAddClassRowBtn && addClassRow) {
+        showAddClassRowBtn.addEventListener('click', () => {
+            addClassRow.style.display = addClassRow.style.display === 'flex' ? 'none' : 'flex';
+        });
+    }
+    if (showAddParticipantRowBtn && addParticipantRow) {
+        showAddParticipantRowBtn.addEventListener('click', () => {
+            addParticipantRow.style.display = addParticipantRow.style.display === 'flex' ? 'none' : 'flex';
+        });
+    }
+
     const addClassBtn = document.querySelector('#add-class-btn');
     const addParticipantBtn = document.querySelector('#add-participant-btn');
 

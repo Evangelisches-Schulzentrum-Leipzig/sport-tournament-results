@@ -38,9 +38,9 @@
                         </select>
                         <input type="text" placeholder="Disziplinen suchen...">
                     </div>
-                    <button><span class="material-icons-round">add</span> Disziplin hinzufügen</button>
+                    <button id="show-add-discipline-row-btn"><span class="material-icons-round">add</span> Disziplin hinzufügen</button>
                 </div>
-                <div class="sub-con-input-row">
+                <div class="sub-con-input-row" id="add-discipline-row" style="display: none;">
                     <input type="text" name="new-discipline-name" id="new-discipline-name" placeholder="Disziplinname">
                     <select name="new-discipline-unit" id="new-discipline-unit">
                         <option value="" disabled selected>Einheit</option>
@@ -97,9 +97,9 @@
                             <option value="2">2. Klasse</option>
                         </select>
                     </div>
-                    <button><span class="material-icons-round">add</span> Wertungstabelle hinzufügen</button>
+                    <button id="show-add-table-row-btn"><span class="material-icons-round">add</span> Wertungstabelle hinzufügen</button>
                 </div>
-                <div class="sub-con-input-row">
+                <div class="sub-con-input-row" id="add-table-row" style="display: none;">
                     <select name="new-table-discipline" id="new-table-discipline">
                         <option value="" disabled selected>Disziplin</option>
                         <option value="100m">100m (s)</option>
