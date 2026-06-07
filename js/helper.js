@@ -49,9 +49,9 @@ openDatabase().then(async request => {
         const { classes, disciplines, participants, measurements } = data;
         await Promise.all([
             ...classes.map(cls => addClassOrUpdate(cls.name, cls.level)),
-            ...disciplines.map(discipline => addDisciplineOrUpdate(discipline.name, discipline.unit, discipline.attempts, discipline.timer)),
-            ...participants.map(participant => addParticipantOrUpdate(participant.name, participant.forename, participant.class, participant.gender)),
-            ...measurements.map(measurement => addMeasurementOrUpdate(measurement.participant_id, measurement.discipline_id, measurement.attempt_number, measurement.value, measurement.created_at, new Date()))
+            ...disciplines.map(discipline => addDisciplineOrUpdate(discipline.name, discipline.unit, discipline.attempts, discipline.timer, discipline.id)),
+            ...participants.map(participant => addParticipantOrUpdate(participant.name, participant.forename, participant.class, participant.gender, participant.id)),
+            ...measurements.map(measurement => addMeasurementOrUpdate(measurement.participant_id, measurement.discipline_id, measurement.attempt_number, measurement.value, measurement.id, measurement.created_at, new Date()))
         ])
     }
     updateSelectOptions();
@@ -354,9 +354,9 @@ async function syncWithServer() {
 
     Promise.all([
         ...classes.map(cls => addClassOrUpdate(cls.name, cls.level)),
-        ...disciplines.map(discipline => addDisciplineOrUpdate(discipline.name, discipline.unit, discipline.attempts, discipline.timer)),
-        ...participants.map(participant => addParticipantOrUpdate(participant.name, participant.forename, participant.class, participant.gender)),
-        ...(serverMeasurements ? serverMeasurements.map(measurement => addMeasurementOrUpdate(measurement.participant_id, measurement.discipline_id, measurement.attempt_number, measurement.value, measurement.created_at, new Date())) : [])
+        ...disciplines.map(discipline => addDisciplineOrUpdate(discipline.name, discipline.unit, discipline.attempts, discipline.timer, discipline.id)),
+        ...participants.map(participant => addParticipantOrUpdate(participant.name, participant.forename, participant.class, participant.gender, participant.id)),
+        ...(serverMeasurements ? serverMeasurements.map(measurement => addMeasurementOrUpdate(measurement.participant_id, measurement.discipline_id, measurement.attempt_number, measurement.value, measurement.id, measurement.created_at, new Date())) : [])
     ]).then(() => {
         lastSyncedTime = new Date().getTime();
         updateSelectOptions();
