@@ -2,7 +2,17 @@ import { setHost, getHost, getData, sync, checkConnectivity, HELPER_NAME_KEY } f
 import { addClassOrUpdate, addDisciplineOrUpdate, addParticipantOrUpdate, addMeasurementOrUpdate, openDatabase, getDisciplines, getClasses, getDisciplineById, getParticipants, getClassMeasurements, getSyncMeasurements, getSyncedMeasurements, setSyncTime } from "./helper-db.js"
 import { convertFloatToUnit, convertUnitToFloat } from "./utils.js"
 
+const darkModeKey = 'darkModeEnabled';
+
 let lastSyncedTime = null;
+
+function updateDarkMode() {
+    if (localStorage.getItem(darkModeKey) === null) {
+        localStorage.setItem(darkModeKey, 'true');
+    }
+    const darkModeEnabled = localStorage.getItem(darkModeKey) === 'true';
+    document.documentElement.classList.toggle("dark", darkModeEnabled);
+}
 
 function promptForHelperName() {
     try {
@@ -25,6 +35,7 @@ function promptForHelperName() {
     }
 }
 
+updateDarkMode();
 promptForHelperName();
 
 openDatabase().then(async request => {
@@ -362,9 +373,11 @@ document.addEventListener('keydown', event => {
 
 document.querySelector("dialog#settings-dialog #dark-mode-toggle").addEventListener('click', () => {
     if (document.querySelector("dialog#settings-dialog #dark-mode-toggle").checked) {
-        document.documentElement.classList.add('dark');
+        localStorage.setItem(darkModeKey, 'true');
+        updateDarkMode();
     } else {
-        document.documentElement.classList.remove('dark');
+        localStorage.setItem(darkModeKey, 'false');
+        updateDarkMode();
     }
 });
 
