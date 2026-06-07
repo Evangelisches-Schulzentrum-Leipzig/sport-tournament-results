@@ -18,8 +18,8 @@
 - [-] export to pdf and print
 - [x] hide input cons -> press add button
 - [ ] Adress on screen keyboard
-- [ ] change server hostname 
-- [ ] change username
+- [x] change server hostname 
+- [x] change username
 - [ ] helper timers
 - [ ] helper sync date, measurement count, current class and discipline
 - [x] helper handle new data and conflicts
