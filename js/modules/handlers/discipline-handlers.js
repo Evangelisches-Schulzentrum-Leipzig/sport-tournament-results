@@ -87,7 +87,7 @@ export async function handleAddMarkRange(data) {
                 mark: i + 1,
                 min_value: parseFloat(marks[i])
             });
-            if (result === null) { success = false; break; }
+            if (result !== null) { success = false; break; }
         }
 
         if (success) {
