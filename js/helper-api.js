@@ -1,4 +1,14 @@
-let host = "http://localhost:8083";
+const hostKey = 'helperHost';
+let host = localStorage.getItem(hostKey) || "http://localhost:8083";
+
+export function setHost(newHost) {
+    host = newHost;
+    localStorage.setItem(hostKey, newHost);
+}
+
+export function getHost() {
+    return host;
+}
 
 // WebSocket helper: monitor connectivity and register after 2 successful checks
 const WS_URL = 'ws://localhost:8083/ws';

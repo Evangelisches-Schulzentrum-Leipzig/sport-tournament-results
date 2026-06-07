@@ -1,4 +1,4 @@
-import { getData, sync, checkConnectivity, HELPER_NAME_KEY } from "./helper-api.js";
+import { setHost, getHost, getData, sync, checkConnectivity, HELPER_NAME_KEY } from "./helper-api.js";
 import { addClassOrUpdate, addDisciplineOrUpdate, addParticipantOrUpdate, addMeasurementOrUpdate, openDatabase, getDisciplines, getClasses, getDisciplineById, getParticipants, getClassMeasurements, getSyncMeasurements, getSyncedMeasurements, setSyncTime } from "./helper-db.js"
 import { convertFloatToUnit, convertUnitToFloat } from "./utils.js"
 
@@ -7,12 +7,14 @@ let lastSyncedTime = null;
 function promptForHelperName() {
     try {
         const existing = localStorage.getItem(HELPER_NAME_KEY);
+        document.querySelector("dialog#settings-dialog #helper-name-input").value = (existing && existing.trim()) ? existing.trim() : '';
         if (existing && existing.trim()) return;
         while (true) {
             const input = prompt('Bitte geben Sie Ihren Namen ein:');
             if (input === null) break; // user cancelled
             const name = input.trim();
             if (name) {
+                document.querySelector("dialog#settings-dialog #helper-name-input").value = name;
                 localStorage.setItem(HELPER_NAME_KEY, name);
                 break;
             }
@@ -358,12 +360,40 @@ document.addEventListener('keydown', event => {
     }
 });
 
+document.querySelector("dialog#settings-dialog #dark-mode-toggle").addEventListener('click', () => {
+    if (document.querySelector("dialog#settings-dialog #dark-mode-toggle").checked) {
+        document.documentElement.classList.add('dark');
+    } else {
+        document.documentElement.classList.remove('dark');
+    }
+});
+
+document.querySelector("dialog#settings-dialog #save-helper-name-btn").addEventListener('click', () => {
+    const name = document.querySelector("dialog#settings-dialog #helper-name-input").value.trim();
+    if (name) {
+        localStorage.setItem(HELPER_NAME_KEY, name);
+    } else {
+        localStorage.removeItem(HELPER_NAME_KEY);
+    }
+    window.location.reload();
+});
+
+document.querySelector("dialog#settings-dialog #server-hostname-input").value = getHost();
+document.querySelector("dialog#settings-dialog #save-server-hostname-btn").addEventListener('click', () => {
+    const hostname = document.querySelector("dialog#settings-dialog #server-hostname-input").value.trim();
+    if (hostname) {
+        setHost(hostname);
+    }
+});
+
 document.querySelector("#sync-state-con button").addEventListener('click', () => {
     syncWithServer();
 });
 
 setInterval(() => {
-    syncWithServer();
+    if (document.querySelector("dialog#settings-dialog #auto-sync-toggle").checked) {
+        syncWithServer();
+    }
 }, 5 * 1000); // every 5 seconds
 
 setInterval(() => {
