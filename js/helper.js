@@ -42,10 +42,13 @@ openDatabase().then(async request => {
 function updateSelectOptions() {
     const disciplineSelect = document.querySelector('#discipline-select');
     const classSelect = document.querySelector('#class-select');
+
+    const lastSelectedDiscipline = disciplineSelect.value;
+    const lastSelectedClass = classSelect.value;
     
     // Clear existing options
-    disciplineSelect.innerHTML = '<option value="" disabled selected>Sportart auswählen</option>';
-    classSelect.innerHTML = '<option value="" disabled selected>Klasse auswählen</option>';
+    let htmlDiscipline = '<option value="" disabled selected>Sportart auswählen</option>';
+    let htmlClass = '<option value="" disabled selected>Klasse auswählen</option>';
 
     getClasses().then(classes => {
         var groups = {};
@@ -64,8 +67,12 @@ function updateSelectOptions() {
                 option.textContent = cls.name;
                 optgroup.appendChild(option);
             });
-            classSelect.appendChild(optgroup);
+            htmlClass += optgroup.outerHTML;
         });
+        classSelect.innerHTML = htmlClass;
+        if (lastSelectedClass) {
+            classSelect.value = lastSelectedClass;
+        }
     }).catch(error => {
         console.error("Error fetching classes:", error);
     });
@@ -75,12 +82,18 @@ function updateSelectOptions() {
             const option = document.createElement('option');
             option.value = discipline.id;
             option.textContent = discipline.name;
-            disciplineSelect.appendChild(option);
+            htmlDiscipline += option.outerHTML;
         });
+        disciplineSelect.innerHTML = htmlDiscipline;
+        if (lastSelectedDiscipline) {
+            disciplineSelect.value = lastSelectedDiscipline;
+        }
     }).catch(error => {
         console.error("Error fetching disciplines:", error);
     });
 
+    disciplineSelect.removeEventListener('change', updateDataInputTable);
+    classSelect.removeEventListener('change', updateDataInputTable);
     disciplineSelect.addEventListener('change', updateDataInputTable);
     classSelect.addEventListener('change', updateDataInputTable);
 }
@@ -92,6 +105,8 @@ async function updateDataInputTable() {
     const className = classSelect.value;
     const tbody = document.querySelector('#data-input-con tbody');
     const thead = document.querySelector('#data-input-con thead');
+
+    const lastInput = document.activeElement;
 
     if (isNaN(disciplineId) || !className) {
         thead.innerHTML = '<tr></tr>';
@@ -131,7 +146,7 @@ async function updateDataInputTable() {
     }
     var inputHtml = [];
     for (let index = 0; index < discipline.attempts; index++) {
-        inputHtml.push(`<td><input type="text" inputmode="decimal" data-unit="${discipline.unit}" data-attempt="${index + 1}" data-discipline="${disciplineId}" data-participant="$participant$" value="$measurement$"></td>`);
+        inputHtml.push(`<td><input type="text" inputmode="decimal" data-unit="${discipline.unit}" data-attempt="${index + 1}" data-discipline="${disciplineId}" data-participant="$participant$" value="$measurement$" id="input-${disciplineId}-${index + 1}-$participant$"></td>`);
     }
 
     thead.innerHTML = `
@@ -143,7 +158,7 @@ async function updateDataInputTable() {
             ${discipline.timer ? `<th><button><span class="material-icons-round">timer</span> Timer</button></th>` : ''}
         </tr>
     `;
-    tbody.innerHTML = '';
+    var tbodyContent = '';
 
     for (const participant of participants) {
         const participantMeasurements = measurements.filter(m => m.participant_id === participant.id).sort((a, b) => a.attempt_number - b.attempt_number);
@@ -155,11 +170,28 @@ async function updateDataInputTable() {
             <td>${participant.name}</td>
             ${inputHtml.map((html, index) => {
                 const measurement = participantMeasurements.find(m => m.attempt_number === index + 1);
-                return html.replace('$measurement$', measurement ? convertFloatToUnit(measurement.value, discipline.unit) : '').replace('$participant$', participant.id);
+                return html.replaceAll('$measurement$', measurement ? convertFloatToUnit(measurement.value, discipline.unit) : '').replaceAll('$participant$', participant.id);
             }).join('')}
             ${discipline.timer ? `<td><button class="stop-timer"><span class="material-icons-round">stop</span></button><button class="individual-timer"><span class="material-icons-round">timer</span></button></td>` : ''}
         `;
-        tbody.appendChild(tr);
+        tbodyContent += tr.outerHTML;
+    }
+    tbody.innerHTML = tbodyContent;
+
+    // Refocus last active input if still present
+    if (lastInput) {
+        var lastAttempt = lastInput.dataset.attempt;
+        var lastDiscipline = lastInput.dataset.discipline;
+        var lastParticipant = lastInput.dataset.participant;
+        if (lastAttempt && lastDiscipline && lastParticipant) {
+            const newInput = tbody.querySelector(`input[data-attempt="${lastAttempt}"][data-discipline="${lastDiscipline}"][data-participant="${lastParticipant}"]`);
+            if (newInput) {
+                newInput.focus();
+                if (newInput.value) {
+                    newInput.select();
+                }
+            }
+        }
     }
 
     document.querySelectorAll('div#data-input-con tbody tr *:not(input):not(button)').forEach(element => 
