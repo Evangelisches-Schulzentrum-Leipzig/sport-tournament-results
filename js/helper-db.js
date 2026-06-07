@@ -171,8 +171,11 @@ export function addMeasurementOrUpdate(participant_id, discipline_id, attempt_nu
             let requestUpdate;
             if (existingMeasurement && new Date(existingMeasurement.created_at) < new Date(created_at)) {
                 requestUpdate = store.put({ id: existingMeasurement.id, participant_id, discipline_id, attempt_number, value, created_at, sync_time });
-            } else {
+            } else if (!existingMeasurement) {
                 requestUpdate = store.put({ participant_id, discipline_id, attempt_number, value, created_at, sync_time });
+            } else {
+                resolve();
+                return;
             }
 
             requestUpdate.addEventListener('success', () => resolve());
