@@ -20,7 +20,7 @@
 - [ ] update/delete measurement (attempt) from central
 - [ ] display helper and current class of discipline
 - [x] hide input cons -> press add button
-- [ ] helper handle new data and conflicts
+- [x] helper handle new data and conflicts
 - [ ] helper timers
 - [ ] all filters working
 
