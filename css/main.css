@@ -118,6 +118,46 @@ div#top-bar div#settings-con button:hover {
     @apply bg-primary-hover;
 }
 
+dialog {
+    @apply bg-transparent m-auto;
+}
+dialog::backdrop {
+    @apply bg-black/50;
+}
+dialog div.modal-surface {
+    @apply mx-auto my-auto bg-surface text-text-background p-6 rounded shadow-lg dark:shadow-none flex flex-col gap-4;
+}
+dialog h1 {
+    @apply text-xl font-bold;
+}
+dialog div.input-con {
+    @apply grid grid-cols-[auto_min-content] items-center gap-2 w-full border-b border-border dark:border-white py-2 last:border-b-0;
+}
+dialog div.input-con label {
+    @apply text-sm text-text-primary flex items-center gap-x-2;
+}
+dialog div.input-con:has(input[type="text"]) label {
+    @apply col-span-2
+}
+dialog div.input-con input[type="text"] {
+    @apply bg-surface-background border border-border rounded px-2 py-1 w-full;
+}
+dialog div.input-con input[type="checkbox"] {
+    @apply bg-surface-background border border-border rounded w-5 h-5;
+}
+dialog div.input-con button {
+    @apply bg-primary text-text-primary rounded-sm px-2 py-0.5 cursor-pointer w-fit;
+}
+dialog div.input-con button:hover {
+    @apply bg-primary-hover;
+}
+dialog div.modal-action-con {
+    @apply flex gap-2 w-full
+}
+dialog div.modal-action-con button {
+    @apply w-full bg-gray-300 text-gray-700 hover:bg-gray-700 rounded px-4 py-2 text-base cursor-pointer;
+}
+
 div#data-input-con {
     @apply m-4 bg-surface-background border border-border rounded overflow-x-auto overflow-y-auto;
 }

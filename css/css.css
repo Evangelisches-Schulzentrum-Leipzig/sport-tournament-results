@@ -807,6 +807,120 @@ div#top-bar div#settings-con button {
 div#top-bar div#settings-con button:hover {
   background-color: var(--color-primary-hover);
 }
+dialog {
+  margin: auto;
+  background-color: transparent;
+}
+dialog::backdrop {
+  background-color: color-mix(in srgb, #000 50%, transparent);
+  @supports (color: color-mix(in lab, red, red)) {
+    background-color: color-mix(in oklab, var(--color-black) 50%, transparent);
+  }
+}
+dialog div.modal-surface {
+  margin-inline: auto;
+  margin-block: auto;
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--spacing) * 4);
+  border-radius: var(--radius);
+  background-color: var(--color-surface);
+  padding: calc(var(--spacing) * 6);
+  color: var(--color-text-background);
+  --tw-shadow: 0 12px 40px var(--tw-shadow-color, rgba(26, 26, 46, 0.12));
+  box-shadow: var(--tw-inset-shadow), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow);
+  &:where(.dark, .dark *) {
+    --tw-shadow: 0 0 #0000;
+    box-shadow: var(--tw-inset-shadow), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow);
+  }
+}
+dialog h1 {
+  font-size: var(--text-xl);
+  line-height: var(--tw-leading, var(--text-xl--line-height));
+  --tw-font-weight: var(--font-weight-bold);
+  font-weight: var(--font-weight-bold);
+}
+dialog div.input-con {
+  display: grid;
+  width: 100%;
+  grid-template-columns: auto min-content;
+  align-items: center;
+  gap: calc(var(--spacing) * 2);
+  border-bottom-style: var(--tw-border-style);
+  border-bottom-width: 1px;
+  border-color: var(--color-border);
+  padding-block: calc(var(--spacing) * 2);
+  &:last-child {
+    border-bottom-style: var(--tw-border-style);
+    border-bottom-width: 0px;
+  }
+  &:where(.dark, .dark *) {
+    border-color: var(--color-white);
+  }
+}
+dialog div.input-con label {
+  display: flex;
+  align-items: center;
+  column-gap: calc(var(--spacing) * 2);
+  font-size: var(--text-sm);
+  line-height: var(--tw-leading, var(--text-sm--line-height));
+  color: var(--color-text-primary);
+}
+dialog div.input-con:has(input[type="text"]) label {
+  grid-column: span 2 / span 2;
+}
+dialog div.input-con input[type="text"] {
+  width: 100%;
+  border-radius: var(--radius);
+  border-style: var(--tw-border-style);
+  border-width: 1px;
+  border-color: var(--color-border);
+  background-color: var(--color-surface-background);
+  padding-inline: calc(var(--spacing) * 2);
+  padding-block: calc(var(--spacing) * 1);
+}
+dialog div.input-con input[type="checkbox"] {
+  height: calc(var(--spacing) * 5);
+  width: calc(var(--spacing) * 5);
+  border-radius: var(--radius);
+  border-style: var(--tw-border-style);
+  border-width: 1px;
+  border-color: var(--color-border);
+  background-color: var(--color-surface-background);
+}
+dialog div.input-con button {
+  width: fit-content;
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  background-color: var(--color-primary);
+  padding-inline: calc(var(--spacing) * 2);
+  padding-block: calc(var(--spacing) * 0.5);
+  color: var(--color-text-primary);
+}
+dialog div.input-con button:hover {
+  background-color: var(--color-primary-hover);
+}
+dialog div.modal-action-con {
+  display: flex;
+  width: 100%;
+  gap: calc(var(--spacing) * 2);
+}
+dialog div.modal-action-con button {
+  width: 100%;
+  cursor: pointer;
+  border-radius: var(--radius);
+  background-color: var(--color-gray-300);
+  padding-inline: calc(var(--spacing) * 4);
+  padding-block: calc(var(--spacing) * 2);
+  font-size: var(--text-base);
+  line-height: var(--tw-leading, var(--text-base--line-height));
+  color: var(--color-gray-700);
+  &:hover {
+    @media (hover: hover) {
+      background-color: var(--color-gray-700);
+    }
+  }
+}
 div#data-input-con {
   margin: calc(var(--spacing) * 4);
   overflow-x: auto;

@@ -53,7 +53,7 @@
                 <button class="material-icons-round">sync</button>
             </div>
             <div id="settings-con">
-                <button class="material-icons-round">settings</button>
+                <button class="material-icons-round" popovertarget="settings-dialog" popovertargetaction="show">settings</button>
             </div>
         </div>
         <div id="data-input-con">
@@ -94,6 +94,34 @@
                 </tbody>
             </table>
         </div>
+        <dialog popover id="settings-dialog">
+            <div class="modal-surface">
+                <h1>Einstellungen</h1>
+                <div class="modal-content">
+                    <div class="input-con">
+                        <label for="dark-mode-toggle"><span class="material-icons-round">dark_mode</span> Dunkelmodus</label>
+                        <input type="checkbox" id="dark-mode-toggle" checked>
+                    </div>
+                    <div class="input-con">
+                        <label for="auto-sync-toggle"><span class="material-icons-round">sync</span> Automatischer Upload</label>
+                        <input type="checkbox" id="auto-sync-toggle" checked>
+                    </div>
+                    <div class="input-con">
+                        <label for="helper-name-input"><span class="material-icons-round">person</span> Name des Helfers</label>
+                        <input type="text" id="helper-name-input" placeholder="Name eingeben">
+                        <button id="save-helper-name-btn"><span class="material-icons-round">save</span></button>
+                    </div>
+                    <div class="input-con">
+                        <label for="server-hostname-input"><span class="material-icons-round">dns</span> Server Hostname</label>
+                        <input type="text" id="server-hostname-input" placeholder="Hostname eingeben">
+                        <button id="save-server-hostname-btn"><span class="material-icons-round">save</span></button>
+                    </div>
+                </div>
+                <div class="modal-action-con">
+                    <button id="close-settings-btn" popovertarget="settings-dialog" popovertargetaction="hide">Schließen</button>
+                </div>
+            </div>
+        </dialog>
         <script type="module" src="js/helper.js"></script>
     </body>
 </html>
