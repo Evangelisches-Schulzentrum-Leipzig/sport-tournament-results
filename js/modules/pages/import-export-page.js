@@ -64,17 +64,19 @@ function setupEventListeners() {
     if (exportParticipantsResultsDividedBtn) {
         exportParticipantsResultsDividedBtn.addEventListener('click', async () => {
             const format = formatSelect.value;
-            var link = await handleExportParticipantsResultsDividedByClass(format);
-            if (!link) {
+            var links = await handleExportParticipantsResultsDividedByClass(format);
+            if (!links || links.length === 0) {
                 return;
             }
-            // Trigger file download
-            const a = document.createElement('a');
-            a.href = link;
-            a.download = `participants_results_divided_by_class.${format}`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
+            // Trigger file download for each class
+            links.forEach(linkObj => {
+                const a = document.createElement('a');
+                a.href = linkObj.url;
+                a.download = `participants_results_divided_by_class_${linkObj.className}.${format}`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+            });
         });
     }
 

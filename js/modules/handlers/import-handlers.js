@@ -262,6 +262,7 @@ export async function handleExportParticipantsResultsDividedByClass(format) {
                 alert('Unbekanntes Exportformat: ' + format);
             }
         });
+        return exportLinks;
     } catch (error) {
         console.error('Error exporting participants results by class:', error);
         alert('Fehler beim Exportieren der Teilnehmerergebnisse nach Klasse: ' + error.message);
