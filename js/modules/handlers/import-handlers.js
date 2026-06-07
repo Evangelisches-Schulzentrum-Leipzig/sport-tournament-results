@@ -4,6 +4,7 @@
  */
 
 import * as api from '../../central-api.js';
+import { computeRankings } from '../../central-logic.js';
 
 export async function handleImportParticipants(file) {
     try {
@@ -79,6 +80,275 @@ export async function handleImportParticipants(file) {
     } catch (error) {
         console.error('Error importing participants:', error);
         alert('Fehler beim Importieren der Datei: ' + error.message);
+    }
+}
+
+export async function handleExportParticipants(format) {
+    try {
+        const participants = await api.getParticipants();
+        if (!participants) { alert('Fehler beim Abrufen der Teilnehmer'); return; }
+
+        const exportData = participants.map(p => ({
+            ID: p.id,
+            Vorname: p.forename,
+            Nachname: p.name,
+            Geschlecht: p.gender,
+            Klasse: p.class,
+            Status: "Aktiv"
+        }));
+
+        if (format === 'csv') {
+            const csvContent = [
+                ['ID', 'Vorname', 'Nachname', 'Geschlecht', 'Klasse', 'Status'].join(','),
+                ...exportData.map(p => [p.ID, p.Vorname, p.Nachname, p.Geschlecht, p.Klasse, p.Status].join(','))
+            ].join('\n');
+            const blob = new Blob([csvContent], { type: 'text/csv' });
+            return URL.createObjectURL(blob);
+        } else if (format === 'json') {
+            // Convert exportData to JSON and trigger download
+            const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+            return URL.createObjectURL(blob);
+        } else {
+            alert('Unbekanntes Exportformat: ' + format);
+        }
+    } catch (error) {
+        console.error('Error exporting participants:', error);
+        alert('Fehler beim Exportieren der Teilnehmer: ' + error.message);
+    }
+}
+
+export async function handleExportParticipantsResults(format) {
+    try {
+        const participants = await api.getParticipants();
+        if (!participants) { alert('Fehler beim Abrufen der Teilnehmer'); return; }
+        const measurements = await api.getMeasurements();
+        if (!measurements) { alert('Fehler beim Abrufen der Messungen'); return; }
+        const disciplines = await api.getDisciplines();
+        if (!disciplines) { alert('Fehler beim Abrufen der Disziplinen'); return; }
+        const markRanges = await api.getMarkRanges();
+        if (!markRanges) { alert('Fehler beim Abrufen der Markierungen'); return; }
+
+        const exportData = []; // extended array of participants with their attempt values and final mark for each discipline [{ID, Vorname, Nachname, Geschlecht, Klasse, Disziplin1_Versuch1_Wert, Disziplin_Versuch2_Wert, ..., Disziplin1_Note, Disziplin2_Versuch1_Wert, Disziplin2_Versuch2_Wert, ..., Disziplin2_Note, ...}, ...]
+        participants.forEach(p => {
+            const participantData = {
+                ID: p.id,
+                Vorname: p.forename,
+                Nachname: p.name,
+                Geschlecht: p.gender,
+                Klasse: p.class,
+            };
+            disciplines.forEach(d => {
+                const attempts = measurements.filter(m => m.participant_id === p.id && m.discipline_id === d.id);
+                attempts.forEach((a, index) => {
+                    participantData[`${d.name}_Versuch${a.attempt_number}_Wert`] = a.value;
+                });
+                const bestAttempt = attempts.reduce((best, a) => a.value > best ? a.value : best, null);
+                if (bestAttempt !== null) {
+                    const markRange = markRanges.find(mr =>
+                        mr.discipline_id === d.id &&
+                        mr.class_level === inferClassLevel(p.class) &&
+                        mr.gender === p.gender &&
+                        bestAttempt >= mr.min_value
+                    );
+                    participantData[`${d.name}_Note`] = markRange ? markRange.mark : null;
+                } else {
+                    participantData[`${d.name}_Note`] = null;
+                }
+            });
+            exportData.push(participantData);
+        });
+
+        if (format === 'csv') {
+            const headers = [...new Set(exportData.flatMap(p => Object.keys(p)))];
+            const csvContent = [
+                headers.join(','),
+                ...exportData.map(p => headers.map(h => p[h] !== undefined ? p[h] : '').join(','))
+            ].join('\n');
+            const blob = new Blob([csvContent], { type: 'text/csv' });
+            return URL.createObjectURL(blob);
+        } else if (format === 'json') {
+            // Convert exportData to JSON and trigger download
+            const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+            return URL.createObjectURL(blob);
+        } else {
+            alert('Unbekanntes Exportformat: ' + format);
+        }
+    } catch (error) {
+        console.error('Error exporting participants results:', error);
+        alert('Fehler beim Exportieren der Teilnehmerergebnisse: ' + error.message);
+    }
+}
+
+export async function handleExportParticipantsResultsDividedByClass(format) {
+    try {
+        const classes = await api.getClasses();
+        if (!classes) { alert('Fehler beim Abrufen der Klassen'); return; }
+        const participants = await api.getParticipants();
+        if (!participants) { alert('Fehler beim Abrufen der Teilnehmer'); return; }
+        const measurements = await api.getMeasurements();
+        if (!measurements) { alert('Fehler beim Abrufen der Messungen'); return; }
+        const disciplines = await api.getDisciplines();
+        if (!disciplines) { alert('Fehler beim Abrufen der Disziplinen'); return; }
+        const markRanges = await api.getMarkRanges();
+        if (!markRanges) { alert('Fehler beim Abrufen der Markierungen'); return; }
+
+        // Group participants by class
+        const classMap = new Map();
+        classes.forEach(c => classMap.set(c.name, c));
+        const participantsByClass = new Map();
+        participants.forEach(p => {
+            const className = p.class;
+            if (!participantsByClass.has(className)) {
+                participantsByClass.set(className, []);
+            }
+            participantsByClass.get(className).push(p);
+        });
+        
+        const exportData = []; // extended array of participants with their attempt values and final mark for each discipline [{ID, Vorname, Nachname, Geschlecht, Klasse, Disziplin1_Versuch1_Wert, Disziplin_Versuch2_Wert, ..., Disziplin1_Note, Disziplin2_Versuch1_Wert, Disziplin2_Versuch2_Wert, ..., Disziplin2_Note, ...}, ...]
+        participants.forEach(p => {
+            const participantData = {
+                ID: p.id,
+                Vorname: p.forename,
+                Nachname: p.name,
+                Geschlecht: p.gender,
+                Klasse: p.class,
+            };
+            disciplines.forEach(d => {
+                const attempts = measurements.filter(m => m.participant_id === p.id && m.discipline_id === d.id);
+                attempts.forEach((a, index) => {
+                    participantData[`${d.name}_Versuch${a.attempt_number}_Wert`] = a.value;
+                });
+                const bestAttempt = attempts.reduce((best, a) => a.value > best ? a.value : best, null);
+                if (bestAttempt !== null) {
+                    const markRange = markRanges.find(mr =>
+                        mr.discipline_id === d.id &&
+                        mr.class_level === inferClassLevel(p.class) &&
+                        mr.gender === p.gender &&
+                        bestAttempt >= mr.min_value
+                    );
+                    participantData[`${d.name}_Note`] = markRange ? markRange.mark : null;
+                } else {
+                    participantData[`${d.name}_Note`] = null;
+                }
+            });
+            exportData.push(participantData);
+        });
+        
+        // Group exportData by class
+        const exportDataByClass = new Map();
+        exportData.forEach(p => {
+            const className = p.Klasse;
+            if (!exportDataByClass.has(className)) {
+                exportDataByClass.set(className, []);
+            }
+            exportDataByClass.get(className).push(p);
+        });
+
+        // create separate CSV/JSON links for each class
+        const exportLinks = [];
+        exportDataByClass.forEach((data, className) => {
+            if (format === 'csv') {
+                const headers = [...new Set(data.flatMap(p => Object.keys(p)))];
+                const csvContent = [
+                    headers.join(','),
+                    ...data.map(p => headers.map(h => p[h] !== undefined ? p[h] : '').join(','))
+                ].join('\n');
+                const blob = new Blob([csvContent], { type: 'text/csv' });
+                exportLinks.push({ className, url: URL.createObjectURL(blob) });
+            } else if (format === 'json') {
+                const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+                exportLinks.push({ className, url: URL.createObjectURL(blob) });
+            } else {
+                alert('Unbekanntes Exportformat: ' + format);
+            }
+        });
+    } catch (error) {
+        console.error('Error exporting participants results by class:', error);
+        alert('Fehler beim Exportieren der Teilnehmerergebnisse nach Klasse: ' + error.message);
+    }
+}
+ 
+export async function handleExportDisciplines(format) {
+    try {
+        const disciplines = await api.getDisciplines();
+        if (!disciplines) { alert('Fehler beim Abrufen der Disziplinen'); return; }
+
+        if (format === 'csv') {
+            const csvContent = [
+                ['ID', 'Name', 'Einheit', 'Versuche', 'Timer'].join(','),
+                ...disciplines.map(d => [d.id, d.name, d.unit, d.attempts, d.timer].join(','))
+            ].join('\n');
+            const blob = new Blob([csvContent], { type: 'text/csv' });
+            return URL.createObjectURL(blob);
+        } else if (format === 'json') {
+            // Convert disciplines to JSON and trigger download
+            const blob = new Blob([JSON.stringify(disciplines, null, 2)], { type: 'application/json' });
+            return URL.createObjectURL(blob);
+        } else {
+            alert('Unbekanntes Exportformat: ' + format);
+        }
+    } catch (error) {
+        console.error('Error exporting disciplines:', error);
+        alert('Fehler beim Exportieren der Disziplinen: ' + error.message);
+    }
+}
+
+export async function handleExportResults(format) {
+    try {
+        const classes = await api.getClasses();
+        if (!classes) { alert('Fehler beim Abrufen der Klassen'); return; }
+        const participants = await api.getParticipants();
+        if (!participants) { alert('Fehler beim Abrufen der Teilnehmer'); return; }
+        const measurements = await api.getMeasurements();
+        if (!measurements) { alert('Fehler beim Abrufen der Messungen'); return; }
+        const disciplines = await api.getDisciplines();
+        if (!disciplines) { alert('Fehler beim Abrufen der Disziplinen'); return; }
+        const markRanges = await api.getMarkRanges();
+        if (!markRanges) { alert('Fehler beim Abrufen der Markierungen'); return; }
+        const resultsData = computeRankings(classes, participants, disciplines, measurements, markRanges);
+
+        if (format === 'json') {
+            const blob = new Blob([JSON.stringify(resultsData, null, 2)], { type: 'application/json' });
+            return URL.createObjectURL(blob);
+        } else {
+            alert('Unbekanntes Exportformat: ' + format);
+        }
+    } catch (error) {
+        console.error('Error exporting results:', error);
+        alert('Fehler beim Exportieren der Ergebnisse: ' + error.message);
+    }
+}
+
+export async function handleExportAllData(format) {
+    try {
+        const classes = await api.getClasses();
+        if (!classes) { alert('Fehler beim Abrufen der Klassen'); return; }
+        const participants = await api.getParticipants();
+        if (!participants) { alert('Fehler beim Abrufen der Teilnehmer'); return; }
+        const measurements = await api.getMeasurements();
+        if (!measurements) { alert('Fehler beim Abrufen der Messungen'); return; }
+        const disciplines = await api.getDisciplines();
+        if (!disciplines) { alert('Fehler beim Abrufen der Disziplinen'); return; }
+        const markRanges = await api.getMarkRanges();
+        if (!markRanges) { alert('Fehler beim Abrufen der Markierungen'); return; }
+
+        const allData = {
+            classes,
+            participants,
+            measurements,
+            disciplines,
+            markRanges
+        };
+        
+        if (format === 'json') {
+            const blob = new Blob([JSON.stringify(allData, null, 2)], { type: 'application/json' });
+            return URL.createObjectURL(blob);
+        } else {
+            alert('Unbekanntes Exportformat: ' + format);
+        }
+    } catch (error) {
+        console.error('Error exporting all data:', error);
+        alert('Fehler beim Exportieren aller Daten: ' + error.message);
     }
 }
 
