@@ -3,8 +3,13 @@ import { addClassOrUpdate, addDisciplineOrUpdate, addParticipantOrUpdate, addMea
 import { convertFloatToUnit, convertUnitToFloat } from "./utils.js"
 
 const darkModeKey = 'darkModeEnabled';
+const autoSyncKey = 'autoSyncEnabled';
 
 let lastSyncedTime = null;
+
+if (localStorage.getItem(autoSyncKey) === null) {
+    localStorage.setItem(autoSyncKey, "true");
+}
 
 function updateDarkMode() {
     if (localStorage.getItem(darkModeKey) === null) {
@@ -381,6 +386,14 @@ document.querySelector("dialog#settings-dialog #dark-mode-toggle").addEventListe
     }
 });
 
+document.querySelector("dialog#settings-dialog #auto-sync-toggle").addEventListener('click', () => {
+    if (document.querySelector("dialog#settings-dialog #auto-sync-toggle").checked) {
+        localStorage.setItem(autoSyncKey, 'true');
+    } else {
+        localStorage.setItem(autoSyncKey, 'false');
+    }
+});
+
 document.querySelector("dialog#settings-dialog #save-helper-name-btn").addEventListener('click', () => {
     const name = document.querySelector("dialog#settings-dialog #helper-name-input").value.trim();
     if (name) {
@@ -404,7 +417,7 @@ document.querySelector("#sync-state-con button").addEventListener('click', () =>
 });
 
 setInterval(() => {
-    if (document.querySelector("dialog#settings-dialog #auto-sync-toggle").checked) {
+    if (localStorage.getItem(autoSyncKey) === 'true') {
         syncWithServer();
     }
 }, 5 * 1000); // every 5 seconds
