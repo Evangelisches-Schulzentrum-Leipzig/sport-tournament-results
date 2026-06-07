@@ -870,7 +870,7 @@ dialog div.input-con label {
   column-gap: calc(var(--spacing) * 2);
   font-size: var(--text-sm);
   line-height: var(--tw-leading, var(--text-sm--line-height));
-  color: var(--color-text-primary);
+  color: var(--color-text-background);
 }
 dialog div.input-con:has(input[type="text"]) label {
   grid-column: span 2 / span 2;
@@ -924,6 +924,11 @@ dialog div.modal-action-con button {
   &:hover {
     @media (hover: hover) {
       background-color: var(--color-gray-700);
+    }
+  }
+  &:hover {
+    @media (hover: hover) {
+      color: var(--color-gray-300);
     }
   }
 }
