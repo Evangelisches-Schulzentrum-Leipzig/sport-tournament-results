@@ -96,6 +96,12 @@ div#top-bar .time-display span {
 div#top-bar div#sync-state-con {
     @apply flex items-center gap-2 bg-surface-background border border-border rounded ps-2 px-1 py-0.5 cursor-pointer col-span-2 md:col-span-1 w-fit mx-auto;
 }
+div#top-bar div#sync-state-con span#sync-icon:not(.offline) {
+    @apply text-green-500;
+}
+div#top-bar div#sync-state-con span#sync-icon.offline {
+    @apply text-red-500;
+}
 div#top-bar div#sync-state-con span#open-upload-state {
     @apply flex items-center;
 }

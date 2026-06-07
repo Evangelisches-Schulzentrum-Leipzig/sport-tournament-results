@@ -24,12 +24,16 @@ export async function checkConnectivity() {
         .then(response => response.json())
         .then(data => {
             if (data.status === 'ok') {
+                document.querySelector('#sync-icon').innerText = 'cloud_done';
+                document.querySelector('#sync-icon').classList.remove('offline');
                 return true;
             } else {
                 throw new Error('Unexpected response');
             }
         })
         .catch(error => {
+            document.querySelector('#sync-icon').innerText = 'cloud_off';
+            document.querySelector('#sync-icon').classList.add('offline');
             return false;
         });
 }

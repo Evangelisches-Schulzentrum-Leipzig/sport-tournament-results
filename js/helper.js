@@ -278,7 +278,7 @@ async function updateDataInputTable() {
 async function displaySyncState() {
     const syncMeasurements = await getSyncMeasurements();
     const syncCountElement = document.querySelector("#open-upload-state");
-    const lastSyncElement = document.querySelector("#sync-state-con > span:not(#open-upload-state)");
+    const lastSyncElement = document.querySelector("#sync-state-con > span#last-time-state");
 
     let lastSyncText = "Nie synchronisiert";
     var timeDiff = lastSyncedTime ? (new Date().getTime() - lastSyncedTime) : null;
