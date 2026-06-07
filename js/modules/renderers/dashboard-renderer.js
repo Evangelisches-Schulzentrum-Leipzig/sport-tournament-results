@@ -188,7 +188,8 @@ export function displayDashboardResults(measurements, data, filters = {}) {
     });
 
     resultsList.innerHTML = '';
-    resultRows.slice(0, 5).forEach((row, index) => {
+    resultRows.sort((a, b) => a.place - b.place);
+    resultRows.forEach((row, index) => {
         const tr = document.createElement('tr');
         tr.innerHTML = `
             <td class="${index < 3 ? 'results-first-places' : ''}">${row.place}</td>
