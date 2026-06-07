@@ -2,6 +2,8 @@ import { getData, sync, checkConnectivity, HELPER_NAME_KEY } from "./helper-api.
 import { addClassOrUpdate, addDisciplineOrUpdate, addParticipantOrUpdate, addMeasurementOrUpdate, openDatabase, getDisciplines, getClasses, getDisciplineById, getParticipants, getClassMeasurements, getSyncMeasurements, getSyncedMeasurements, setSyncTime } from "./helper-db.js"
 import { convertFloatToUnit, convertUnitToFloat } from "./utils.js"
 
+let lastSyncedTime = null;
+
 function promptForHelperName() {
     try {
         const existing = localStorage.getItem(HELPER_NAME_KEY);
@@ -273,11 +275,6 @@ async function updateDataInputTable() {
 
 async function displaySyncState() {
     const syncMeasurements = await getSyncMeasurements();
-    const syncedMeasurements = await getSyncedMeasurements();
-    const lastSyncedTime = syncedMeasurements.length > 0 ? syncedMeasurements.reduce((latest, m) => {
-        const syncTime = new Date(m.sync_time).getTime();
-        return syncTime > latest ? syncTime : latest;
-    }, 0) : null;
     const syncCountElement = document.querySelector("#open-upload-state");
     const lastSyncElement = document.querySelector("#sync-state-con > span:not(#open-upload-state)");
 
@@ -343,6 +340,7 @@ async function syncWithServer() {
         ...participants.map(participant => addParticipantOrUpdate(participant.name, participant.forename, participant.class, participant.gender)),
         ...(serverMeasurements ? serverMeasurements.map(measurement => addMeasurementOrUpdate(measurement.participant_id, measurement.discipline_id, measurement.attempt_number, measurement.value, measurement.created_at, new Date())) : [])
     ]).then(() => {
+        lastSyncedTime = new Date().getTime();
         updateSelectOptions();
         updateDataInputTable();
     }).catch(error => {
@@ -366,7 +364,7 @@ document.querySelector("#sync-state-con button").addEventListener('click', () =>
 
 setInterval(() => {
     syncWithServer();
-}, 5 * 1000); // every 5 minutes
+}, 5 * 1000); // every 5 seconds
 
 setInterval(() => {
     document.querySelector("#top-bar div.time-display span").textContent = new Date().toLocaleTimeString();
