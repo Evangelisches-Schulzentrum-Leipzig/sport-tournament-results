@@ -294,7 +294,7 @@ export async function handleExportDisciplines(format) {
     }
 }
 
-export async function handleExportResults(format) {
+export async function handleExportResults(format, className = null, classLevel = null, disciplineId = null) {
     try {
         const classes = await api.getClasses();
         if (!classes) { alert('Fehler beim Abrufen der Klassen'); return; }
@@ -306,6 +306,17 @@ export async function handleExportResults(format) {
         if (!disciplines) { alert('Fehler beim Abrufen der Disziplinen'); return; }
         const markRanges = await api.getMarkRanges();
         if (!markRanges) { alert('Fehler beim Abrufen der Markierungen'); return; }
+
+        if (className) {
+            participants = participants.filter(p => p.class === className);
+        }
+        if (classLevel) {
+            participants = participants.filter(p => inferClassLevel(p.class) === classLevel);
+        }
+        if (disciplineId) {
+            measurements = measurements.filter(m => m.discipline_id === disciplineId);
+        }
+
         const resultsData = computeRankings(classes, participants, disciplines, measurements, markRanges);
 
         if (format === 'json') {

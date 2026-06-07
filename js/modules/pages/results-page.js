@@ -8,6 +8,7 @@ import {
     populateResultsDisciplineFilterDropdown,
     populateResultsClassFilterDropdown
 } from '../renderers/results-renderer.js';
+import { handleExportResults } from '../handlers/import-handlers.js';
 
 export async function init() {
     const data = await api.getData();
@@ -18,6 +19,7 @@ export async function init() {
     if (data.measurements) displayResults(data.measurements, data, {});
 
     setupFilters(data);
+    setupExportButtons();
 }
 
 function setupFilters(data) {
@@ -41,4 +43,51 @@ function setupFilters(data) {
     if (classFilter) classFilter.addEventListener('change', applyFilters);
     if (classLevelFilter) classLevelFilter.addEventListener('change', applyFilters);
     if (refreshBtn) refreshBtn.addEventListener('click', applyFilters);
+}
+
+function setupExportButtons() {
+    const jsonExportBtn = document.querySelector('#export-json-btn');
+    const csvExportBtn = document.querySelector('#export-csv-btn');
+
+    const disciplineFilter = document.querySelector('select[name="discipline"]');
+    const classFilter = document.querySelector('select[name="class"]');
+    const classLevelFilter = document.querySelector('select[name="class-level"]');
+    
+    if (jsonExportBtn) {
+        jsonExportBtn.addEventListener('click', async () => {
+            const disciplineId = disciplineFilter?.value || null;
+            const className = classFilter?.value || null;
+            const classLevel = classLevelFilter?.value || null;
+            var link = await handleExportResults('json', className, classLevel, disciplineId);
+            if (!link) {
+                return;
+            }
+            // Trigger file download
+            const a = document.createElement('a');
+            a.href = link;
+            a.download = `results.${disciplineId ? 'discipline_' + disciplineId + '.' : ''}${className ? 'class_' + className + '.' : ''}${classLevel ? 'level_' + classLevel + '.' : ''}json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        });
+    }
+
+    if (csvExportBtn) {
+        csvExportBtn.addEventListener('click', async () => {
+            const disciplineId = disciplineFilter?.value || null;
+            const className = classFilter?.value || null;
+            const classLevel = classLevelFilter?.value || null;
+            var link = await handleExportResults('csv', className, classLevel, disciplineId);
+            if (!link) {
+                return;
+            }
+            // Trigger file download
+            const a = document.createElement('a');
+            a.href = link;
+            a.download = `results.${disciplineId ? 'discipline_' + disciplineId + '.' : ''}${className ? 'class_' + className + '.' : ''}${classLevel ? 'level_' + classLevel + '.' : ''}csv`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+        });
+    }
 }
