@@ -365,6 +365,10 @@ document.querySelector("#sync-state-con button").addEventListener('click', () =>
 });
 
 setInterval(() => {
+    syncWithServer();
+}, 5 * 1000); // every 5 minutes
+
+setInterval(() => {
     document.querySelector("#top-bar div.time-display span").textContent = new Date().toLocaleTimeString();
     displaySyncState();
 }, 500);
