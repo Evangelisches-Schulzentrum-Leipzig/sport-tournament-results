@@ -412,7 +412,7 @@ div#nav-bar div#sync-state-con span#last-sync-event {
 }
 
 #dashboard-con div#live-results div.tile-filter-con {
-    @apply flex items-center gap-2 p-2 border-b border-border;
+    @apply flex items-center gap-2 p-2 border-b border-border overflow-x-auto;
 }
 #dashboard-con div#live-results div.tile-filter-con input,
 #dashboard-con div#live-results div.tile-filter-con select {
@@ -435,6 +435,9 @@ div#nav-bar div#sync-state-con span#last-sync-event {
 }
 #dashboard-con div#live-results table#results-list td.results-first-places {
     @apply text-primary;
+}
+#dashboard-con div#live-results table#results-list td:nth-child(2) {
+    @apply max-w-25 truncate;
 }
 #dashboard-con div#live-results table#results-list td:last-child {
     @apply text-right text-primary font-semibold;
