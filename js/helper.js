@@ -4,8 +4,38 @@ import { convertFloatToUnit, convertUnitToFloat } from "./utils.js"
 
 const darkModeKey = 'darkModeEnabled';
 const autoSyncKey = 'autoSyncEnabled';
+const timerKeys = 'timerValues';
 
 let lastSyncedTime = null;
+
+// --- Timer state (cleared on every table redraw) ---
+let _globalTimerInterval = null;
+const _individualTimerIntervals = {};
+
+function _clearAllTimerIntervals() {
+    if (_globalTimerInterval) { clearInterval(_globalTimerInterval); _globalTimerInterval = null; }
+    Object.keys(_individualTimerIntervals).forEach(k => { clearInterval(_individualTimerIntervals[k]); delete _individualTimerIntervals[k]; });
+}
+
+function _getTimerState() {
+    try { return JSON.parse(localStorage.getItem(timerKeys)) || {}; } catch (e) { return {}; }
+}
+
+function _saveTimerState(state) {
+    const hasData = state.global || (state.stoppedAt && Object.keys(state.stoppedAt).length) || (state.individual && Object.keys(state.individual).length);
+    if (!hasData) { localStorage.removeItem(timerKeys); } else { localStorage.setItem(timerKeys, JSON.stringify(state)); }
+}
+
+function _fmtMs(ms) {
+    const s = Math.floor(Math.max(0, ms) / 1000);
+    return `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
+}
+
+// Returns the first empty attempt input in a row, or the last if all are filled
+function _targetAttemptInput(tr) {
+    const inputs = Array.from(tr.querySelectorAll('input[data-attempt]'));
+    return inputs.find(i => !i.value.trim()) || inputs[inputs.length - 1] || null;
+}
 
 if (localStorage.getItem(autoSyncKey) === null) {
     localStorage.setItem(autoSyncKey, "true");
@@ -175,7 +205,7 @@ async function updateDataInputTable() {
             <th>Vorname</th>
             <th>Name</th>
             ${Array.from({ length: discipline.attempts }, (_, i) => `<th>Versuch ${i + 1} ${discipline.unit ? `${unitLabel}` : ''}</th>`).join('')}
-            ${discipline.timer ? `<th><button><span class="material-icons-round">timer</span> Timer</button></th>` : ''}
+            ${discipline.timer ? `<th><span id="time-value"></span><button id="stop-global-timer" style="display:none;"><span class="material-icons-round">stop</span></button><button id="start-global-timer"><span class="material-icons-round">timer</span> Timer</button></th>` : ''}
         </tr>
     `;
     var tbodyContent = '';
@@ -192,10 +222,11 @@ async function updateDataInputTable() {
                 const measurement = participantMeasurements.find(m => m.attempt_number === index + 1);
                 return html.replaceAll('$measurement$', measurement ? convertFloatToUnit(measurement.value, discipline.unit) : '').replaceAll('$participant$', participant.id);
             }).join('')}
-            ${discipline.timer ? `<td><button class="stop-timer"><span class="material-icons-round">stop</span></button><button class="individual-timer"><span class="material-icons-round">timer</span></button></td>` : ''}
+            ${discipline.timer ? `<td><span id="time-value-${participant.id}"></span><button class="stop-timer" style="display:none;"><span class="material-icons-round">stop</span></button><button class="individual-timer"><span class="material-icons-round">timer</span></button></td>` : ''}
         `;
         tbodyContent += tr.outerHTML;
     }
+    _clearAllTimerIntervals();
     tbody.innerHTML = tbodyContent;
 
     // Refocus last active input if still present
@@ -292,6 +323,165 @@ async function updateDataInputTable() {
             });
         });
     });
+
+    setupTimers(participants, disciplineId);
+}
+
+// localStorage shape: { global: <ms>, stoppedAt: { <pid>: <elapsedMs> }, individual: { <pid>: <startMs> } }
+function setupTimers(participants, disciplineId) {
+    _clearAllTimerIntervals();
+    const state = _getTimerState();
+    const startGlobalBtn = document.querySelector('#start-global-timer');
+    const stopGlobalBtn  = document.querySelector('#stop-global-timer');
+    const globalTimeEl   = document.querySelector('thead #time-value');
+    if (!startGlobalBtn) return; // discipline has no timer
+
+    // Always wire the start button regardless of which branch we enter,
+    // so it works correctly after a global reset on a page that loaded mid-run.
+    startGlobalBtn.onclick = () => {
+        const s = _getTimerState();
+        s.global = Date.now(); s.stoppedAt = {};
+        _saveTimerState(s);
+        setupTimers(participants, disciplineId);
+    };
+
+    if (state.global) {
+        // ---- Global timer is running ----
+        startGlobalBtn.style.display = 'none';
+        stopGlobalBtn.style.display  = '';
+
+        // Reset/stop: wipe state then re-run setupTimers to restore all button handlers cleanly
+        stopGlobalBtn.onclick = () => {
+            const s = _getTimerState();
+            delete s.global; delete s.stoppedAt;
+            _saveTimerState(s);
+            _clearAllTimerIntervals();
+            setupTimers(participants, disciplineId);
+        };
+
+        // Interval updates header + all non-stopped participant displays
+        const tick = () => {
+            const s = _getTimerState();
+            if (!s.global) return;
+            const elapsed = Date.now() - s.global;
+            if (globalTimeEl) globalTimeEl.textContent = _fmtMs(elapsed);
+            participants.forEach(p => {
+                if (s.stoppedAt?.[p.id] !== undefined) return;
+                const el = document.querySelector(`#time-value-${p.id}`);
+                if (el) el.textContent = _fmtMs(elapsed);
+            });
+        };
+        tick();
+        _globalTimerInterval = setInterval(tick, 1000);
+
+        // Per-participant stop buttons
+        participants.forEach(participant => {
+            const pid    = participant.id;
+            const timeEl = document.querySelector(`#time-value-${pid}`);
+            const tr     = timeEl?.closest('tr');
+            if (!tr) return;
+            const stopBtn  = tr.querySelector('button.stop-timer');
+            const startBtn = tr.querySelector('button.individual-timer');
+            if (startBtn) startBtn.style.display = 'none'; // hide individual start while global runs
+
+            if (state.stoppedAt?.[pid] !== undefined) {
+                // Already stopped individually — show frozen time, hide stop button
+                if (timeEl)  timeEl.textContent    = _fmtMs(state.stoppedAt[pid]);
+                if (stopBtn) stopBtn.style.display  = 'none';
+            } else {
+                // Still ticking with global
+                if (stopBtn) {
+                    stopBtn.style.display = '';
+                    stopBtn.onclick = () => {
+                        const s = _getTimerState();
+                        if (!s.global) return;
+                        const elapsedMs = Date.now() - s.global;
+                        if (!s.stoppedAt) s.stoppedAt = {};
+                        s.stoppedAt[pid] = elapsedMs;
+                        _saveTimerState(s);
+                        if (stopBtn) stopBtn.style.display = 'none';
+                        if (timeEl)  timeEl.textContent    = _fmtMs(elapsedMs);
+                        const input = _targetAttemptInput(tr);
+                        if (input) {
+                            addMeasurementOrUpdate(pid, disciplineId, parseInt(input.dataset.attempt), convertUnitToFloat(_fmtMs(elapsedMs), 'minutes'))
+                                .then(() => { displaySyncState(); updateDataInputTable(); })
+                                .catch(e => console.error('Global-timer save error:', e));
+                        }
+                    };
+                }
+            }
+        });
+
+    } else {
+        // ---- No global timer ----
+        startGlobalBtn.style.display = '';
+        stopGlobalBtn.style.display  = 'none';
+        if (globalTimeEl) globalTimeEl.textContent = '';
+
+        // Individual per-participant timers
+        participants.forEach(participant => {
+            const pid    = participant.id;
+            const timeEl = document.querySelector(`#time-value-${pid}`);
+            const tr     = timeEl?.closest('tr');
+            if (!tr) return;
+            const stopBtn  = tr.querySelector('button.stop-timer');
+            const startBtn = tr.querySelector('button.individual-timer');
+            const indivStart = state.individual?.[pid];
+
+            if (indivStart) {
+                // Restore running individual timer
+                if (startBtn) startBtn.style.display = 'none';
+                if (stopBtn)  stopBtn.style.display  = '';
+                const update = () => { if (timeEl) timeEl.textContent = _fmtMs(Date.now() - indivStart); };
+                update();
+                _individualTimerIntervals[pid] = setInterval(update, 1000);
+                if (stopBtn) stopBtn.onclick = () => _stopIndividualTimer(pid, participants, disciplineId);
+            } else {
+                // Not running
+                if (stopBtn)  stopBtn.style.display  = 'none';
+                if (timeEl)   timeEl.textContent     = '';
+                if (startBtn) {
+                    startBtn.style.display = '';
+                    startBtn.onclick = () => {
+                        const s = _getTimerState();
+                        if (!s.individual) s.individual = {};
+                        s.individual[pid] = Date.now();
+                        _saveTimerState(s);
+                        setupTimers(participants, disciplineId);
+                    };
+                }
+            }
+        });
+    }
+}
+
+function _stopIndividualTimer(pid, participants, disciplineId) {
+    if (_individualTimerIntervals[pid]) { clearInterval(_individualTimerIntervals[pid]); delete _individualTimerIntervals[pid]; }
+    const s = _getTimerState();
+    const elapsedMs = s.individual?.[pid] ? Date.now() - s.individual[pid] : 0;
+    if (s.individual) { delete s.individual[pid]; if (!Object.keys(s.individual).length) delete s.individual; }
+    _saveTimerState(s);
+    const timeEl = document.querySelector(`#time-value-${pid}`);
+    const tr     = timeEl?.closest('tr');
+    if (tr) {
+        const stopBtn  = tr.querySelector('button.stop-timer');
+        const startBtn = tr.querySelector('button.individual-timer');
+        if (stopBtn)  stopBtn.style.display  = 'none';
+        if (startBtn) { startBtn.style.display = ''; startBtn.onclick = () => {
+            const s = _getTimerState();
+            if (!s.individual) s.individual = {};
+            s.individual[pid] = Date.now();
+            _saveTimerState(s);
+            setupTimers(participants, disciplineId);
+        }; }
+        if (timeEl) timeEl.textContent = '';
+        const input = _targetAttemptInput(tr);
+        if (input && elapsedMs > 0) {
+            addMeasurementOrUpdate(pid, disciplineId, parseInt(input.dataset.attempt), convertUnitToFloat(_fmtMs(elapsedMs), 'minutes'))
+                .then(() => { displaySyncState(); updateDataInputTable(); })
+                .catch(e => console.error('Individual timer save error:', e));
+        }
+    }
 }
 
 async function displaySyncState() {
