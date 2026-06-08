@@ -276,6 +276,9 @@ async function updateDataInputTable() {
     document.querySelectorAll('#data-input-con input').forEach(input => {
         input.addEventListener('input', event => {
             const value = event.target.value;
+            if (!value) {
+                return;
+            }
             const attempt = parseInt(event.target.dataset.attempt);
             const discipline = parseInt(event.target.dataset.discipline);
             const participant = parseInt(event.target.dataset.participant);
