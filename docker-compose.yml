@@ -30,7 +30,10 @@ services:
         condition: service_healthy
   
   web:
-    build: .
+    build: 
+      context: .
+      args:
+        BACKEND_URL: http://localhost:3000
     restart: always
     ports:
       - 3000:80
