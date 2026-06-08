@@ -90,7 +90,7 @@ function updateSelectOptions() {
             htmlClass += optgroup.outerHTML;
         });
         classSelect.innerHTML = htmlClass;
-        if (lastSelectedClass) {
+        if (lastSelectedClass && classes.some(c => c.name == lastSelectedClass)) {
             classSelect.value = lastSelectedClass;
         }
     }).catch(error => {
@@ -105,7 +105,7 @@ function updateSelectOptions() {
             htmlDiscipline += option.outerHTML;
         });
         disciplineSelect.innerHTML = htmlDiscipline;
-        if (lastSelectedDiscipline) {
+        if (lastSelectedDiscipline && disciplines.some(d => d.id == lastSelectedDiscipline)) {
             disciplineSelect.value = lastSelectedDiscipline;
         }
     }).catch(error => {
@@ -139,7 +139,7 @@ async function updateDataInputTable() {
     const participants = (await getParticipants(className)).sort((a, b) => a.name.localeCompare(b.name) || a.forename.localeCompare(b.forename));
     console.log("Participants in class:", participants);
 
-    if (discipline === null) {
+    if (discipline === null || discipline === undefined) {
         thead.innerHTML = '<tr></tr>';
         tbody.innerHTML = '<tr><td style="text-align: center;">Keine Daten für die ausgewählte Sportart verfügbar.</td></tr>';
         return;
