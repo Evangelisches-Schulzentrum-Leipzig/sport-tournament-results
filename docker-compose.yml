@@ -28,3 +28,12 @@ services:
     depends_on:
       db:
         condition: service_healthy
+  
+  web:
+    build: .
+    restart: always
+    ports:
+      - 3000:8083
+    depends_on:
+      db:
+        condition: service_healthy
