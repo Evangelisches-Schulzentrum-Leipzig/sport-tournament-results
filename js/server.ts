@@ -22,7 +22,7 @@ const port = process.env['API_PORT'] || 80;
 app.use(cors())
 app.use(express.json())
 
-app.use("/", express.static("./"));
+app.use("/", express.static("./", { index: "helper.html" }));
 
 app.get('/status', (req, res) => {
     res.json({ status: 'ok' });
