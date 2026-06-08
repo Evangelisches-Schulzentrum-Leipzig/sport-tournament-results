@@ -1,4 +1,5 @@
 const host = "http://localhost:8083";
+const WS_URL = 'ws://localhost:8083/ws';
 
 /**
  * Internal helper — makes a single fetch call, returns parsed JSON or null on any failure.
@@ -208,7 +209,6 @@ export function sync(measurements) {
 }
 
 // WebSocket client for central dashboard to receive helper lists and updates
-const WS_URL = 'ws://localhost:8083/ws';
 let centralWs = null;
 let centralReconnectTimer = null;
 let centralOnClients = null;
