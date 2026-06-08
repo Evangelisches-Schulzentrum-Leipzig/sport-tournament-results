@@ -1,4 +1,5 @@
-USE DATABASE 'tournament';
+CREATE DATABASE IF NOT EXISTS `tournament` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;
+USE `tournament`;
 
 CREATE TABLE IF NOT EXISTS `classes` (
     `name` varchar(255) NOT NULL PRIMARY KEY,

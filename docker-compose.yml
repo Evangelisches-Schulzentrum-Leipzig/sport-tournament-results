@@ -7,6 +7,8 @@ services:
       - 3306:3306
     environment:
       MYSQL_ROOT_PASSWORD: notSecureChangeMe
+    volumes:
+      - ./db.sql:/docker-entrypoint-initdb.d/db.sql
     healthcheck:
       test: ["CMD", "mariadb-admin", "ping", "-h", "localhost"]
       interval: 5s
