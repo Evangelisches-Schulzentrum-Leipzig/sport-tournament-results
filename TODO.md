@@ -21,7 +21,7 @@
 - [x] change server hostname 
 - [x] change username
 - [x] helper timers
-- [ ] helper sync date, measurement count, current class and discipline
+- [x] helper sync date, measurement count, current class and discipline
 - [x] helper handle new data and conflicts
 
 ## Bugs

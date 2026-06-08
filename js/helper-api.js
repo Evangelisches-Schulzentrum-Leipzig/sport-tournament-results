@@ -117,6 +117,19 @@ function heartbeat(ws) {
     }, 30000 + 1000);
 }
 
+export function wsUpdateSelectedClassAndDiscipline(className, disciplineId) {
+    if (wsConnection && wsConnection.readyState === WebSocket.OPEN) {
+        try {
+            wsConnection.send(JSON.stringify({ type: 'select-class', currentClass: className }));
+            wsConnection.send(JSON.stringify({ type: 'select-discipline', currentDisciplineId: disciplineId }));
+        } catch (e) {
+            console.error('Failed to send selection message:', e);
+        }
+    } else {
+        console.warn('WebSocket not connected, cannot send selection update');
+    }
+}
+
 
 function startConnectivityMonitor() {
     if (connectivityTimer) return;

@@ -1,4 +1,4 @@
-import { setHost, getHost, getData, sync, checkConnectivity, HELPER_NAME_KEY } from "./helper-api.js";
+import { setHost, getHost, getData, sync, checkConnectivity, HELPER_NAME_KEY, wsUpdateSelectedClassAndDiscipline } from "./helper-api.js";
 import { addClassOrUpdate, addDisciplineOrUpdate, addParticipantOrUpdate, addMeasurementOrUpdate, openDatabase, deleteDatabase, getDisciplines, getClasses, getDisciplineById, getParticipants, getClassMeasurements, getSyncMeasurements, getSyncedMeasurements, setSyncTime } from "./helper-db.js"
 import { convertFloatToUnit, convertUnitToFloat } from "./utils.js"
 
@@ -144,8 +144,14 @@ function updateSelectOptions() {
 
     disciplineSelect.removeEventListener('change', updateDataInputTable);
     classSelect.removeEventListener('change', updateDataInputTable);
-    disciplineSelect.addEventListener('change', updateDataInputTable);
-    classSelect.addEventListener('change', updateDataInputTable);
+    disciplineSelect.addEventListener('change', () => {
+        wsUpdateSelectedClassAndDiscipline(classSelect.value, disciplineSelect.value);
+        updateDataInputTable();
+    });
+    classSelect.addEventListener('change', () => {
+        wsUpdateSelectedClassAndDiscipline(classSelect.value, disciplineSelect.value);
+        updateDataInputTable();
+    });
 }
 
 async function updateDataInputTable() {
