@@ -68,6 +68,28 @@ export function openDatabase() {
     });
 }
 
+export function deleteDatabase() {
+    return new Promise((resolve, reject) => {
+        if (db) {
+            db.close();
+            console.log('Database connection closed before deletion');
+        }
+        const deleteRequest = indexedDB.deleteDatabase('helper-sports-tournament');
+
+        deleteRequest.addEventListener('success', () => {
+            console.log('Database deleted successfully');
+            resolve();
+        });
+        deleteRequest.addEventListener('error', event => {
+            console.error('Error deleting database:', event.target.error);
+            reject(event.target.error);
+        });
+        deleteRequest.addEventListener('blocked', () => {
+            console.warn('Database deletion blocked. Please close all other tabs using this database.');
+        });
+    });
+}
+
 /**
  * 
  * @param {string} name 

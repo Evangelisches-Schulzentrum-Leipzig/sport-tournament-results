@@ -157,6 +157,9 @@ dialog div.input-con button {
 dialog div.input-con button:hover {
     @apply bg-primary-hover;
 }
+dialog div.modal-content button {
+    @apply bg-primary text-text-primary flex items-center justify-center rounded-sm px-2 py-0.5 cursor-pointer w-full;
+}
 dialog div.modal-action-con {
     @apply flex gap-2 w-full
 }

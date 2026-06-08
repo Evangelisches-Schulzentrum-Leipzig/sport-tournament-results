@@ -906,6 +906,18 @@ dialog div.input-con button {
 dialog div.input-con button:hover {
   background-color: var(--color-primary-hover);
 }
+dialog div.modal-content button {
+  display: flex;
+  width: 100%;
+  cursor: pointer;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  background-color: var(--color-primary);
+  padding-inline: calc(var(--spacing) * 2);
+  padding-block: calc(var(--spacing) * 0.5);
+  color: var(--color-text-primary);
+}
 dialog div.modal-action-con {
   display: flex;
   width: 100%;

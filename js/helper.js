@@ -1,5 +1,5 @@
 import { setHost, getHost, getData, sync, checkConnectivity, HELPER_NAME_KEY } from "./helper-api.js";
-import { addClassOrUpdate, addDisciplineOrUpdate, addParticipantOrUpdate, addMeasurementOrUpdate, openDatabase, getDisciplines, getClasses, getDisciplineById, getParticipants, getClassMeasurements, getSyncMeasurements, getSyncedMeasurements, setSyncTime } from "./helper-db.js"
+import { addClassOrUpdate, addDisciplineOrUpdate, addParticipantOrUpdate, addMeasurementOrUpdate, openDatabase, deleteDatabase, getDisciplines, getClasses, getDisciplineById, getParticipants, getClassMeasurements, getSyncMeasurements, getSyncedMeasurements, setSyncTime } from "./helper-db.js"
 import { convertFloatToUnit, convertUnitToFloat } from "./utils.js"
 
 const darkModeKey = 'darkModeEnabled';
@@ -409,6 +409,18 @@ document.querySelector("dialog#settings-dialog #save-server-hostname-btn").addEv
     const hostname = document.querySelector("dialog#settings-dialog #server-hostname-input").value.trim();
     if (hostname) {
         setHost(hostname);
+    }
+});
+
+document.querySelector("dialog#settings-dialog #delete-database-btn").addEventListener('click', () => {
+    if (confirm("Möchten Sie wirklich alle lokal gespeicherten Daten löschen? Diese Aktion kann nicht rückgängig gemacht werden.")) {
+        deleteDatabase().then(() => {
+            alert("Lokale Datenbank wurde gelöscht. Die Seite wird neu geladen.");
+            window.location.reload();
+        }).catch(error => {
+            console.error("Error deleting database:", error);
+            alert("Fehler beim Löschen der Datenbank. Bitte versuchen Sie es erneut.");
+        });
     }
 });
 
