@@ -737,6 +737,7 @@ app.post('/sync', async (req, res) => {
                         const helper = helpers.find(h => h.id === sync_ws_uuid);
                         if (helper) {
                             helper.lastSync = Date.now();
+                            helper.measurementCount += 1;
                         }
                         broadcastToAll(JSON.stringify({ type: 'clients', helpers: helpers }));
                     }
@@ -752,6 +753,7 @@ app.post('/sync', async (req, res) => {
                     const helper = helpers.find(h => h.id === sync_ws_uuid);
                     if (helper) {
                         helper.lastSync = Date.now();
+                        helper.measurementCount += 1;
                     }
                     broadcastToAll(JSON.stringify({ type: 'clients', helpers: helpers }));
                 }
