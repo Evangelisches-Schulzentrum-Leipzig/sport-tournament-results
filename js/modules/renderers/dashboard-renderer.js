@@ -10,19 +10,28 @@ export function displayDashboardDisciplines(disciplines, data) {
     const grid = document.querySelector('#discipline-grid');
     if (!grid) return;
 
+    const helpers = data.helpers || [];
+
     grid.innerHTML = '';
     disciplines.sort((a, b) => a.name.localeCompare(b.name))
     disciplines.forEach(discipline => {
         const count = data.measurements?.filter(m => m.discipline_id === discipline.id).length || 0;
         const total = data.participants?.length || 0;
 
+        const assignedHelpers = helpers.filter(h => h.currentDisciplineId === discipline.id);
+        const helperNames = assignedHelpers.length > 0
+            ? assignedHelpers.map(h => h.name).join(', ')
+            : '–';
+        const currentClasses = [...new Set(assignedHelpers.map(h => h.currentClass).filter(Boolean))];
+        const classDisplay = currentClasses.length > 0 ? currentClasses.join(', ') : '–';
+
         const tile = document.createElement('div');
         tile.className = 'discipline-tile';
         tile.innerHTML = `
             <h3>${discipline.name}</h3>
             <span class="discipline-progress">${count}/${total}</span>
-            <span class="discipline-helper">Helper 1, Helper 2</span>
-            <span class="discipline-current-class">Klasse 8a</span>
+            <span class="discipline-helper">${helperNames}</span>
+            <span class="discipline-current-class">${classDisplay}</span>
         `;
         grid.appendChild(tile);
     });

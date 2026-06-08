@@ -47,7 +47,7 @@ export async function init() {
         if (data.measurements) displayDashboardResults(data.measurements, data, {});
 
         setupFilters(data);
-        startHelpersView(data.disciplines);
+        startHelpersView(data.disciplines, data);
     } catch (error) {
         console.error('Error initializing dashboard page:', error);
     }
@@ -73,9 +73,13 @@ function setupFilters(data) {
     if (disciplineFilter) disciplineFilter.addEventListener('change', applyFilters);
 }
 
-function startHelpersView(disciplines) {
+function startHelpersView(disciplines, data) {
     const disciplineMap = new Map((disciplines || []).map(d => [d.id, d.name]));
-    api.startCentralWebSocket(helpers => renderHelpers(helpers, disciplineMap));
+    api.startCentralWebSocket(helpers => {
+        renderHelpers(helpers, disciplineMap);
+        // Re-render discipline tiles with live helper assignment
+        if (data?.disciplines) displayDashboardDisciplines(data.disciplines, { ...data, helpers });
+    });
     setInterval(() => api.centralRequestClients(), 1000);
 }
 
@@ -83,17 +87,28 @@ function renderHelpers(helpers, disciplineMap) {
     const container = document.querySelector('#helper-list');
     if (!container) return;
     container.innerHTML = '';
+    if (!helpers.length) {
+        const empty = document.createElement('div');
+        empty.className = 'helper-item helper-item-empty';
+        empty.textContent = 'Keine Helfer verbunden';
+        container.appendChild(empty);
+        return;
+    }
     helpers.forEach(h => {
         const item = document.createElement('div');
         item.className = 'helper-item';
-        const discName = h.currentDisciplineId
-            ? (disciplineMap.get(h.currentDisciplineId) || h.currentDisciplineId)
-            : 'Unbekannt';
+        const discName = h.currentDisciplineId != null
+            ? (disciplineMap.get(Number(h.currentDisciplineId)) || `ID ${h.currentDisciplineId}`)
+            : '–';
+        const className = h.currentClass || '–';
         const lastSync = h.lastSync ? timeAgo(new Date(h.lastSync)) : 'Nie';
         const statusClass = h.isAlive ? 'online' : 'offline';
+        const count = h.measurementCount != null ? h.measurementCount : 0;
         item.innerHTML = `
             <h3>${h.name}</h3>
             <span class="helper-current-discipline">${discName}</span>
+            <span class="helper-current-class">${className}</span>
+            <span class="helper-measurement-count">${count} Messungen</span>
             <span class="helper-last-active">Letzter Sync: ${lastSync}</span>
             <div class="helper-status-indicator ${statusClass}"></div>
         `;
