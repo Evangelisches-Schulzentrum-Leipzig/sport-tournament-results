@@ -438,3 +438,42 @@ setInterval(() => {
     document.querySelector("#top-bar div.time-display span").textContent = new Date().toLocaleTimeString();
     displaySyncState();
 }, 500);
+
+var serviceWorkerRegistration;
+
+const registerServiceWorker = async () => {
+  if ("serviceWorker" in navigator) {
+    try {
+      serviceWorkerRegistration = await navigator.serviceWorker.register("/webworker.js", {
+        scope: "/",
+      });
+      if (serviceWorkerRegistration.installing) {
+        console.log("Service worker installing");
+      } else if (serviceWorkerRegistration.waiting) {
+        console.log("Service worker installed");
+      } else if (serviceWorkerRegistration.active) {
+        console.log("Service worker active");
+      }
+    } catch (error) {
+      console.error(`Registration failed with ${error}`);
+    }
+  }
+};
+
+registerServiceWorker();
+
+async function deleteCache() {
+    if (serviceWorkerRegistration && serviceWorkerRegistration.active) {
+        serviceWorkerRegistration.active.postMessage("deleteCache");
+    } else if (navigator.serviceWorker && navigator.serviceWorker.controller) {
+        navigator.serviceWorker.controller.postMessage("deleteCache");
+    }
+}
+
+async function unregisterServiceWorker() {
+    serviceWorkerRegistration.unregister().then((boolean) => {
+        if (boolean) {
+            console.log("Service worker unregistered successfully.");
+        }
+    })
+}
