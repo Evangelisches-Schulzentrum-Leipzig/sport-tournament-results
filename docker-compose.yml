@@ -1,10 +1,11 @@
-
 services:
   db:
     image: mariadb:latest
     restart: always
     ports:
       - 3306:3306
+    networks:
+      - web
     environment:
       MYSQL_ROOT_PASSWORD: notSecureChangeMe
     volumes:
@@ -20,6 +21,8 @@ services:
     restart: always
     ports:
       - 8080:80
+    networks:
+      - web
     environment:
       - PMA_HOST=db
       - PMA_PORT=3306
@@ -28,15 +31,18 @@ services:
     depends_on:
       db:
         condition: service_healthy
-  
+
   web:
-    build: 
+    build:
       context: .
       args:
-        BACKEND_URL: http://localhost:3000
+        BACKEND_URL: https://sportfest.casparkroll.de
     restart: always
     ports:
       - 3000:80
+    networks:
+      - web
+      - proxy
     environment:
       - API_PORT=80
       - DB_HOST=db
@@ -47,3 +53,15 @@ services:
     depends_on:
       db:
         condition: service_healthy
+    labels:
+      - "traefik.enable=true"
+      # Route incoming traffic for the domain to this container
+      - "traefik.http.routers.sportfest-web.rule=Host(`sportfest.casparkroll.de`)"
+      - "traefik.http.routers.sportfest-web.entrypoints=websecure"
+      - "traefik.http.routers.sportfest-web.tls=true"
+      # Explicitly tell Traefik which port your container listens on internally
+      - "traefik.http.services.sportfest-web.loadbalancer.server.port=80"
+networks:
+  proxy:
+    external: true
+  web:
