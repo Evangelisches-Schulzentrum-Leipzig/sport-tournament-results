@@ -280,14 +280,14 @@ async function updateDataInputTable() {
             const unit = event.target.dataset.unit;
             if (unit === 'minutes') {
                 // allow only digits and colon, and enforce MM:SS format
-                const cleanedValue = value.replace(/[^0-9:]/g, '');
+                const cleanedValue = value.replace(/[^0-9:,.]/g, '');
                 const parts = cleanedValue.split(':');
                 parts[0] = parts[0] == '' ? '00' : parts[0]; // default minutes to 0 if empty
                 if (parts.length > 2) {
-                    event.target.value = parts.slice(0, 2).join(':');
+                    event.target.value = parts.join(':');
                 } else if (parts.length === 2) {
                     const minutes = parts[0]; // allow any number of digits for minutes
-                    const seconds = parts[1].slice(0, 2); // limit seconds to 2 digits
+                    const seconds = parts[1]; // limit seconds to 2 digits
                     event.target.value = `${minutes}:${seconds}`;
                 } else {
                     event.target.value = cleanedValue; // allow any number of digits for minutes until colon is added 
@@ -297,10 +297,10 @@ async function updateDataInputTable() {
                 const cleanedValue = value.replace(/[^0-9,.]/g, '');
                 const parts = cleanedValue.split(/[,\.]/);
                 if (parts.length > 2) {
-                    event.target.value = parts.slice(0, 2).join(',');
+                    event.target.value = parts.join(',');
                 } else if (parts.length === 2) {
                     const integerPart = parts[0]; // allow any number of digits for integer part
-                    const decimalPart = parts[1].slice(0, 2); // limit decimal part to 2 digits
+                    const decimalPart = parts[1]; // limit decimal part to 2 digits
                     event.target.value = `${integerPart},${decimalPart}`;
                 } else {
                     event.target.value = cleanedValue; // allow only digits until decimal point is added
