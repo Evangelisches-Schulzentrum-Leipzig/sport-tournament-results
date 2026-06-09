@@ -1,12 +1,14 @@
 import { setHost, getHost, getData, sync, checkConnectivity, HELPER_NAME_KEY, wsUpdateSelectedClassAndDiscipline } from "./helper-api.js";
 import { addClassOrUpdate, addDisciplineOrUpdate, addParticipantOrUpdate, addMeasurementOrUpdate, openDatabase, deleteDatabase, getDisciplines, getClasses, getDisciplineById, getParticipants, getClassMeasurements, getSyncMeasurements, getSyncedMeasurements, setSyncTime } from "./helper-db.js"
-import { convertFloatToUnit, convertUnitToFloat } from "./utils.js"
+import { convertFloatToUnit, convertUnitToFloat, unitLabel } from "./utils.js"
 
 const darkModeKey = 'darkModeEnabled';
 const autoSyncKey = 'autoSyncEnabled';
 const timerKeys = 'timerValues';
 
 let lastSyncedTime = null;
+
+console.log(convertUnitToFloat("1:30.9", "minutes")); // should output 90
 
 // --- Timer state (cleared on every table redraw) ---
 let _globalTimerInterval = null;
@@ -27,7 +29,7 @@ function _saveTimerState(state) {
 }
 
 function _fmtMs(ms) {
-    const s = Math.floor(Math.max(0, ms) / 1000);
+    const s = (Math.max(0, ms) / 1000); // allow milliseconds
     return `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
 }
 
@@ -190,16 +192,6 @@ async function updateDataInputTable() {
     const measurements = await getClassMeasurements(className, disciplineId);
     console.log("Measurements for class and discipline:", measurements);
 
-    switch (discipline.unit) {
-        case 'minutes':
-            var unitLabel = '(MM:SS)';
-            break;
-        case 'meters':
-            var unitLabel = '(m)';
-            break;
-        default:
-            var unitLabel = `(${discipline.unit})`;
-    }
     var inputHtml = [];
     for (let index = 0; index < discipline.attempts; index++) {
         inputHtml.push(`<td><input type="text" inputmode="decimal" data-unit="${discipline.unit}" data-attempt="${index + 1}" data-discipline="${disciplineId}" data-participant="$participant$" value="$measurement$" id="input-${disciplineId}-${index + 1}-$participant$"></td>`);
@@ -210,7 +202,7 @@ async function updateDataInputTable() {
             <th>ID</th>
             <th>Vorname</th>
             <th>Name</th>
-            ${Array.from({ length: discipline.attempts }, (_, i) => `<th>Versuch ${i + 1} ${discipline.unit ? `${unitLabel}` : ''}</th>`).join('')}
+            ${Array.from({ length: discipline.attempts }, (_, i) => `<th>Versuch ${i + 1} ${discipline.unit ? `${unitLabel(discipline.unit)}` : ''}</th>`).join('')}
             ${discipline.timer ? `<th><span id="time-value"></span><button id="stop-global-timer" style="display:none;"><span class="material-icons-round">stop</span></button><button id="start-global-timer"><span class="material-icons-round">timer</span> Timer</button></th>` : ''}
         </tr>
     `;
@@ -280,7 +272,7 @@ async function updateDataInputTable() {
             const unit = event.target.dataset.unit;
             if (unit === 'minutes') {
                 // allow only digits and colon, and enforce MM:SS format
-                const cleanedValue = value.replace(/[^0-9:,.]/g, '');
+                const cleanedValue = value.replace(/[^0-9:.,]/g, '');
                 const parts = cleanedValue.split(':');
                 parts[0] = parts[0] == '' ? '00' : parts[0]; // default minutes to 0 if empty
                 if (parts.length > 2) {
@@ -291,6 +283,19 @@ async function updateDataInputTable() {
                     event.target.value = `${minutes}:${seconds}`;
                 } else {
                     event.target.value = cleanedValue; // allow any number of digits for minutes until colon is added 
+                }
+            } else if (unit === 'seconds') {
+                // allow only digits and optionally one decimal point
+                const cleanedValue = value.replace(/[^0-9,.]/g, '');
+                const parts = cleanedValue.split(/[,\.]/);
+                if (parts.length > 2) {
+                    event.target.value = parts.join(',');
+                } else if (parts.length === 2) {
+                    const integerPart = parts[0]; // allow any number of digits for integer part
+                    const decimalPart = parts[1]; // limit decimal part to 2 digits
+                    event.target.value = `${integerPart},${decimalPart}`;
+                } else {
+                    event.target.value = cleanedValue; // allow only digits until decimal point is added
                 }
             } else if (unit === 'meters') {
                 // allow only digits and optionally one decimal point
@@ -321,6 +326,7 @@ async function updateDataInputTable() {
             const participant = parseInt(event.target.dataset.participant);
             const unit = event.target.dataset.unit;
 
+            console.log(convertUnitToFloat(value, unit), unit, value);
             addMeasurementOrUpdate(participant, discipline, attempt, convertUnitToFloat(value, unit)).then(() => {
                 console.log("Measurement added or updated successfully");
                 displaySyncState();

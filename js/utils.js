@@ -9,6 +9,8 @@ export function convertUnitToFloat(value, unit) {
         return parseFloat(value.replace(',', '.')) || 0; // fallback to raw number if format is incorrect
     } else if (unit === 'meters') {
         return parseFloat(value.replace(',', '.')) || 0; // convert comma to dot for decimal and parse
+    } else if (unit === 'seconds') {
+        return parseFloat(value.replace(',', '.')) || 0; // convert comma to dot for decimal and parse
     } else {
         return parseFloat(value.replace(',', '.')) || 0; // default parsing for other units
     }
@@ -17,9 +19,11 @@ export function convertUnitToFloat(value, unit) {
 export function convertFloatToUnit(value, unit) {
     if (unit === 'minutes') {
         const minutes = Math.floor(value / 60);
-        const seconds = Math.round(value % 60);
+        const seconds = (value % 60);
         return `${minutes}:${seconds.toString().padStart(2, '0')}`;
     } else if (unit === 'meters') {
+        return value.toString().replace('.', ','); // convert dot to comma for decimal
+    } else if (unit === 'seconds') {
         return value.toString().replace('.', ','); // convert dot to comma for decimal
     } else {
         return value.toString(); // default string conversion for other units
@@ -31,6 +35,8 @@ export function unitLabel(unit) {
         return '(mm:ss)';
     } else if (unit === 'meters') {
         return '(m)';
+    } else if (unit === 'seconds') {
+        return '(s)';
     } else {
         return unit; // default to showing the unit as is
     }
@@ -41,6 +47,8 @@ export function unitOrder(unit) {
         return 1; // Time-based disciplines should be ranked with lower values better
     } else if (unit === 'meters') {
         return -1; // Distance-based disciplines should be ranked with higher values better
+    } else if (unit === 'seconds') {
+        return 1; // Time-based disciplines should be ranked with lower values better
     } else {
         return 0; // Default order for unknown units
     }

@@ -2,6 +2,8 @@
  * Render disciplines and mark-range tables to the DOM.
  */
 
+import { convertFloatToUnit, unitLabel } from '../../utils.js';
+
 export function displayDisciplines(disciplines) {
     const disciplinesSubCon = document.querySelector('#disciplines-con .sub-con');
     const tbody = disciplinesSubCon?.querySelector('tbody');
@@ -79,7 +81,7 @@ export function displayMarkRanges(disciplines, markRanges) {
 
         const thead = document.createElement('thead');
         thead.innerHTML = `
-            <tr><th colspan="9">${discipline.name}</th></tr>
+            <tr><th colspan="9">${discipline.name} ${unitLabel(discipline.unit)}</th></tr>
             <tr>
                 <th>Klassenstufe</th><th>Geschlecht</th>
                 <th>Note 1</th><th>Note 2</th><th>Note 3</th>
@@ -104,7 +106,7 @@ export function displayMarkRanges(disciplines, markRanges) {
                 genders.forEach(gender => {
                     const marks = rangesByDiscipline[discipline.id][classLevel][gender];
                     const genderLabel = gender === 'male' ? 'Jungen' : 'Mädchen';
-                    const markValues = [1, 2, 3, 4, 5, 6].map(i => marks[i] !== undefined ? marks[i] : '-');
+                    const markValues = [1, 2, 3, 4, 5, 6].map(i => marks[i] !== undefined ? convertFloatToUnit(marks[i], discipline.unit) : '-');
 
                     const row = document.createElement('tr');
                     row.innerHTML = `
