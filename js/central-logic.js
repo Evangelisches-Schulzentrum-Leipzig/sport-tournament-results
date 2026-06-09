@@ -72,6 +72,9 @@ export function computeRankings(classes, participants, disciplines, measurements
                         break;
                     }
                 }
+                if (mark === null) {
+                    mark = 6; // If no mark thresholds are met, assign the lowest mark (6)
+                }
             }
 
             disciplineRankings.get(disciplineId).push({ participantId, value: bestMeas.value, mark });
