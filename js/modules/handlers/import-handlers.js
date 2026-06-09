@@ -5,6 +5,7 @@
 
 import * as api from '../../central-api.js';
 import { computeRankings } from '../../central-logic.js';
+import { convertFloatToUnit } from '../../utils.js';
 
 export async function handleImportParticipants(file) {
     try {
@@ -99,8 +100,8 @@ export async function handleExportParticipants(format) {
 
         if (format === 'csv') {
             const csvContent = [
-                ['ID', 'Vorname', 'Nachname', 'Geschlecht', 'Klasse', 'Status'].join(','),
-                ...exportData.map(p => [p.ID, p.Vorname, p.Nachname, p.Geschlecht, p.Klasse, p.Status].join(','))
+                ['ID', 'Vorname', 'Nachname', 'Geschlecht', 'Klasse', 'Status'].map(el => `"${el}"`).join(','),
+                ...exportData.map(p => [p.ID, p.Vorname, p.Nachname, p.Geschlecht, p.Klasse, p.Status].map(el => `"${el}"`).join(','))
             ].join('\n');
             const blob = new Blob([csvContent], { type: 'text/csv' });
             return URL.createObjectURL(blob);
@@ -117,7 +118,7 @@ export async function handleExportParticipants(format) {
     }
 }
 
-export async function handleExportParticipantsResults(format) {
+export async function handleExportParticipantsResults(format, convertUnits = false) {
     try {
         const participants = await api.getParticipants();
         if (!participants) { alert('Fehler beim Abrufen der Teilnehmer'); return; }
@@ -140,7 +141,7 @@ export async function handleExportParticipantsResults(format) {
             disciplines.forEach(d => {
                 const attempts = measurements.filter(m => m.participant_id === p.id && m.discipline_id === d.id);
                 attempts.forEach((a, index) => {
-                    participantData[`${d.name}_Versuch${a.attempt_number}_Wert`] = a.value;
+                    participantData[`${d.name}_Versuch${a.attempt_number}_Wert`] = convertUnits ? convertFloatToUnit(a.value, d.unit) : a.value;
                 });
                 const bestAttempt = attempts.reduce((best, a) => a.value > best ? a.value : best, null);
                 if (bestAttempt !== null) {
@@ -161,8 +162,8 @@ export async function handleExportParticipantsResults(format) {
         if (format === 'csv') {
             const headers = [...new Set(exportData.flatMap(p => Object.keys(p)))];
             const csvContent = [
-                headers.join(','),
-                ...exportData.map(p => headers.map(h => p[h] !== undefined ? p[h] : '').join(','))
+                headers.map(h => `"${h}"`).join(','),
+                ...exportData.map(p => headers.map(h => p[h] !== undefined ? `"${p[h]}"` : '').join(','))
             ].join('\n');
             const blob = new Blob([csvContent], { type: 'text/csv' });
             return URL.createObjectURL(blob);
@@ -179,7 +180,7 @@ export async function handleExportParticipantsResults(format) {
     }
 }
 
-export async function handleExportParticipantsResultsDividedByClass(format) {
+export async function handleExportParticipantsResultsDividedByClass(format, convertUnits = false) {
     try {
         const classes = await api.getClasses();
         if (!classes) { alert('Fehler beim Abrufen der Klassen'); return; }
@@ -216,7 +217,7 @@ export async function handleExportParticipantsResultsDividedByClass(format) {
             disciplines.forEach(d => {
                 const attempts = measurements.filter(m => m.participant_id === p.id && m.discipline_id === d.id);
                 attempts.forEach((a, index) => {
-                    participantData[`${d.name}_Versuch${a.attempt_number}_Wert`] = a.value;
+                    participantData[`${d.name}_Versuch${a.attempt_number}_Wert`] = convertUnits ? convertFloatToUnit(a.value, d.unit) : a.value;
                 });
                 const bestAttempt = attempts.reduce((best, a) => a.value > best ? a.value : best, null);
                 if (bestAttempt !== null) {
@@ -250,8 +251,8 @@ export async function handleExportParticipantsResultsDividedByClass(format) {
             if (format === 'csv') {
                 const headers = [...new Set(data.flatMap(p => Object.keys(p)))];
                 const csvContent = [
-                    headers.join(','),
-                    ...data.map(p => headers.map(h => p[h] !== undefined ? p[h] : '').join(','))
+                    headers.map(h => `"${h}"`).join(','),
+                    ...data.map(p => headers.map(h => p[h] !== undefined ? `"${p[h]}"` : '').join(','))
                 ].join('\n');
                 const blob = new Blob([csvContent], { type: 'text/csv' });
                 exportLinks.push({ className, url: URL.createObjectURL(blob) });
@@ -276,8 +277,8 @@ export async function handleExportDisciplines(format) {
 
         if (format === 'csv') {
             const csvContent = [
-                ['ID', 'Name', 'Einheit', 'Versuche', 'Timer'].join(','),
-                ...disciplines.map(d => [d.id, d.name, d.unit, d.attempts, d.timer].join(','))
+                ['ID', 'Name', 'Einheit', 'Versuche', 'Timer'].map(el => `"${el}"`).join(','),
+                ...disciplines.map(d => [d.id, d.name, d.unit, d.attempts, d.timer].map(el => `"${el}"`).join(','))
             ].join('\n');
             const blob = new Blob([csvContent], { type: 'text/csv' });
             return URL.createObjectURL(blob);

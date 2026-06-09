@@ -46,7 +46,8 @@ function setupEventListeners() {
     if (exportParticipantsResultsBtn) {
         exportParticipantsResultsBtn.addEventListener('click', async () => {
             const format = formatSelect.value;
-            var link = await handleExportParticipantsResults(format);
+            const formatUnits = document.querySelector('#export-format-units-checkbox').checked;
+            var link = await handleExportParticipantsResults(format, formatUnits);
             if (!link) {
                 return;
             }
@@ -64,7 +65,8 @@ function setupEventListeners() {
     if (exportParticipantsResultsDividedBtn) {
         exportParticipantsResultsDividedBtn.addEventListener('click', async () => {
             const format = formatSelect.value;
-            var links = await handleExportParticipantsResultsDividedByClass(format);
+            const formatUnits = document.querySelector('#export-format-units-checkbox').checked;
+            var links = await handleExportParticipantsResultsDividedByClass(format, formatUnits);
             if (!links || links.length === 0) {
                 return;
             }
