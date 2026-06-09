@@ -65,8 +65,8 @@ export function computeRankings(classes, participants, disciplines, measurements
                     .sort((a, b) => order * (parseFloat(a[1]) - parseFloat(b[1])));
                 for (const [m, minValue] of sortedEntries) {
                     const qualifies = order === 1
-                        ? bestMeas.value <= minValue  // time: lower is better
-                        : bestMeas.value >= minValue; // distance: higher is better
+                        ? Math.floor(bestMeas.value) <= minValue  // time: lower is better
+                        : Math.floor(bestMeas.value) >= minValue; // distance: higher is better
                     if (qualifies) {
                         mark = parseInt(m);
                         break;

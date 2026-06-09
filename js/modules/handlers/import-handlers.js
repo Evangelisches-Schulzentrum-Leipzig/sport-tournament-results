@@ -165,12 +165,10 @@ export async function handleExportParticipantsResults(format, convertUnits = fal
                         // For minutes (order=1): ascending threshold order (lowest min_value = hardest = best mark).
                         const sortedEntries = Object.entries(markInfo)
                             .sort((a, b) => order * (parseFloat(a[1]) - parseFloat(b[1])));
-                        console.log(sortedEntries);
                         for (const [m, minValue] of sortedEntries) {
                             const qualifies = order === 1
-                                ? bestAttempt <= minValue  // time: lower is better
-                                : bestAttempt >= minValue; // distance: higher is better
-                            console.log(`Checking mark ${m} with threshold ${minValue} against best measurement ${bestAttempt}: qualifies = ${qualifies}`);
+                                ? Math.floor(bestAttempt) <= minValue  // time: lower is better
+                                : Math.floor(bestAttempt) >= minValue; // distance: higher is better
                             if (qualifies) {
                                 mark = parseInt(m);
                                 break;
@@ -270,12 +268,10 @@ export async function handleExportParticipantsResultsDividedByClass(format, conv
                         // For minutes (order=1): ascending threshold order (lowest min_value = hardest = best mark).
                         const sortedEntries = Object.entries(markInfo)
                             .sort((a, b) => order * (parseFloat(a[1]) - parseFloat(b[1])));
-                        console.log(sortedEntries);
                         for (const [m, minValue] of sortedEntries) {
                             const qualifies = order === 1
-                                ? bestAttempt <= minValue  // time: lower is better
-                                : bestAttempt >= minValue; // distance: higher is better
-                            console.log(`Checking mark ${m} with threshold ${minValue} against best measurement ${bestAttempt}: qualifies = ${qualifies}`);
+                                ? Math.floor(bestAttempt) <= minValue  // time: lower is better
+                                : Math.floor(bestAttempt) >= minValue; // distance: higher is better
                             if (qualifies) {
                                 mark = parseInt(m);
                                 break;
