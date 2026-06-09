@@ -5,7 +5,7 @@
 
 import * as api from '../../central-api.js';
 import { computeRankings } from '../../central-logic.js';
-import { convertFloatToUnit } from '../../utils.js';
+import { convertFloatToUnit, unitOrder } from '../../utils.js';
 
 export async function handleImportParticipants(file) {
     try {
@@ -129,8 +129,18 @@ export async function handleExportParticipantsResults(format, convertUnits = fal
         const markRanges = await api.getMarkRanges();
         if (!markRanges) { alert('Fehler beim Abrufen der Markierungen'); return; }
 
+        // Build mark lookup: markMap[discipline_id][class_level][gender][mark] = min_value
+        const markMap = {};
+        markRanges.forEach(mr => {
+            if (!markMap[mr.discipline_id]) markMap[mr.discipline_id] = {};
+            if (!markMap[mr.discipline_id][mr.class_level]) markMap[mr.discipline_id][mr.class_level] = {};
+            if (!markMap[mr.discipline_id][mr.class_level][mr.gender]) markMap[mr.discipline_id][mr.class_level][mr.gender] = {};
+            markMap[mr.discipline_id][mr.class_level][mr.gender][mr.mark] = mr.min_value;
+        });
+
         const exportData = []; // extended array of participants with their attempt values and final mark for each discipline [{ID, Vorname, Nachname, Geschlecht, Klasse, Disziplin1_Versuch1_Wert, Disziplin_Versuch2_Wert, ..., Disziplin1_Note, Disziplin2_Versuch1_Wert, Disziplin2_Versuch2_Wert, ..., Disziplin2_Note, ...}, ...]
         participants.forEach(p => {
+            const class_level = inferClassLevel(p.class);
             const participantData = {
                 ID: p.id,
                 Vorname: p.forename,
@@ -139,19 +149,38 @@ export async function handleExportParticipantsResults(format, convertUnits = fal
                 Klasse: p.class,
             };
             disciplines.forEach(d => {
+                const order = unitOrder(d.unit);
                 const attempts = measurements.filter(m => m.participant_id === p.id && m.discipline_id === d.id);
                 attempts.forEach((a, index) => {
                     participantData[`${d.name}_Versuch${a.attempt_number}_Wert`] = convertUnits ? convertFloatToUnit(a.value, d.unit) : a.value;
                 });
                 const bestAttempt = attempts.reduce((best, a) => a.value > best ? a.value : best, null);
                 if (bestAttempt !== null) {
-                    const markRange = markRanges.find(mr =>
-                        mr.discipline_id === d.id &&
-                        mr.class_level === inferClassLevel(p.class) &&
-                        mr.gender === p.gender &&
-                        bestAttempt >= mr.min_value
-                    );
-                    participantData[`${d.name}_Note`] = markRange ? markRange.mark : null;
+                    const markInfo = markMap[d.id]?.[class_level]?.[p.gender];
+
+                    let mark = null;
+                    if (markInfo) {
+                        // Sort marks most-demanding-first so the first qualifying entry is the best achievable mark.
+                        // For meters (order=-1): descending threshold order (highest min_value = hardest = best mark).
+                        // For minutes (order=1): ascending threshold order (lowest min_value = hardest = best mark).
+                        const sortedEntries = Object.entries(markInfo)
+                            .sort((a, b) => order * (parseFloat(a[1]) - parseFloat(b[1])));
+                        console.log(sortedEntries);
+                        for (const [m, minValue] of sortedEntries) {
+                            const qualifies = order === 1
+                                ? bestAttempt <= minValue  // time: lower is better
+                                : bestAttempt >= minValue; // distance: higher is better
+                            console.log(`Checking mark ${m} with threshold ${minValue} against best measurement ${bestAttempt}: qualifies = ${qualifies}`);
+                            if (qualifies) {
+                                mark = parseInt(m);
+                                break;
+                            }
+                        }
+                        if (mark === null) {
+                            mark = 6; // If no mark thresholds are met, assign the lowest mark (6)
+                        }
+                    }
+                    participantData[`${d.name}_Note`] = mark;
                 } else {
                     participantData[`${d.name}_Note`] = null;
                 }
@@ -193,6 +222,15 @@ export async function handleExportParticipantsResultsDividedByClass(format, conv
         const markRanges = await api.getMarkRanges();
         if (!markRanges) { alert('Fehler beim Abrufen der Markierungen'); return; }
 
+        // Build mark lookup: markMap[discipline_id][class_level][gender][mark] = min_value
+        const markMap = {};
+        markRanges.forEach(mr => {
+            if (!markMap[mr.discipline_id]) markMap[mr.discipline_id] = {};
+            if (!markMap[mr.discipline_id][mr.class_level]) markMap[mr.discipline_id][mr.class_level] = {};
+            if (!markMap[mr.discipline_id][mr.class_level][mr.gender]) markMap[mr.discipline_id][mr.class_level][mr.gender] = {};
+            markMap[mr.discipline_id][mr.class_level][mr.gender][mr.mark] = mr.min_value;
+        });
+
         // Group participants by class
         const classMap = new Map();
         classes.forEach(c => classMap.set(c.name, c));
@@ -207,6 +245,7 @@ export async function handleExportParticipantsResultsDividedByClass(format, conv
         
         const exportData = []; // extended array of participants with their attempt values and final mark for each discipline [{ID, Vorname, Nachname, Geschlecht, Klasse, Disziplin1_Versuch1_Wert, Disziplin_Versuch2_Wert, ..., Disziplin1_Note, Disziplin2_Versuch1_Wert, Disziplin2_Versuch2_Wert, ..., Disziplin2_Note, ...}, ...]
         participants.forEach(p => {
+            const class_level = inferClassLevel(p.class);
             const participantData = {
                 ID: p.id,
                 Vorname: p.forename,
@@ -215,19 +254,38 @@ export async function handleExportParticipantsResultsDividedByClass(format, conv
                 Klasse: p.class,
             };
             disciplines.forEach(d => {
+                const order = unitOrder(d.unit);
                 const attempts = measurements.filter(m => m.participant_id === p.id && m.discipline_id === d.id);
                 attempts.forEach((a, index) => {
                     participantData[`${d.name}_Versuch${a.attempt_number}_Wert`] = convertUnits ? convertFloatToUnit(a.value, d.unit) : a.value;
                 });
                 const bestAttempt = attempts.reduce((best, a) => a.value > best ? a.value : best, null);
                 if (bestAttempt !== null) {
-                    const markRange = markRanges.find(mr =>
-                        mr.discipline_id === d.id &&
-                        mr.class_level === inferClassLevel(p.class) &&
-                        mr.gender === p.gender &&
-                        bestAttempt >= mr.min_value
-                    );
-                    participantData[`${d.name}_Note`] = markRange ? markRange.mark : null;
+                    const markInfo = markMap[d.id]?.[class_level]?.[p.gender];
+
+                    let mark = null;
+                    if (markInfo) {
+                        // Sort marks most-demanding-first so the first qualifying entry is the best achievable mark.
+                        // For meters (order=-1): descending threshold order (highest min_value = hardest = best mark).
+                        // For minutes (order=1): ascending threshold order (lowest min_value = hardest = best mark).
+                        const sortedEntries = Object.entries(markInfo)
+                            .sort((a, b) => order * (parseFloat(a[1]) - parseFloat(b[1])));
+                        console.log(sortedEntries);
+                        for (const [m, minValue] of sortedEntries) {
+                            const qualifies = order === 1
+                                ? bestAttempt <= minValue  // time: lower is better
+                                : bestAttempt >= minValue; // distance: higher is better
+                            console.log(`Checking mark ${m} with threshold ${minValue} against best measurement ${bestAttempt}: qualifies = ${qualifies}`);
+                            if (qualifies) {
+                                mark = parseInt(m);
+                                break;
+                            }
+                        }
+                        if (mark === null) {
+                            mark = 6; // If no mark thresholds are met, assign the lowest mark (6)
+                        }
+                    }
+                    participantData[`${d.name}_Note`] = mark;
                 } else {
                     participantData[`${d.name}_Note`] = null;
                 }
