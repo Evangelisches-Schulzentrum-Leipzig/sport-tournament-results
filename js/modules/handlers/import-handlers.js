@@ -160,6 +160,26 @@ export async function handleExportParticipantsResults(format, convertUnits = fal
 
                     let mark = null;
                     if (markInfo) {
+                        // Mark flooring based on unit
+                        var flooredValue;
+                        switch (d.id) {
+                            case 1: // 800m run (time in minutes) -> Floor to second
+                                flooredValue = Math.floor(bestAttempt);
+                                break;
+                            case 2: // Weitwurf (distance in meters) -> Floor to half meter
+                                flooredValue = Math.floor(bestAttempt * 2) / 2;
+                                break;
+                            case 3: // Sprint (time in seconds) -> Floor to tenth of a second
+                                flooredValue = Math.floor(bestAttempt * 10) / 10;
+                                break;
+                            case 4: // Dreierhopp (distance in meters) -> Floor to tenth of a meter
+                                flooredValue = Math.floor(bestAttempt * 10) / 10;
+                                break;
+                            default:
+                                flooredValue = bestAttempt;
+                                break;
+                        }
+
                         // Sort marks most-demanding-first so the first qualifying entry is the best achievable mark.
                         // For meters (order=-1): descending threshold order (highest min_value = hardest = best mark).
                         // For minutes (order=1): ascending threshold order (lowest min_value = hardest = best mark).
@@ -167,8 +187,8 @@ export async function handleExportParticipantsResults(format, convertUnits = fal
                             .sort((a, b) => order * (parseFloat(a[1]) - parseFloat(b[1])));
                         for (const [m, minValue] of sortedEntries) {
                             const qualifies = order === 1
-                                ? Math.floor(bestAttempt) <= minValue  // time: lower is better
-                                : Math.floor(bestAttempt) >= minValue; // distance: higher is better
+                                ? flooredValue <= minValue  // time: lower is better
+                                : flooredValue >= minValue; // distance: higher is better
                             if (qualifies) {
                                 mark = parseInt(m);
                                 break;
@@ -263,6 +283,26 @@ export async function handleExportParticipantsResultsDividedByClass(format, conv
 
                     let mark = null;
                     if (markInfo) {
+                        // Mark flooring based on unit
+                        var flooredValue;
+                        switch (d.id) {
+                            case 1: // 800m run (time in minutes) -> Floor to second
+                                flooredValue = Math.floor(bestAttempt);
+                                break;
+                            case 2: // Weitwurf (distance in meters) -> Floor to half meter
+                                flooredValue = Math.floor(bestAttempt * 2) / 2;
+                                break;
+                            case 3: // Sprint (time in seconds) -> Floor to tenth of a second
+                                flooredValue = Math.floor(bestAttempt * 10) / 10;
+                                break;
+                            case 4: // Dreierhopp (distance in meters) -> Floor to tenth of a meter
+                                flooredValue = Math.floor(bestAttempt * 10) / 10;
+                                break;
+                            default:
+                                flooredValue = bestAttempt;
+                                break;
+                        }
+
                         // Sort marks most-demanding-first so the first qualifying entry is the best achievable mark.
                         // For meters (order=-1): descending threshold order (highest min_value = hardest = best mark).
                         // For minutes (order=1): ascending threshold order (lowest min_value = hardest = best mark).
@@ -270,8 +310,8 @@ export async function handleExportParticipantsResultsDividedByClass(format, conv
                             .sort((a, b) => order * (parseFloat(a[1]) - parseFloat(b[1])));
                         for (const [m, minValue] of sortedEntries) {
                             const qualifies = order === 1
-                                ? Math.floor(bestAttempt) <= minValue  // time: lower is better
-                                : Math.floor(bestAttempt) >= minValue; // distance: higher is better
+                                ? flooredValue <= minValue  // time: lower is better
+                                : flooredValue >= minValue; // distance: higher is better
                             if (qualifies) {
                                 mark = parseInt(m);
                                 break;
